@@ -48,3 +48,21 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "enable_karpenter" {
+  description = "Whether to provision Karpenter AWS prerequisites (IAM roles, SQS queue, EventBridge rules)"
+  type        = bool
+  default     = true
+}
+
+variable "cluster_addons" {
+  description = "Map of cluster addons to enable"
+  type        = any
+  default     = {}
+}
+
+variable "node_security_group_tags" {
+  description = "Additional tags for the node security group"
+  type        = map(string)
+  default     = {}
+}

@@ -49,6 +49,24 @@ module "eks" {
     }
   }
 
+  # --- EKS ADDONS: Pod Identity Agent ---
+  cluster_addons = merge(
+    {
+      eks-pod-identity-agent = {
+        most_recent = true
+      }
+    },
+    var.cluster_addons
+  )
+
+  # --- KARPENTER: Node Security Group Discovery Tag ---
+  node_security_group_tags = merge(
+    {
+      "karpenter.sh/discovery" = var.cluster_name
+    },
+    var.node_security_group_tags
+  )
+
   # --- GOVERNANCE: Mandatory Tagging ---
   tags = merge(
     {
@@ -71,4 +89,32 @@ module "eks" {
 
   # --- SECURITY: Encrypt CloudWatch Log Group (Resolves CKV_AWS_158) ---
   cloudwatch_log_group_kms_key_id = module.eks.kms_key_arn
+}
+
+# --- KARPENTER: AWS Cloud Prerequisites (IAM, SQS, EventBridge) ---
+module "karpenter" {
+  count   = var.enable_karpenter ? 1 : 0
+  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
+  version = "21.19.0"
+
+  cluster_name = module.eks.cluster_name
+
+  # Enable Pod Identity for Karpenter controller
+  enable_pod_identity             = true
+  create_pod_identity_association = true
+
+  # Attach additional policies to Karpenter node IAM role
+  node_iam_role_additional_policies = {
+    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  }
+
+  # Interruption handling: Creates SQS queue and EventBridge rules for Spot interruptions
+  enable_spot_termination = true
+
+  tags = merge(
+    {
+      Service = "compute-karpenter"
+    },
+    var.tags
+  )
 }
