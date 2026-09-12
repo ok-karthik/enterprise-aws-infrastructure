@@ -6,121 +6,63 @@ The **IaC Platform Agent** is an autonomous platform engineering and SRE capabil
 
 ## Architecture & Visual Flow
 
-```mermaid
-flowchart TD
-    subgraph INGRESS["1 · Ingress Interfaces"]
-        CLI["💻 CLI\npython3 iac_agent.py --request ..."]
-        CHATOPS["🤖 ChatOps\n/generate & /reconcile comments"]
-        BACKSTAGE["📦 Backstage IDP\nSoftware Templates → runner.py"]
-        HTTP["🌐 Local HTTP API\nPOST /v1/generate"]
-    end
+![Autonomous AI Infrastructure Platform Architecture](images/ai_platform_arch.jpg)
 
-    subgraph SRE_GUARD["2 · SRE Guardrails (error_budgets.yaml)"]
-        BUDGET["Check Remaining Error Budget\n(Block prod if < 10%)"]
-        WINDOW["Check Change Window\n(Mon-Thu 08:00-16:00 UTC)"]
-        BYPASS{"Bypass Flag?\n--bypass-error-budget"}
-    end
+### Execution Pipeline Breakdown:
 
-    subgraph ORCHESTRATION["3 · Routing & Scaffolding"]
-        CATALOG_CHECK{"Matches Golden Path?\n(golden-paths.yaml)"}
-        TEMPL_S3["S3 Encrypted Template"]
-        TEMPL_RDS["RDS PostgreSQL Template"]
-        TEMPL_DDB["DynamoDB Table Template"]
-        LLM_CLASSIFY["LLM Classifier\n(Category, Module Path, Hint)"]
-        SKELETON["Deterministic Skeleton Scaffolder\n(generate-module.sh)"]
-    end
-
-    subgraph RETRIEVAL["4 · Context & Policy Ingestion"]
-        POLICY_DIGEST["Policy Digest Extractor\n(Active Rego rules + Checkov suppressions)"]
-        MCP_RETRIEVE["MCP Doc Client / GitHub Fallback\n(Provider Schema & Attributes)"]
-    end
-
-    subgraph GENERATION_LOOP["5 · Diff Generation & Audit Loop (Retries 1..3)"]
-        LLM_DIFF["LLM Diff Authoring\n(Provider: Gemini / Groq / OpenAI / Ollama)"]
-        GIT_APPLY["git apply --check & patch"]
-        AUDIT_GATE{"Semantic Policy Auditor\n(Independent Second-Opinion LLM)"}
-    end
-
-    subgraph VALIDATION_LADDER["6 · Platform Validation Ladder"]
-        V_FMT["1. terraform & terragrunt fmt"]
-        V_VAL["2. terragrunt validate (-backend=false)"]
-        V_LINT["3. tflint scan"]
-        V_COST["4. Infracost monthly delta threshold"]
-        V_OPA["5. Conftest OPA/Rego tagging & instance rules"]
-        V_SEC["6. Checkov CIS & Trivy vulnerability scan"]
-    end
-
-    subgraph DELIVERY["7 · Autonomous Delivery & Telemetry"]
-        GIT_BRANCH["Commit locally to branch agent/iac-*"]
-        PR_PROPOSE["Push & Open Compliant Pull Request"]
-        METRICS_LOG["Record Append-Only Run Telemetry\n(.agents/metrics/runs.jsonl)"]
-    end
-
-    CLI --> SRE_GUARD
-    CHATOPS --> SRE_GUARD
-    BACKSTAGE --> SRE_GUARD
-    HTTP --> SRE_GUARD
-
-    SRE_GUARD --> BUDGET
-    BUDGET --> WINDOW
-    WINDOW -->|Violated & Enforced| BYPASS
-    BYPASS -->|No| STOP_REJECT["❌ Request Rejected by SRE Guardrails"]
-    BYPASS -->|Yes or Healthy| CATALOG_CHECK
-
-    CATALOG_CHECK -->|data/s3-encrypted| TEMPL_S3
-    CATALOG_CHECK -->|data/rds-postgres| TEMPL_RDS
-    CATALOG_CHECK -->|data/dynamodb-table| TEMPL_DDB
-    CATALOG_CHECK -->|Uncatalogued| LLM_CLASSIFY
-
-    TEMPL_S3 --> VALIDATION_LADDER
-    TEMPL_RDS --> VALIDATION_LADDER
-    TEMPL_DDB --> VALIDATION_LADDER
-
-    LLM_CLASSIFY --> SKELETON
-    SKELETON --> POLICY_DIGEST
-    POLICY_DIGEST --> MCP_RETRIEVE
-    MCP_RETRIEVE --> LLM_DIFF
-    LLM_DIFF --> GIT_APPLY
-    GIT_APPLY --> AUDIT_GATE
-
-    AUDIT_GATE -->|Failed ↺| LLM_DIFF
-    AUDIT_GATE -->|Passed| VALIDATION_LADDER
-
-    VALIDATION_LADDER --> V_FMT --> V_VAL --> V_LINT --> V_COST --> V_OPA --> V_SEC
-    V_SEC -->|All Gates Pass| GIT_BRANCH
-    VALIDATION_LADDER -.->|Any Gate Fails ↺ Feed Error| LLM_DIFF
-
-    GIT_BRANCH --> PR_PROPOSE
-    PR_PROPOSE --> METRICS_LOG
-    STOP_REJECT --> METRICS_LOG
+```text
+[ 1. Ingress Request ] ──► (Backstage IDP / ChatOps / Drift Alert / CLI)
+        │
+        ▼
+[ 2. SRE Guardrails ] ──► (Check error_budgets.yaml; freeze prod if budget < 10%)
+        │
+        ▼
+[ 3. Golden-Path First Check ] ──► (Match .agents/catalog/golden-paths.yaml)
+        │
+        ├──► [ MATCH FOUND ] ──► Deterministic Template (0 LLM Tokens / $0 Cost)
+        │                                  │
+        └──► [ UNCATALOGUED ] ─────────────┼──► LLM Scaffolding Pipeline:
+                                           │     1. Classify Category & Skeleton
+                                           │     2. Ingest Rego & Checkov Policies
+                                           │     3. Query MCP Provider Docs
+                                           │     4. Generate HCL Diff & Patch
+                                           │     5. Semantic Policy Auditor Gate
+                                           ▼
+[ 4. 5-Stage Verification Ladder ]
+        ├── 1. terraform & terragrunt fmt
+        ├── 2. terragrunt validate (-backend=false dry-run)
+        ├── 3. tflint (AWS rules)
+        ├── 4. Infracost delta threshold check
+        ├── 5. Conftest OPA/Rego compliance rules
+        └── 6. Checkov CIS & Trivy security scans
+        │
+        ▼
+[ 5. Delivery & Telemetry ]
+        ├── Push Git branch (agent/iac-*) & open compliant Pull Request
+        └── Record append-only telemetry (.agents/metrics/runs.jsonl)
 ```
 
 ---
 
 ## Closed-Loop Drift Reconciliation Flow
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant AWS as Live AWS Cloud
-    participant DriftCron as Nightly Workflow (drift-detection.yml)
-    participant Issue as GitHub Drift Issue
-    participant Engineer as Platform Engineer / SRE
-    participant ChatOps as ChatOps Trigger (chatops_generator.yml)
-    participant Agent as IaC Platform Agent
-    participant PR as Pull Request
+```text
+1. [ Nightly Drift Cron ] (drift-detection.yml)
+      └── Runs `terragrunt run --all plan` across dev and prod.
+      └── Detects AWS out-of-band changes (Exit Code 2).
+      └── Creates or updates a GitHub Issue with the embedded drift diff block.
 
-    DriftCron->>AWS: terragrunt run --all plan -- -detailed-exitcode
-    AWS-->>DriftCron: Exit Code 2 (Drift Detected)
-    DriftCron->>Issue: Create/Update Issue with embedded diff in ```diff``` block
-    Engineer->>Issue: Comment "/reconcile remediate dev drift"
-    Issue->>ChatOps: webhook issue_comment.created
-    ChatOps->>Issue: gh issue view --json body (extract diff block)
-    ChatOps->>Agent: python3 iac_agent.py --reconcile /tmp/drift-plan.txt
-    Agent->>Agent: Ingest drift diff + classify affected modules
-    Agent->>Agent: Generate corrective HCL diff & run validation ladder
-    Agent->>PR: Push branch & create Pull Request closing Drift Issue
-    Agent->>Issue: Comment with link to corrective PR
+2. [ SRE / Engineer Comment ]
+      └── Engineer comments `/reconcile` on the GitHub Issue.
+
+3. [ ChatOps Automation ] (chatops_generator.yml)
+      └── Webhook triggers on comment and extracts the raw diff text.
+      └── Launches `python3 iac_agent.py --reconcile /tmp/drift-plan.txt`.
+
+4. [ Autonomous Synthesis & Validation ]
+      └── Agent parses plan diff and synthesizes corrective Terragrunt HCL.
+      └── Runs the 5-stage validation ladder (OPA, Trivy, Infracost).
+      └── Pushes a branch and opens a Pull Request that auto-closes the drift issue.
 ```
 
 ---

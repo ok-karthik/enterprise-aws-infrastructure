@@ -156,3 +156,12 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
     python3 -m unittest discover -s .agents/tests
     ```
 *   **Documentation & Visual Flow**: See **[docs/IAC_PLATFORM_AGENT.md](../docs/IAC_PLATFORM_AGENT.md)** for complete end-to-end architecture flow diagrams, ChatOps triggers, Backstage IDP runner, and setup instructions.
+
+---
+
+## 8. Communication & Diagram Standards
+
+- **STRICT PROHIBITION: NO Mermaid Diagrams**: Never generate Mermaid flowcharts, sequence diagrams, or graph syntax in chat outputs or documentation. They fail to render reliably across different IDEs and markdown viewers.
+- **Accepted Formats**:
+  1. **Clean Plain Text / ASCII Box Formats**: Simple, readable text layouts and structured tables.
+  2. **Rendered Diagram Images**: For complex architectural flows, use the image generation tool to produce high-resolution, professional visual architecture diagrams saved as media artifacts.

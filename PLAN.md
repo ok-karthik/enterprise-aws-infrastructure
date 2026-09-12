@@ -122,6 +122,15 @@ runs, not for hand-rolling how it's provisioned. Concretely, that reframes what 
   `check_sre_error_budget()` blocking unapproved changes to prod when remaining error budget is
   below critical threshold (10%), with `--bypass-error-budget` override.
 
+#### Phase E - Integrate Digger or suggest if there are better alternatives than Digger (I thought Digger as an alternative to Atlantis)
+- **2026-09-03** — Phase E: GitOps Execution Engine Integration (Orchestrating Pre-Merge Applies via Digger):
+  - **E1 (Serverless Lock Infrastructure)**: Provision an AWS DynamoDB table (`digger-locks`) inside `infrastructure-bootstrap/` to handle folder-level concurrency locking without a persistent server runtime.
+  - **E2 (Terragrunt Project Mapping)**: Define a root-level `digger.yml` configuration mapping `infrastructure-live/` nested directory trees into isolated execution stacks, matching your DRY environment topologies.
+  - **E3 (ChatOps Workflow Engine)**: Implement `.github/workflows/digger.yml` to intercept issue comments (`digger plan` / `digger apply`) and drive executions inside the pull request branch via existing OIDC zero-key IAM roles.
+  - **E4 (Pipeline Alignment)**: Hook your static analysis (`TFLint`, `Trivy`, `Checkov`), `Infracost`, and OPA/Conftest policy gates directly into the Digger workflow lifecycle to block malicious or non-compliant applies before merge.
+  - **E5 (Self-Healing Hooks)**: Update `.agents/scripts/healer_runner.py` to seamlessly parse failed logs originating from Digger runtime steps instead of standard linear GitHub Action jobs.
+
+
 ## Non-goals / guardrails (carried forward from Phase 0, apply to every phase above)
 
 - Never auto-push, never run `terraform apply`/`terragrunt apply`, never bypass the prod manual-approval gate.
