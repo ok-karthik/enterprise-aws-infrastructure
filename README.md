@@ -48,22 +48,37 @@ See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the full inheritance mo
 
 ---
 
-## CI/CD pipeline
+## CI/CD Pipeline
 
-```mermaid
-graph LR
-    PR["PR / Push to main"] --> SA["Static Analysis\nTFLint · Trivy · Checkov"]
-    PR --> PD["Plan: dev"]
-    PR --> PP["Plan: prod"]
-    PD --> GD["OPA + Cost: dev"]
-    PP --> GP["OPA + Cost: prod"]
-    SA & GD -->|all gates pass| AD["Apply: dev"]
-    AD -->|promote| AP["Approve → Apply: prod"]
-    SA & GP -->|all gates pass| AP
-    AP --> AWS["AWS"]
+```text
+[ PR / Push to main ]
+  │
+  ├──► [ Static Analysis ] (TFLint · Trivy · Checkov)
+  │
+  ├──► [ Plan: dev ]  ──► [ OPA + Cost: dev ]  ──► [ Apply: dev ]
+  │                                                      │ (promote)
+  └──► [ Plan: prod ] ──► [ OPA + Cost: prod ] ─┐        ▼
+                                                └──► [ Manual Approval ] ──► [ Apply: prod ] ──► [ AWS Cloud ]
 ```
 
 Parallel governance gates, sequential environment promotion, and a protected GitHub Environment requiring **manual approval** before any prod apply. Full detail in **[docs/CICD.md](docs/CICD.md)**.
+
+---
+
+## Autonomous AI IaC Platform & SRE Agent
+
+This repository features a fully autonomous Platform Engineering agent that converts natural-language requests and nightly drift alerts into compliant Terragrunt modules.
+
+![Autonomous AI Infrastructure Platform Architecture](docs/images/ai_platform_arch.jpg)
+
+### Key Capabilities:
+- **Golden-Path First (Deterministic & $0 Cost):** Standard modules (encrypted S3, RDS PostgreSQL, DynamoDB) match pre-vetted templates with **zero LLM tokens and zero hallucination risk**. Uncatalogued requests route to the LLM scaffolding engine.
+- **Semantic Second-Opinion Gate:** Every generated diff passes an independent review by the Policy Auditor persona before validation.
+- **5-Stage Verification Ladder:** Every proposal must pass offline `-backend=false` init, TFLint, Conftest/OPA Rego rules, Trivy/Checkov security scans, and Infracost FinOps budgets.
+- **Closed-Loop Drift Healing:** Responds to `/reconcile` issue comments to reverse-engineer AWS drift into an exact GitOps pull request.
+- **SRE Error-Budget Guardrails:** Automatically freezes production proposals if the environment error budget is below 10%.
+
+See **[docs/IAC_PLATFORM_AGENT.md](docs/IAC_PLATFORM_AGENT.md)** for complete end-to-end setup, Backstage IDP templates, and CLI guides.
 
 ---
 
@@ -113,6 +128,7 @@ Full tagging/IAM policy in [GOVERNANCE.md](GOVERNANCE.md).
 | :--- | :--- |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Terragrunt inheritance model, module layout, state design |
 | [docs/CICD.md](docs/CICD.md) | Pipeline stages, governance gates, drift detection, self-healing CI |
+| [docs/IAC_PLATFORM_AGENT.md](docs/IAC_PLATFORM_AGENT.md) | Autonomous IaC Platform Agent visual flow, ChatOps, IDP & setup guide |
 | [GOVERNANCE.md](GOVERNANCE.md) | Tagging policy, IAM, branch protection |
 | [FINOPS.md](FINOPS.md) | Cost strategy: spot, scale-to-zero, teardown |
 | [DISASTER_RECOVERY.md](DISASTER_RECOVERY.md) | Runbooks for state corruption, locks, partial applies |
