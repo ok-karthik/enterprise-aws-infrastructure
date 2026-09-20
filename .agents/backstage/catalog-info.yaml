@@ -11,7 +11,7 @@ metadata:
     - platform-engineering
     - automation
   annotations:
-    github.com/project-slug: ok-karthik/enterprise-aws-infrastructure-terragrunt
+    github.com/project-slug: ok-karthik/enterprise-aws-infrastructure
 spec:
   type: service
   lifecycle: production
