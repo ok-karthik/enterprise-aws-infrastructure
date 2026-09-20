@@ -49,3 +49,9 @@ test: ## Run OPA policy unit tests
 docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/network/vpc
 	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/compute/eks
+	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/data/postgres
+	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/storage/s3
+	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/identity/workload-iam
+	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/identity/human-access
+	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/identity/workload-identity
+	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/governance/organization

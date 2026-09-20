@@ -8,8 +8,10 @@ locals {
   env_vars     = read_terragrunt_config(find_in_parent_folders("env.hcl"))
   env          = local.env_vars.locals.env
   cluster_name = local.env_vars.locals.cluster_name
-}
 
+  region_vars = read_terragrunt_config(find_in_parent_folders("region.hcl"))
+  aws_region  = local.region_vars.locals.aws_region
+}
 
 dependency "vpc" {
   config_path = "${get_terragrunt_dir()}/../../network/vpc" # Resolves relative to the live module directory
@@ -32,6 +34,11 @@ inputs = {
   min_size     = local.env_vars.locals.min_size
   max_size     = 3
   desired_size = local.env_vars.locals.desired_size
+
+  # Discovery contract
+  env                    = local.env
+  region                 = local.aws_region
+  publish_ssm_parameters = true
 
   tags = {
     Project     = "Infrastructure-Automation"

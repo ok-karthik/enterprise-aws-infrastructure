@@ -10,14 +10,57 @@ A multi-environment AWS Infrastructure-as-Code platform built with **Terragrunt 
 
 ### Infrastructure Layout
 *   `/infrastructure-live/`: Contains environment-specific configurations (`terragrunt.hcl`) and shared category blueprints (`_envcommon/`).
-*   `/infrastructure-modules/`: Custom reusable Terraform modules (`network/vpc`, `compute/eks`). Pure `.tf`, no environment specifics.
+*   `/infrastructure-modules/`: Custom reusable Terraform modules. Pure `.tf`, no environment specifics, no provider blocks.
 *   `/infrastructure-bootstrap/`: Day-0 stack (OIDC provider, IAM roles, S3 state bucket, DynamoDB lock) that bootstraps the backend state.
 *   `/policies/terraform/`: Rego-based OPA compliance rules enforced against Terraform plan JSON.
 *   `/.agents/`: Catalog, prompts, eval fixtures, SRE policies, and scripts for autonomous agents.
 
 ---
 
-## 2. Essential Commands
+## 2. Module Boundary: Tenant-Facing Capabilities vs. Internal Foundation
+
+Per **ADR 0011** and **ADR 0012**, all AWS Terraform previously located in `internal-developer-platform` is owned and published from this repository. Because `infrastructure-modules/` uses domain-first grouping (`data/`, `storage/`, `identity/`, `compute/`, `network/`, `governance/`), the architectural boundary between **tenant-facing capabilities** and **internal foundation stacks** is defined below:
+
+### 1. Tenant-Facing Capability Modules (Consumed via IDP Catalog)
+Consumed externally by the `ok-karthik/internal-developer-platform` catalog and scaffolder engines via Git URL + pinned semantic version tag:
+```
+git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//infrastructure-modules/<category>/<module>?ref=<module>-vX.Y.Z
+```
+
+| Module Path | Capability Name | Public Release Tag | Contract & Guardrails |
+|---|---|---|---|
+| `infrastructure-modules/data/postgres` | `postgres` | `postgres-v1.0.0` | KMS encryption, Secrets Manager password rotation, private subnets only, automated backups |
+| `infrastructure-modules/storage/s3` | `s3` | `s3-v1.0.0` | S3 Block Public Access, AES256 server-side encryption, versioning enabled |
+| `infrastructure-modules/identity/workload-iam` | `iam` | `workload-iam-v1.0.0` | Documented interface stub for workload pod identity / IRSA role vending |
+
+### 2. Platform Foundation Modules (Internal to this Repository)
+Applied and maintained directly by this platform via Terragrunt environments (`infrastructure-live/{dev,prod}/...` and `_global/`):
+
+| Module Path | Scope | Release Tag | Purpose |
+|---|---|---|---|
+| `infrastructure-modules/network/vpc` | Regional | `vpc-v1.0.0` | Multi-AZ VPC, flow logs, deny-all default NACL, private & database subnets |
+| `infrastructure-modules/compute/eks` | Regional | `eks-v1.2.0` | Hardened EKS, IMDSv2 (hop limit 1), private API endpoint, KMS rot., full audit logs |
+| `infrastructure-modules/identity/human-access` | Account | `human-access-v1.0.0` | IAM Identity Center permission sets + EKS Access Entries & View policies |
+| `infrastructure-modules/identity/workload-identity` | Cluster | `workload-identity-v1.0.0` | EKS Pod Identity associations + IRSA federated OIDC fallback |
+| `infrastructure-modules/governance/organization` | Global | `organization-v1.0.0` | AWS Organizations OUs, SCP guardrails, and ACK cross-account hub/spoke trust |
+
+### 3. The Discovery Contract (SSM Parameter Store Service Catalog)
+Per **PLAN.md Phase 18.1**, tenant Terraform modules never hardcode AWS IDs (VPC IDs, subnets, OIDC ARNs, cluster names). On every foundation stack apply, standard parameters are published to AWS SSM Parameter Store:
+
+- `/platform/${env}/${region}/vpc/id`: The VPC ID
+- `/platform/${env}/${region}/vpc/database_subnets`: Comma-delimited list of database subnet IDs
+- `/platform/${env}/${region}/eks/cluster_name`: Name of the EKS cluster
+- `/platform/${env}/${region}/eks/oidc_provider_arn`: EKS OIDC provider ARN for IRSA / Pod Identity
+- `/platform/${env}/${region}/ack/cross_account_role_arn`: ACK controller cross-account role ARN for hub-spoke provisioning
+
+Tenant Terraform ingests these parameters dynamically at plan time via `data "aws_ssm_parameter"`.
+
+### 4. Release Automation & Monorepo Versioning
+Independent per-module semantic versioning is automated using Google's **`release-please` manifest mode** (`release-please-config.json` + `.release-please-manifest.json` + `.github/workflows/release.yml`). Tags follow `<module>-vX.Y.Z` (e.g. `postgres-v1.0.0`, `eks-v1.2.0`, `vpc-v1.0.0`).
+
+---
+
+## 3. Essential Commands
 
 All tooling is baked into the toolchain container (`.github/docker/Dockerfile`); locally install the equivalents (Terraform `1.15.1`, Terragrunt `1.0.3` pinned in Dockerfile ARGs and `.github/actions/setup-platform/action.yml`).
 
@@ -51,7 +94,7 @@ pre-commit install
 
 ---
 
-## 3. Architecture: The Terragrunt Inheritance Chain
+## 4. Architecture: The Terragrunt Inheritance Chain
 
 The core pattern is **strict separation of "blueprint" from "live config"**, kept 100% DRY through a layered `include`/`read_terragrunt_config` chain:
 
@@ -72,7 +115,7 @@ The core pattern is **strict separation of "blueprint" from "live config"**, kep
 
 ---
 
-## 4. Governance Gates (What Will Block a PR)
+## 5. Governance Gates (What Will Block a PR)
 
 These are enforced against the **Terraform plan JSON** in CI (`reusable-terragrunt.yml`), so a change can pass `terraform validate` and still fail here:
 
@@ -85,7 +128,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 
 ---
 
-## 5. CI/CD Pipeline
+## 6. CI/CD Pipeline
 
 - `terragrunt.yml` — main orchestrator. Static analysis + `dev`/`prod` reusable stacks run in parallel; on push to `main`, `apply-dev` runs then `apply-prod` (gated by a protected GitHub `prod` Environment requiring manual approval).
 - `reusable-terragrunt.yml` — per-environment plan → governance (OPA/Checkov/Trivy) → cost analysis. Plans are generated as `tfplan.bin`, converted to `tfplan.json`, uploaded as artifacts, and consumed by the gate jobs.
@@ -96,7 +139,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 
 ---
 
-## 6. Conventions & Gotchas
+## 7. Conventions & Gotchas
 
 - **Never hand-write `provider.tf` or `backend.tf`** — they are generated by `root.hcl`. Editing them has no effect (`if_exists = "overwrite_terragrunt"`).
 - When adding a module, create both the blueprint (`_envcommon/.../<m>.hcl` → `terraform.source`) and the leaf `terragrunt.hcl` in each env; don't inline module logic into a live dir.
@@ -106,7 +149,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 
 ---
 
-## 7. Agent Registry & Platform Capabilities
+## 8. Agent Registry & Platform Capabilities
 
 ### 1. IaC Architect (`.agents/prompts/architect.md`)
 *   **Role**: Senior Cloud Infrastructure Architect.
@@ -159,7 +202,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 
 ---
 
-## 8. Communication & Diagram Standards
+## 9. Communication & Diagram Standards
 
 - **STRICT PROHIBITION: NO Mermaid Diagrams**: Never generate Mermaid flowcharts, sequence diagrams, or graph syntax in chat outputs or documentation. They fail to render reliably across different IDEs and markdown viewers.
 - **Accepted Formats**:

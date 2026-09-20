@@ -23,6 +23,10 @@ AWS-0178
 AVD-AWS-0039
 AWS-0039
 
+# AVD-AWS-0132: Tenant capability S3 buckets default to AWS-managed SSE-S3 (AES256) for cost efficiency.
+AVD-AWS-0132
+AWS-0132
+
 # --- Toolchain / Docker ---
 DS-0010      # apt-get recommends (non-critical optimization)
 AVD-DS-0010

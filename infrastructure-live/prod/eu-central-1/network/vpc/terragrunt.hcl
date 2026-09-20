@@ -9,6 +9,8 @@ include "envcommon" {
 
 # Production VPC might use a different CIDR range to avoid overlapping with Dev
 inputs = {
-  cidr = "10.1.0.0/16"
-
+  cidr             = "10.1.0.0/16"
+  private_subnets  = ["10.1.1.0/24", "10.1.2.0/24", "10.1.3.0/24"]
+  public_subnets   = ["10.1.101.0/24"]
+  database_subnets = ["10.1.201.0/24", "10.1.202.0/24", "10.1.203.0/24"]
 }

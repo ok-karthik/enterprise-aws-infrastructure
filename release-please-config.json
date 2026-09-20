@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    "infrastructure-modules/data/postgres": {
+      "release-type": "terraform-module",
+      "package-name": "postgres",
+      "component": "postgres",
+      "tag-separator": "-v"
+    },
+    "infrastructure-modules/storage/s3": {
+      "release-type": "terraform-module",
+      "package-name": "s3",
+      "component": "s3",
+      "tag-separator": "-v"
+    },
+    "infrastructure-modules/identity/workload-iam": {
+      "release-type": "terraform-module",
+      "package-name": "workload-iam",
+      "component": "workload-iam",
+      "tag-separator": "-v"
+    },
+    "infrastructure-modules/compute/eks": {
+      "release-type": "terraform-module",
+      "package-name": "eks",
+      "component": "eks",
+      "tag-separator": "-v"
+    },
+    "infrastructure-modules/network/vpc": {
+      "release-type": "terraform-module",
+      "package-name": "vpc",
+      "component": "vpc",
+      "tag-separator": "-v"
+    },
+    "infrastructure-modules/identity/human-access": {
+      "release-type": "terraform-module",
+      "package-name": "human-access",
+      "component": "human-access",
+      "tag-separator": "-v"
+    },
+    "infrastructure-modules/identity/workload-identity": {
+      "release-type": "terraform-module",
+      "package-name": "workload-identity",
+      "component": "workload-identity",
+      "tag-separator": "-v"
+    },
+    "infrastructure-modules/governance/organization": {
+      "release-type": "terraform-module",
+      "package-name": "organization",
+      "component": "organization",
+      "tag-separator": "-v"
+    }
+  }
+}

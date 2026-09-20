@@ -47,3 +47,13 @@ output "karpenter_queue_arn" {
   description = "The ARN of the SQS interruption queue for Karpenter"
   value       = try(module.karpenter[0].queue_arn, null)
 }
+
+output "ssm_cluster_name_parameter" {
+  description = "SSM Parameter Store name for EKS cluster name"
+  value       = try(aws_ssm_parameter.cluster_name[0].name, null)
+}
+
+output "ssm_oidc_provider_arn_parameter" {
+  description = "SSM Parameter Store name for EKS OIDC provider ARN"
+  value       = try(aws_ssm_parameter.oidc_provider_arn[0].name, null)
+}

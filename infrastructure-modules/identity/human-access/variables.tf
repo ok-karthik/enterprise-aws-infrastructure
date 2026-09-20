@@ -1,6 +1,7 @@
 variable "sso_instance_arn" {
-  description = "The Amazon Resource Name (ARN) of the IAM Identity Center instance"
+  description = "The Amazon Resource Name (ARN) of the IAM Identity Center instance (leave empty if managing cluster access entries only)"
   type        = string
+  default     = ""
 }
 
 variable "name_prefix" {
@@ -15,8 +16,23 @@ variable "session_duration" {
   default     = "PT8H"
 }
 
+variable "cluster_name" {
+  description = "Name of the EKS cluster to grant access entries for"
+  type        = string
+  default     = ""
+}
+
+variable "team_access" {
+  description = "Map of (team, tier) access configurations with principal ARN and kubernetes groups"
+  type = map(object({
+    principal_arn = string
+    k8s_groups    = list(string)
+  }))
+  default = {}
+}
+
 variable "tags" {
-  description = "A map of tags to add to all permission set resources"
+  description = "A map of tags to add to all resources"
   type        = map(string)
   default     = {}
 }

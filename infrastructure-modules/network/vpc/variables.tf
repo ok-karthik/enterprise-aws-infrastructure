@@ -23,6 +23,12 @@ variable "public_subnets" {
   type        = list(string)
 }
 
+variable "database_subnets" {
+  description = "A list of database subnets inside the VPC"
+  type        = list(string)
+  default     = []
+}
+
 variable "enable_nat_gateway" {
   description = "Should be true if you want to provision NAT Gateways for each of your private networks"
   type        = bool
@@ -39,6 +45,24 @@ variable "cluster_name" {
   description = "Name of the EKS cluster to tag subnets for"
   type        = string
   default     = ""
+}
+
+variable "env" {
+  description = "Target environment for naming and discovery contract (e.g. dev, prod)"
+  type        = string
+  default     = ""
+}
+
+variable "region" {
+  description = "AWS region for naming and discovery contract (e.g. eu-central-1)"
+  type        = string
+  default     = ""
+}
+
+variable "publish_ssm_parameters" {
+  description = "Whether to publish discovery contract parameters to SSM Parameter Store"
+  type        = bool
+  default     = false
 }
 
 variable "tags" {

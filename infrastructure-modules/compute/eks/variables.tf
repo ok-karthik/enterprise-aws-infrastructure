@@ -66,3 +66,33 @@ variable "node_security_group_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "cluster_endpoint_public_access" {
+  description = "Indicates whether or not the Amazon EKS public API server endpoint is enabled"
+  type        = bool
+  default     = true
+}
+
+variable "api_allowed_cidrs" {
+  description = "List of CIDR blocks that can access the Amazon EKS public API server endpoint"
+  type        = list(string)
+  default     = []
+}
+
+variable "env" {
+  description = "Target environment for naming and discovery contract (e.g. dev, prod)"
+  type        = string
+  default     = ""
+}
+
+variable "region" {
+  description = "AWS region for naming and discovery contract (e.g. eu-central-1)"
+  type        = string
+  default     = ""
+}
+
+variable "publish_ssm_parameters" {
+  description = "Whether to publish discovery contract parameters to SSM Parameter Store"
+  type        = bool
+  default     = false
+}
