@@ -2,7 +2,7 @@
   "infrastructure-modules/data/postgres": "1.0.0",
   "infrastructure-modules/storage/s3": "1.0.0",
   "infrastructure-modules/identity/workload-iam": "1.0.0",
-  "infrastructure-modules/compute/eks": "1.2.0",
+  "infrastructure-modules/compute/eks": "1.0.0",
   "infrastructure-modules/network/vpc": "1.0.0",
   "infrastructure-modules/identity/human-access": "1.0.0",
   "infrastructure-modules/identity/workload-identity": "1.0.0",

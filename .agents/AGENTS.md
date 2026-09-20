@@ -39,7 +39,7 @@ Applied and maintained directly by this platform via Terragrunt environments (`i
 | Module Path | Scope | Release Tag | Purpose |
 |---|---|---|---|
 | `infrastructure-modules/network/vpc` | Regional | `vpc-v1.0.0` | Multi-AZ VPC, flow logs, deny-all default NACL, private & database subnets |
-| `infrastructure-modules/compute/eks` | Regional | `eks-v1.2.0` | Hardened EKS, IMDSv2 (hop limit 1), private API endpoint, KMS rot., full audit logs |
+| `infrastructure-modules/compute/eks` | Regional | `eks-v1.0.0` | Hardened EKS, IMDSv2 (hop limit 1), private API endpoint, KMS rot., full audit logs |
 | `infrastructure-modules/identity/human-access` | Account | `human-access-v1.0.0` | IAM Identity Center permission sets + EKS Access Entries & View policies |
 | `infrastructure-modules/identity/workload-identity` | Cluster | `workload-identity-v1.0.0` | EKS Pod Identity associations + IRSA federated OIDC fallback |
 | `infrastructure-modules/governance/organization` | Global | `organization-v1.0.0` | AWS Organizations OUs, SCP guardrails, and ACK cross-account hub/spoke trust |
@@ -56,7 +56,7 @@ Per **PLAN.md Phase 18.1**, tenant Terraform modules never hardcode AWS IDs (VPC
 Tenant Terraform ingests these parameters dynamically at plan time via `data "aws_ssm_parameter"`.
 
 ### 4. Release Automation & Monorepo Versioning
-Independent per-module semantic versioning is automated using Google's **`release-please` manifest mode** (`release-please-config.json` + `.release-please-manifest.json` + `.github/workflows/release.yml`). Tags follow `<module>-vX.Y.Z` (e.g. `postgres-v1.0.0`, `eks-v1.2.0`, `vpc-v1.0.0`).
+Independent per-module semantic versioning is automated using Google's **`release-please` manifest mode** (`release-please-config.json` + `.release-please-manifest.json` + `.github/workflows/release.yml`). Tags follow `<module>-vX.Y.Z` (e.g. `postgres-v1.0.0`, `eks-v1.0.0`, `vpc-v1.0.0`).
 
 ---
 
