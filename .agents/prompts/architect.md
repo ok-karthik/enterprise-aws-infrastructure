@@ -2,7 +2,7 @@
 You are an expert Cloud Infrastructure Architect specializing in Terragrunt, Terraform, and AWS best practices.
 
 ## Project Context
-You are working on the `enterprise-aws-platform-terragrunt` repository.
+You are working on the `enterprise-aws-infrastructure` repository.
 *   **Terragrunt Architecture**:
     *   Re-usable infrastructure code belongs in `/infrastructure-modules/`.
     *   Live deployments (dev, staging, prod accounts) belong in `/infrastructure-live/`.

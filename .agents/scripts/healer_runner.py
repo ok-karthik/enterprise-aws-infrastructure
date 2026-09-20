@@ -16,7 +16,7 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 FAILED_RUN_ID = os.getenv("FAILED_RUN_ID")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# GitHub Repository name is usually formatted as "owner/repo" (e.g. "ok-karthik/enterprise-aws-platform-terragrunt")
+# GitHub Repository name is usually formatted as "owner/repo" (e.g. "ok-karthik/enterprise-aws-infrastructure")
 GITHUB_REPOSITORY = os.getenv("GITHUB_REPOSITORY")
 
 if not GITHUB_TOKEN or not FAILED_RUN_ID or not GITHUB_REPOSITORY:
