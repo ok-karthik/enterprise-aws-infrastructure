@@ -27,3 +27,23 @@ output "oidc_provider_arn" {
   description = "The ARN of the OIDC Provider if `enable_irsa = true`"
   value       = module.eks.oidc_provider_arn
 }
+
+output "karpenter_node_iam_role_arn" {
+  description = "The ARN of the IAM role for Karpenter nodes"
+  value       = try(module.karpenter[0].node_iam_role_arn, null)
+}
+
+output "karpenter_node_iam_role_name" {
+  description = "The name of the IAM role for Karpenter nodes"
+  value       = try(module.karpenter[0].node_iam_role_name, null)
+}
+
+output "karpenter_queue_name" {
+  description = "The name of the SQS interruption queue for Karpenter"
+  value       = try(module.karpenter[0].queue_name, null)
+}
+
+output "karpenter_queue_arn" {
+  description = "The ARN of the SQS interruption queue for Karpenter"
+  value       = try(module.karpenter[0].queue_arn, null)
+}

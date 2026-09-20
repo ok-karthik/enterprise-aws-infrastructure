@@ -50,15 +50,17 @@ See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the full inheritance mo
 
 ## CI/CD Pipeline
 
-```text
-[ PR / Push to main ]
-  │
-  ├──► [ Static Analysis ] (TFLint · Trivy · Checkov)
-  │
-  ├──► [ Plan: dev ]  ──► [ OPA + Cost: dev ]  ──► [ Apply: dev ]
-  │                                                      │ (promote)
-  └──► [ Plan: prod ] ──► [ OPA + Cost: prod ] ─┐        ▼
-                                                └──► [ Manual Approval ] ──► [ Apply: prod ] ──► [ AWS Cloud ]
+```mermaid
+graph LR
+    PR["PR / Push to main"] --> SA["Static Analysis\nTFLint · Trivy · Checkov"]
+    PR --> PD["Plan: dev"]
+    PR --> PP["Plan: prod"]
+    PD --> GD["OPA + Cost: dev"]
+    PP --> GP["OPA + Cost: prod"]
+    SA & GD -->|all gates pass| AD["Apply: dev"]
+    AD -->|promote| AP["Approve → Apply: prod"]
+    SA & GP -->|all gates pass| AP
+    AP --> AWS["AWS"]
 ```
 
 Parallel governance gates, sequential environment promotion, and a protected GitHub Environment requiring **manual approval** before any prod apply. Full detail in **[docs/CICD.md](docs/CICD.md)**.

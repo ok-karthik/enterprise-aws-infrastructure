@@ -130,6 +130,79 @@ runs, not for hand-rolling how it's provisioned. Concretely, that reframes what 
   - **E4 (Pipeline Alignment)**: Hook your static analysis (`TFLint`, `Trivy`, `Checkov`), `Infracost`, and OPA/Conftest policy gates directly into the Digger workflow lifecycle to block malicious or non-compliant applies before merge.
   - **E5 (Self-Healing Hooks)**: Update `.agents/scripts/healer_runner.py` to seamlessly parse failed logs originating from Digger runtime steps instead of standard linear GitHub Action jobs.
 
+#### Phase F
+- The Plan-Time State Lock Race - Configure explicit -lock-timeout=5m in CI. Split monolithic states into decoupled domains (network, compute, database) so PRs on application modules don't block on shared network state. - But i guess this will be resolved by the Phase E above
+- Destroy-Before-Create Dependency Inversion - Use lifecycle { create_before_destroy = true } where possible, or treat immutable infrastructure changes (VPC CIDRs, K8s control planes) as blue/green side-by-side deployments rather than in-place Terraform refactors
+
+#### Phase G
+Approach 1: Path-Based Tagging (The Monorepo Solution)
+You keep all modules in one central repository, but you NEVER use global tags like v2.0.0.
+
+Instead, you use Component/Path-Scoped Git Tags:
+
+
+
+repo: terraform-aws-modules (Monorepo)
+  ├── modules/vpc/  ───> Tag: vpc-v2.0.0   (Only bumped when /vpc changes!)
+  ├── modules/s3/   ───> Tag: s3-v1.1.0    (Untouched! Stays at v1.1.0)
+  └── modules/alb/  ───> Tag: alb-v1.4.2   (Untouched!)
+How Release Please Handles This Automatically:
+Google's Release Please natively supports monorepos with path-based tagging using a configuration file (release-please-config.json):
+
+json
+
+
+{
+  "packages": {
+    "modules/vpc": {
+      "package-name": "vpc",
+      "tag-prefix": "vpc-v"
+    },
+    "modules/s3": {
+      "package-name": "s3",
+      "tag-prefix": "s3-v"
+    }
+  }
+}
+What happens when you commit feat!(vpc): update upstream module:
+Release Please inspects git history: only files in modules/vpc/ changed.
+It creates a release PR only for VPC.
+When merged, it creates the Git tag: vpc-v2.0.0.
+It does NOT create a tag for S3 or ALB!
+How Product Repos Use It:
+In the product application repo:
+
+hcl
+
+
+module "network" {
+  # Points explicitly to the VPC tag
+  source = "git::https://github.com/my-org/terraform-aws-modules.git//modules/vpc?ref=vpc-v2.0.0"
+}
+module "storage" {
+  # Stays pinned to the S3 tag
+  source = "git::https://github.com/my-org/terraform-aws-modules.git//modules/s3?ref=s3-v1.1.0"
+}
+How Renovate Bot Knows NOT to Create False PRs:
+In the consumer repo's renovate.json, you tell Renovate to match the tag prefix:
+
+json
+
+
+{
+  "packageRules": [
+    {
+      "matchPackageNames": ["my-org/terraform-aws-modules//modules/vpc"],
+      "tagPrefix": "vpc-v"
+    },
+    {
+      "matchPackageNames": ["my-org/terraform-aws-modules//modules/s3"],
+      "tagPrefix": "s3-v"
+    }
+  ]
+}
+Result: When vpc-v2.0.0 is released, Renovate ONLY opens a PR for module.network. It completely ignores module.storage because s3-v did not change!
+
 
 ## Non-goals / guardrails (carried forward from Phase 0, apply to every phase above)
 
