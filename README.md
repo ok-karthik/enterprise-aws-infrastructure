@@ -1,4 +1,4 @@
-# Enterprise AWS Infrastructure Platform (Terragrunt)
+# Enterprise AWS Infrastructure
 
 [![Terragrunt](https://img.shields.io/badge/Terragrunt-1.0.3-blue?logo=terraform)](https://terragrunt.gruntwork.io/)
 [![Terraform](https://img.shields.io/badge/Terraform-1.15.1-623CE4?logo=terraform)](https://www.terraform.io/)
@@ -100,8 +100,8 @@ This turns a red pipeline into an auto-generated fix proposal instead of a manua
 
 ```bash
 # Prereqs: terraform >=1.15, terragrunt >=1.0.3, tflint, trivy, conftest, aws-cli v2
-git clone https://github.com/ok-karthik/enterprise-aws-infrastructure-terragrunt.git
-cd enterprise-aws-infrastructure-terragrunt
+git clone https://github.com/ok-karthik/enterprise-aws-infrastructure.git
+cd enterprise-aws-infrastructure
 
 make install        # install the pre-commit hook (fmt + smoke-test + trivy)
 make validate       # full local validation suite (compliance, fmt, init/validate, tflint)

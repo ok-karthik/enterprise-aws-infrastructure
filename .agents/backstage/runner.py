@@ -40,7 +40,7 @@ def _get_repo_url() -> str:
             return url
     except Exception:
         pass
-    return "https://github.com/ok-karthik/enterprise-aws-infrastructure-terragrunt"
+    return "https://github.com/ok-karthik/enterprise-aws-infrastructure"
 
 
 def main():
