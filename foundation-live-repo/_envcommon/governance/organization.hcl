@@ -14,6 +14,17 @@ locals {
 
   env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
   env      = local.env_vars.locals.env
+
+  # Delegated administrators: service => the registry account that administers it. Left out until that
+  # account has a REAL id (registry placeholders are never registered).
+  registry = read_terragrunt_config("${get_repo_root()}/foundation-live-repo/_config/accounts.hcl")
+  delegated_administrator_accounts = {
+    "access-analyzer.amazonaws.com" = "security-tooling"
+  }
+  delegated_administrators = {
+    for service, account in local.delegated_administrator_accounts : service => local.registry.locals.accounts[account].id
+    if !startswith(local.registry.locals.accounts[account].id, "00000000")
+  }
 }
 
 inputs = {
@@ -23,6 +34,10 @@ inputs = {
   # The baseline SCPs attach to these OUs only. Start on Policy-Staging, test there, then widen
   # deliberately (for example ["Policy-Staging", "Sandbox", "NonProd"]). PLAN 4.6.
   guardrail_target_ous = ["Policy-Staging"]
+
+  # Centralized root access (PLAN 3.5) is on by default; delegated administrators only once their account is real.
+  enable_centralized_root_access = true
+  delegated_administrators       = local.delegated_administrators
 
   tags = {
     Environment = title(local.env)
