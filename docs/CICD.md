@@ -21,17 +21,19 @@ Jobs assume short-lived IAM roles via GitHub Actions OIDC through the `setup-pla
 | Role | Used by | Trusted OIDC subjects | Permissions |
 |---|---|---|---|
 | `github-actions-plan` | plan, governance and drift-detection jobs | `repo:<repo>:pull_request`, `repo:<repo>:ref:refs/heads/main` | `ReadOnlyAccess`; on the state bucket: read state, write/delete `*.tflock` lock files only |
-| `github-actions-apply` | `apply-dev`, `apply-prod`, `destroy` | `repo:<repo>:environment:dev`, `repo:<repo>:environment:prod` | `AdministratorAccess` capped by the `github-actions-apply-boundary` permissions boundary (denies organizations, Identity Center, CloudTrail changes, and edits to the boundary, the `github-actions-*` roles and the OIDC provider). Narrowed further in PLAN 3.4 |
+| `github-actions-apply` | `apply-dev`, `apply-prod`, `destroy` | `repo:<repo>:environment:<GitHubEnvironment>`, exactly one per account (`management` in the management account) | `AdministratorAccess` capped by the `github-actions-apply-boundary` permissions boundary (denies Identity Center, CloudTrail changes, organization destruction, edits to the boundary, the `github-actions-*` roles, the OIDC provider, the state bucket's settings and the bootstrap stack; also `organizations:*` / `account:*` everywhere except management). Narrowed further in PLAN 3.4 |
 
-Because the apply role trusts only the `dev` / `prod` GitHub Environments, the `prod` manual-approval gate cannot be bypassed from a branch or PR.
+Both roles, the OIDC provider and the state bucket come from the Day-0 CloudFormation stack `platform-bootstrap` (`infrastructure-bootstrap/`, see its README).
 
-**Repository variables** (Settings → Secrets and variables → Actions → Variables). `infrastructure-bootstrap/bootstrap.sh` prints the exact `gh variable set` commands:
+Because the apply role trusts only one GitHub Environment, the manual-approval gate on that Environment cannot be bypassed from a branch or PR. **Today only the `management` account exists**, so create the `management` Environment (owner as required reviewer); its apply role trusts `environment:management` and nothing else.
+
+**Repository variables** (Settings → Secrets and variables → Actions → Variables). `infrastructure-bootstrap/bootstrap.sh` prints the exact `gh` commands (it does not run them):
 
 | Variable | Value |
 |---|---|
 | `AWS_REGION` | primary region, e.g. `eu-central-1` |
-| `AWS_DEV_PLAN_ROLE_ARN` / `AWS_PROD_PLAN_ROLE_ARN` | ARN of `github-actions-plan` in the dev / prod account |
-| `AWS_DEV_APPLY_ROLE_ARN` / `AWS_PROD_APPLY_ROLE_ARN` | ARN of `github-actions-apply` in the dev / prod account |
+| `AWS_DEV_PLAN_ROLE_ARN` / `AWS_PROD_PLAN_ROLE_ARN` | ARN of `github-actions-plan`. Set both to the **management** plan role for now: plans are read-only, so they can stay there until `workloads-dev` exists |
+| `AWS_DEV_APPLY_ROLE_ARN` / `AWS_PROD_APPLY_ROLE_ARN` | **Leave unset until a workload account exists.** The management apply role trusts only `environment:management`, so the dev/prod apply jobs cannot deploy workloads into the management account. This is intended. CI for the org stack (`_global`) comes with PLAN 2.6, and per-account Environments with it (until then `environment:dev` can apply to *any* NonProd account) |
 
 The old `AWS_DEV_ROLE_ARN` / `AWS_PROD_ROLE_ARN` variables are no longer read and can be deleted.
 

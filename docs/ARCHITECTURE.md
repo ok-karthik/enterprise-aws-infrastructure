@@ -23,8 +23,8 @@ To understand any live module you read it top-down through these layers — a le
 
 ## Bootstrap (day-0)
 
-`infrastructure-bootstrap/` is a separate stack that must exist before `infrastructure-live` can deploy. It provisions the S3 state bucket, the GitHub OIDC identity provider, the `github-actions-apply` permissions boundary and the two CI roles (`github-actions-plan`, `github-actions-apply`) — i.e. the very backend and trust the live stacks depend on. `bootstrap.sh` refuses to run unless your credentials belong to the account in `account.hcl`.
+`infrastructure-bootstrap/` is a CloudFormation stack (`platform-bootstrap`) that must exist before `infrastructure-live` can deploy. It provisions the S3 state bucket, the GitHub OIDC identity provider, the `github-actions-apply` permissions boundary and the two CI roles (`github-actions-plan`, `github-actions-apply`) — i.e. the very backend and trust the live stacks depend on. CloudFormation is used here (not Terraform) because Terraform cannot create the bucket that holds its own state, and Terragrunt's `--backend-bootstrap` would create that bucket outside any state. `bootstrap.sh` refuses to run unless your credentials belong to the account in `infrastructure-live/_global/account.hcl`; member accounts get the same template through StackSets (PLAN 2.0b).
 
 ## State backend
 
-Configured centrally in `root.hcl`: S3 bucket per account/region with versioning (point-in-time rollback), DynamoDB locking (prevents concurrent-apply corruption), block-public-access, and AES-256 SSE at rest.
+Configured centrally in `root.hcl`: bucket `tg-state-<account-id>-<region>` per account/region, created by the bootstrap stack, with versioning (point-in-time rollback), native S3 lock files (`use_lockfile`, prevents concurrent-apply corruption), block-public-access, TLS 1.2+ only, and AES-256 SSE at rest.
