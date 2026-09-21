@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/organization-v2.0.0...organization-v2.1.0) (2026-09-21)
+
+
+### Features
+
+* **organization:** enable centralized root access and register delegated administrators ([501ecfb](https://github.com/ok-karthik/enterprise-aws-infrastructure/commit/501ecfbf5eb45498720732f47f43836cb8f96d17))
+* **phase-3:** identity, least privilege, break-glass alerts & access analyzer ([6f96cd0](https://github.com/ok-karthik/enterprise-aws-infrastructure/commit/6f96cd0cac5ceafd67aab1549adb259587cf3363))
+
 ## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/organization-v1.0.0...organization-v2.0.0) (2026-09-21)
 
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/bootstrap-stacksets-v2.0.0...bootstrap-stacksets-v2.1.0) (2026-09-21)
+
+
+### Features
+
+* **bootstrap-stacksets:** never allow Identity Center administration in member accounts ([4dc5bae](https://github.com/ok-karthik/enterprise-aws-infrastructure/commit/4dc5baede101eac7ba02c3e40bd913bdb1bdb921))
+
+
+### Bug Fixes
+
+* let the management apply role manage Identity Center (3.8) and deny only public Lambda URLs (3.7) ([9ed70ae](https://github.com/ok-karthik/enterprise-aws-infrastructure/commit/9ed70aea1f921bc554f8e9c3b53f9054ed48a3ae))
+
 ## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/bootstrap-stacksets-v1.0.0...bootstrap-stacksets-v2.0.0) (2026-09-21)
 
 
