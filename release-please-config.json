@@ -66,6 +66,12 @@
       "package-name": "account-factory",
       "component": "account-factory",
       "tag-separator": "-v"
+    },
+    "iac-modules-repo/governance/account-baseline": {
+      "release-type": "terraform-module",
+      "package-name": "account-baseline",
+      "component": "account-baseline",
+      "tag-separator": "-v"
     }
   }
 }
