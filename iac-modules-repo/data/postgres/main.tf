@@ -42,6 +42,7 @@ resource "aws_db_subnet_group" "this" {
 }
 
 resource "aws_security_group" "this" {
+  #checkov:skip=CKV_AWS_382: "RDS needs outbound access for S3 import/export, extensions and replication; egress is governed by the VPC (endpoints, NACLs, route tables) and the SG allows ingress only from the private supernet on 5432"
   count       = var.vpc_id != "" ? 1 : 0
   name        = "${local.identifier}-sg"
   description = "PostgreSQL access for ${var.team_name}/${var.app_name}"
@@ -74,6 +75,13 @@ resource "aws_security_group" "this" {
 }
 
 resource "aws_db_instance" "this" {
+  # Optional features that cost money or are the tenant's call, not a baseline guardrail. Each is left off on
+  # purpose in this minimal, NonProd-first capability; a tenant that needs one overrides it in its own stack.
+  #checkov:skip=CKV_AWS_157: "Multi-AZ doubles the instance cost; NonProd/Sandbox default. Production high availability is the Aurora option planned in PLAN 7.3"
+  #checkov:skip=CKV_AWS_293: "skip_final_snapshot is true and tenant stacks must be destroyable in NonProd/Sandbox; production sets deletion protection in its own stack until the module takes a variable for it"
+  #checkov:skip=CKV_AWS_118: "Enhanced monitoring needs an IAM role and is billed per instance; CloudWatch basic metrics are on. Enable per tenant when needed"
+  #checkov:skip=CKV_AWS_353: "Performance Insights is an optional diagnostics feature, not a security control; enable per tenant when needed"
+  #checkov:skip=CKV2_AWS_30: "Query logging needs a parameter group with tenant-specific log_statement settings. The postgresql and upgrade logs are exported to CloudWatch (enabled_cloudwatch_logs_exports); tenants tune verbosity"
   identifier     = local.identifier
   engine         = "postgres"
   engine_version = var.engine_version
@@ -94,6 +102,14 @@ resource "aws_db_instance" "this" {
   storage_encrypted       = true
   backup_retention_period = var.backup_retention_days
   skip_final_snapshot     = true
+
+  # Safe hardening that costs nothing: IAM database authentication (an extra way in, not a replacement),
+  # snapshots keep the instance's tags, minor engine versions are patched, and the engine and upgrade logs
+  # go to CloudWatch.
+  iam_database_authentication_enabled = true
+  copy_tags_to_snapshot               = true
+  auto_minor_version_upgrade          = true
+  enabled_cloudwatch_logs_exports     = ["postgresql", "upgrade"]
 
   tags = merge(
     {

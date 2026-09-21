@@ -47,5 +47,6 @@ To ensure the integrity of the `main` branch, the following **GitHub UI settings
 
 ## 📜 Compliance Auditing
 - **CloudTrail**: Enabled globally for all infrastructure changes.
-- **Trivy/Checkov**: Continuous scanning for known vulnerabilities and misconfigurations. Both tools are configured as **Strict Blocking Gates** (exit code 1) for any High or Critical findings.
+- **Checkov** (is the infrastructure secure?): scans the HCL and workflows in CI and **every** `tfplan.json` at plan time. It blocks: no soft-fail anywhere. The settings live only in `.checkov.yaml`, and `make checkov` / the `checkov` pre-commit hook run the same command as CI, so a local pass is a CI pass. Accepted findings are inline `#checkov:skip=<ID>: <reason>` on the resource; the repo-wide `skip-check` list is only for checks that do not apply to this platform at all.
+- **Trivy** (is the toolbox image free of known CVEs?): `publish-toolchain.yml` builds the image, scans it (`HIGH,CRITICAL`, fixable only, exit code 1) and pushes only if the scan passes. `make image-scan` does the same locally. `trivy config` (Terraform) still runs until PLAN 8.9 step 5 removes it, because Checkov now covers that job.
 - **License Compliance**: Automated verification that all local modules include a standard open-source LICENSE, preventing legal risk and vendor lock-in.

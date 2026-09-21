@@ -4,9 +4,16 @@ on:
     workflows: ["Terragrunt CI/CD"] # Triggers when your main validation pipeline runs
     types: [completed]
 
+# Least privilege: read-only by default, and the one job below gets exactly what the healer needs.
+permissions:
+  contents: read
+
 jobs:
   heal:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read     # download the logs of the failed run
+      contents: write   # push the remediation commit to the PR branch
     # Run inside the platform toolchain container to access terragrunt/terraform
     container:
       image: ghcr.io/ok-karthik/infrastructure-toolchain:latest

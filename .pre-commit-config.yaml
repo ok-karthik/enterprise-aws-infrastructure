@@ -45,3 +45,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+
+      - id: checkov
+        name: 🔒 Checkov (same settings as CI)
+        # ./workloads-live-repo/scripts/run-checkov.sh runs `checkov --config-file .checkov.yaml`, the
+        # same command the CI static-analysis action runs, so a local pass means a CI pass.
+        entry: ./workloads-live-repo/scripts/run-checkov.sh --compact --quiet
+        language: system
+        pass_filenames: false
+        files: \.(tf|hcl|ya?ml|json)$|Dockerfile$

@@ -970,7 +970,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   `python3 .agents/scripts/iac_agent_eval.py` and `python3 -m unittest discover -s .agents/tests`
   must pass.
 
-- [ ] **8.9 One scanner per job, and every gate blocks (do before 8.10).**
+- [~] **8.9 One scanner per job, and every gate blocks (do before 8.10).** *Steps 1–4, 6, 7 done (PR `feat/p8-scanner-gates`); step 5 (remove `trivy config`) is still open.*
   **Why:** today two tools do the same job, and the strict one is the wrong one. Checkov and
   Trivy both check Terraform for security problems. The static Checkov step is
   `soft_fail: true`, so its job goes green even with findings. The PR is still red because
@@ -1416,3 +1416,24 @@ Everything goes under `docs/`.
     not exist on `main` until this commit.
   - **Checked (offline):** `terraform fmt` / `validate` / `test` for `account-baseline` (15) and `bootstrap-stacksets` (9); template tests (13); `conftest verify` (66); `cfn-lint`; `checkov -f` and `checkov -d`; `shellcheck`
     and a stub-`aws` run of `bootstrap.sh`. **Not checked:** the change set against AWS (`validate-template`, a real change set), the policy in the IAM simulator, or any apply.
+
+- **2026-09-21 (cont.)** — **8.9 steps 1–4, 6, 7** (branch `feat/p8-scanner-gates`; step 5, removing `trivy config`, deliberately not done).
+  - **Why local and CI differed (step 1):** the CI action scanned `.github` too and downloaded external modules, while `.checkov.yaml` listed three directories and a nested `_bootstrap` path. Now one settings file:
+    `.checkov.yaml` scans `iac-modules-repo`, `foundation-live-repo`, `workloads-live-repo` and `.github`, with `download-external-modules: false` (the plan-stage scan sees the resolved values, and the static
+    external-module scan gave a false positive on `CKV_AWS_37`). `workloads-live-repo/scripts/run-checkov.sh` runs it (used by CI, `make checkov` and the `checkov` pre-commit hook) and warns if the local Checkov
+    differs from `CHECKOV_VERSION` in the toolbox Dockerfile (pinned to 3.3.19, Renovate-managed).
+  - **Backlog (step 2):** now 0 findings locally (`run-checkov.sh`). Fixed instead of skipped: postgres `iam_database_authentication_enabled`, `copy_tags_to_snapshot`, `auto_minor_version_upgrade`,
+    `enabled_cloudwatch_logs_exports`; s3 lifecycle rule aborting incomplete multipart uploads; `pipeline_healer.yml` explicit `permissions`; Dockerfile Checkov pin. Skipped inline with a reason: postgres
+    CKV_AWS_157 (multi-AZ costs money, PLAN 7.3), 293 (deletion protection while `skip_final_snapshot`), 118, 353, 382, CKV2_AWS_30; s3 CKV_AWS_145, 18, 144, CKV2_AWS_62; Dockerfile CKV_DOCKER_2, 8.
+    `soft-fail-on: LOW` and `soft_fail` are gone. Tests: `terraform test` for postgres (1 run) and s3 (2 runs).
+  - **Step 3:** `CKV_AWS_111` and `CKV_AWS_356` are out of the repo-wide skip list. **Nothing fires offline** without them (no inline skips were needed), so this is proven for the static scan only. Whether the plan-stage
+    scan flags IAM policies inside upstream modules cannot be known without a real plan: if it does, add the exception with a reason.
+  - **Step 4:** the plan-stage step now loops over **every** `tfplan.json` (one Checkov run each, fails if any fails, fails if there are none) and `merge_sarif.py` merges the results into one SARIF per account
+    (deduplicated). Simulated the exact workflow step with two fixture plans (one clean, one with an open SSH group): scanned 2, exit 1, one merged SARIF with the finding once. The old `head -n 1` step
+    would have missed the second plan.
+  - **Step 6:** `publish-toolchain.yml` now builds (`load: true`), scans with `trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` (Trivy version read from the Dockerfile), and only then pushes.
+    `make image-scan` does the same locally. **`--ignore-unfixed` is a decision for the owner:** without it a CVE with no available fix would block every rebuild.
+  - **Step 7:** `GOVERNANCE.md`, `docs/CICD.md`, `.agents/AGENTS.md` updated (gate table, commands).
+  - **Checked (offline):** Checkov 0 findings; `actionlint`; 7 unit tests for `merge_sarif.py`; `terraform fmt` / `validate` / `test` for postgres and s3. **Not checked:** a real CI run (the action and workflow changes),
+    a real plan, the image build and scan (Docker is not running here), the pre-commit hook on a full commit. **Owner steps:** merge, then the toolbox image is rebuilt by `publish-toolchain.yml` on `main`; until then CI
+    uses the old image without the pinned Checkov.

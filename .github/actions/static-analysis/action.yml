@@ -63,15 +63,14 @@ runs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
 
+    # Checkov runs through the same script as the pre-commit hook and `make checkov`, so a finding that fails here
+    # fails locally too. Settings live only in .checkov.yaml; this step adds only the output format. Any finding
+    # fails the job (no soft-fail), and it is the same result the "Checkov" code-scanning check reports.
     - name: Run Checkov (Static HCL)
-      uses: bridgecrewio/checkov-action@v12
-      with:
-        config_file: .checkov.yaml
-        soft_fail: true
-        output_format: sarif
-        output_file_path: checkov-results.sarif
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
+      shell: bash
+      run: |
+        ./workloads-live-repo/scripts/run-checkov.sh \
+          --output cli --output sarif --output-file-path console,checkov-results.sarif
 
     - name: Upload Checkov SARIF results
       uses: github/codeql-action/upload-sarif@v4
@@ -81,6 +80,7 @@ runs:
         category: static-analysis-checkov
 
     - name: Run Trivy Scan (Security)
+      if: ${{ !cancelled() }}
       shell: bash
       run: |
         echo "🛡️ Running Trivy scan (SARIF)..."
@@ -102,6 +102,7 @@ runs:
         category: static-analysis-trivy
 
     - name: License Compliance Check
+      if: ${{ !cancelled() }}
       shell: bash
       run: |
         echo "📜 Checking license compliance..."
