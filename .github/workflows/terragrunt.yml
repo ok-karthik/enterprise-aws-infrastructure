@@ -22,6 +22,10 @@ permissions:
 
 env:
   AWS_REGION: ${{ github.event.inputs.target_region || vars.AWS_REGION }}
+  # Use modules from this checkout instead of the pinned release tags (module_versions in env.hcl).
+  # Needed until every module has a release tag at the iac-modules-repo path (PLAN 1.4), and later for
+  # PRs that change iac-modules-repo/** so module changes are tested before release.
+  IAC_MODULES_LOCAL: '1'
 
 jobs:
   # ─────────────────────────────────────────────────────────────
@@ -69,7 +73,7 @@ jobs:
     uses: ./.github/workflows/reusable-terragrunt.yml
     with:
       environment: 'dev'
-      working_directory: 'infrastructure-live/dev'
+      working_directory: 'workloads-live-repo/dev'
       aws_plan_role_arn: ${{ vars.AWS_DEV_PLAN_ROLE_ARN }}
     secrets:
       INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
@@ -79,7 +83,7 @@ jobs:
     uses: ./.github/workflows/reusable-terragrunt.yml
     with:
       environment: 'prod'
-      working_directory: 'infrastructure-live/prod'
+      working_directory: 'workloads-live-repo/prod'
       aws_plan_role_arn: ${{ vars.AWS_PROD_PLAN_ROLE_ARN }}
     secrets:
       INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
@@ -112,7 +116,7 @@ jobs:
 
       - name: "Terragrunt Apply"
         run: terragrunt run --all apply --non-interactive -auto-approve
-        working-directory: infrastructure-live/dev
+        working-directory: workloads-live-repo/dev
 
   apply-prod:
     name: '🚀 Apply: Prod'
@@ -139,4 +143,4 @@ jobs:
 
       - name: "Terragrunt Apply"
         run: terragrunt run --all apply --non-interactive -auto-approve
-        working-directory: infrastructure-live/prod
+        working-directory: workloads-live-repo/prod

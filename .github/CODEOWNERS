@@ -5,11 +5,12 @@
 *       @ok-karthik
 
 # Module-specific owners
-/infrastructure-modules/   @ok-karthik
-/infrastructure-live/      @ok-karthik
+/iac-modules-repo/   @ok-karthik
+/foundation-live-repo/     @ok-karthik
+/workloads-live-repo/      @ok-karthik
 
 # Security & Compliance policies
-/policies/                 @ok-karthik
+/policy-library-repo/      @ok-karthik
 
 # CI/CD Workflows & Actions
 /.github/                  @ok-karthik

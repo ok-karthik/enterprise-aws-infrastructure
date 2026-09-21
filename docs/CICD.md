@@ -7,12 +7,24 @@ All jobs run inside a purpose-built toolchain container (`ghcr.io/ok-karthik/inf
 1. **Static analysis** (parallel with planning): `terraform fmt -check`, `terraform validate`, TFLint, Checkov (HCL), Trivy. Results upload as SARIF to the GitHub Security tab.
 2. **Plan** per environment: `terragrunt run --all plan` produces `tfplan.bin`, converted to `tfplan.json` and uploaded as an artifact.
 3. **Governance gates** consume the plan JSON:
-   - **OPA/Conftest** against `policies/terraform/` — mandatory tagging, no legacy instance families.
+   - **OPA/Conftest** against `policy-library-repo/terraform/` — mandatory tagging, no legacy instance families.
    - **Checkov** (plan-level, CIS benchmark) and **Trivy** (CRITICAL/HIGH) as blocking gates.
 4. **Cost** — Infracost posts a per-module breakdown as a PR comment (`tf-summarize` adds a change summary).
 5. **Apply** — on push to `main`, `apply-dev` runs, then `apply-prod`, which is gated by a protected GitHub **Environment** requiring manual approval.
 
 A change can pass `terraform validate` and still fail the governance gates — the gates run against the *planned* resources, not just the HCL.
+
+## Module versions and promotion (dev → prod)
+
+Live stacks do not read modules from the working tree. Each account's `env.hcl` has a `module_versions` map (for example `vpc = "vpc-v1.0.0"`), and each `_envcommon/<category>/<module>.hcl` builds its `terraform.source` from it:
+
+```
+git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//iac-modules-repo/<category>/<module>?ref=<module>-vX.Y.Z
+```
+
+- **Release:** merging a `feat(<module>): ...` / `fix(<module>): ...` commit makes release-please open a release PR that tags `<module>-vX.Y.Z`.
+- **Promote:** Renovate opens one PR per module and environment (`iac-modules: vpc pin (dev)`, then `... (prod)`), never automerged. Bump the pin in `workloads-live-repo/dev/env.hcl`, merge, check it; only then merge the prod PR. Dev and prod are separate PRs so the order is kept.
+- **Test a module change before releasing it:** set `IAC_MODULES_LOCAL=1` to use the module from your checkout instead of the pinned tag. The workflows set it (and `workloads-live-repo/scripts/smoke-test.sh` defaults to it) **until every module has a release tag at the new `iac-modules-repo` path**: tags created before the rename (`vpc-v1.0.0`, ...) point at the old `infrastructure-modules` path. Release each module again (for example a `feat(<module>): relocate to iac-modules-repo` commit per module), then remove the variable from the workflows so the pins are used.
 
 ## Authentication — zero-key OIDC
 
@@ -23,11 +35,11 @@ Jobs assume short-lived IAM roles via GitHub Actions OIDC through the `setup-pla
 | `github-actions-plan` | plan, governance and drift-detection jobs | `repo:<repo>:*` (any job of this repository, whatever the trigger; read-only, so this was widened from `pull_request` + `refs/heads/main` on purpose. Narrow it again if collaborators are added) | `ReadOnlyAccess`; on the state bucket: read state, write/delete `*.tflock` lock files only |
 | `github-actions-apply` | `apply-dev`, `apply-prod`, `destroy` | `repo:<repo>:environment:<GitHubEnvironment>`, exactly one per account (`management` in the management account) | `AdministratorAccess` capped by the `github-actions-apply-boundary` permissions boundary (denies Identity Center, CloudTrail changes, organization destruction, edits to the boundary, the `github-actions-*` roles, the OIDC provider, the state bucket's settings and the bootstrap stack; also `organizations:*` / `account:*` everywhere except management). Narrowed further in PLAN 3.4 |
 
-Both roles, the OIDC provider and the state bucket come from the Day-0 CloudFormation stack `platform-bootstrap` (`infrastructure-bootstrap/`, see its README).
+Both roles, the OIDC provider and the state bucket come from the Day-0 CloudFormation stack `platform-bootstrap` (`foundation-live-repo/_bootstrap/`, see its README).
 
 Because the apply role trusts only one GitHub Environment, the manual-approval gate on that Environment cannot be bypassed from a branch or PR. **Today only the `management` account exists**, so create the `management` Environment (owner as required reviewer); its apply role trusts `environment:management` and nothing else.
 
-**Repository variables** (Settings → Secrets and variables → Actions → Variables). `infrastructure-bootstrap/bootstrap.sh` prints the exact `gh` commands (it does not run them):
+**Repository variables** (Settings → Secrets and variables → Actions → Variables). `foundation-live-repo/_bootstrap/bootstrap.sh` prints the exact `gh` commands (it does not run them):
 
 | Variable | Value |
 |---|---|
@@ -39,7 +51,7 @@ The old `AWS_DEV_ROLE_ARN` / `AWS_PROD_ROLE_ARN` variables are no longer read an
 
 **Account guard:** `root.hcl` takes the account ID from `account.hcl` (not from the caller's credentials) and sets it as `allowed_account_ids`, so running a stack with credentials for the wrong account fails at provider init.
 
-## Governance rules (`policies/terraform/`)
+## Governance rules (`policy-library-repo/terraform/`)
 
 - `require_tags.rego` — every created/updated resource must carry `Service`, `Environment`, `Project`, `Owner` and `DataClassification` (checked in `tags_all`; satisfied by `root.hcl` default tags, which read `owner` / `data_classification` from `account.hcl`).
 - `no_legacy_instances.rego` — blocks `t2.`, `m3.`, `m4.`, `c3.`, `c4.` families.

@@ -33,6 +33,20 @@
     },
     {
       "customType": "regex",
+      "description": "Track iac-modules-repo release pins (module_versions maps in env.hcl). Tags look like <module>-vX.Y.Z",
+      "managerFilePatterns": [
+        "/(^|/)env\\.hcl$/"
+      ],
+      "matchStrings": [
+        "(?<module>[a-z0-9_]+)\\s*=\\s*\"(?<prefix>[a-z0-9-]+)-v(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
+      ],
+      "datasourceTemplate": "github-tags",
+      "depNameTemplate": "ok-karthik/enterprise-aws-infrastructure",
+      "depTypeTemplate": "{{{module}}}",
+      "extractVersionTemplate": "^{{{prefix}}}-v(?<version>\\d+\\.\\d+\\.\\d+)$"
+    },
+    {
+      "customType": "regex",
       "description": "Track Terragrunt registry modules (tfr:// protocol)",
       "managerFilePatterns": [
         "/\\.hcl$/"
@@ -44,6 +58,60 @@
     }
   ],
   "packageRules": [
+    {
+      "description": "vpc pin in dev: own PR, no automerge, so the promotion order dev then prod is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["vpc"],
+      "matchFileNames": ["**/dev/env.hcl"],
+      "groupName": "iac-modules: vpc pin (dev)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "dev"]
+    },
+    {
+      "description": "vpc pin in prod: own PR, no automerge, so the promotion order dev then prod is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["vpc"],
+      "matchFileNames": ["**/prod/env.hcl"],
+      "groupName": "iac-modules: vpc pin (prod)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "prod"]
+    },
+    {
+      "description": "eks pin in dev: own PR, no automerge, so the promotion order dev then prod is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["eks"],
+      "matchFileNames": ["**/dev/env.hcl"],
+      "groupName": "iac-modules: eks pin (dev)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "dev"]
+    },
+    {
+      "description": "eks pin in prod: own PR, no automerge, so the promotion order dev then prod is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["eks"],
+      "matchFileNames": ["**/prod/env.hcl"],
+      "groupName": "iac-modules: eks pin (prod)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "prod"]
+    },
+    {
+      "description": "organization pin in _global: own PR, no automerge, so the promotion order dev then prod is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["organization"],
+      "matchFileNames": ["**/_global/env.hcl"],
+      "groupName": "iac-modules: organization pin (_global)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "global"]
+    },
+    {
+      "description": "bootstrap_stacksets pin in _global: own PR, no automerge, so the promotion order dev then prod is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["bootstrap_stacksets"],
+      "matchFileNames": ["**/_global/env.hcl"],
+      "groupName": "iac-modules: bootstrap_stacksets pin (_global)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "global"]
+    },
     {
       "matchManagers": ["terraform", "terragrunt", "custom.regex"],
       "matchUpdateTypes": ["minor", "patch"],

@@ -324,18 +324,18 @@
                                 </li>
                             </ul>
                         </li>
-                        <li><span class="folder">infrastructure-bootstrap/</span> <span class="comment"># Day-0</span>
+                        <li><span class="folder">foundation-live-repo/_bootstrap/</span> <span class="comment"># Day-0</span>
                             <ul>
                                 <li class="last"><span class="comment">CloudFormation: S3 state, OIDC role</span></li>
                             </ul>
                         </li>
-                        <li><span class="folder">infrastructure-modules/</span> <span class="comment"># Blueprints</span>
+                        <li><span class="folder">iac-modules-repo/</span> <span class="comment"># Blueprints</span>
                             <ul>
                                 <li><span class="folder">network/vpc/</span></li>
                                 <li class="last"><span class="folder">compute/eks/</span></li>
                             </ul>
                         </li>
-                        <li><span class="folder">infrastructure-live/</span> <span class="comment"># Deliverables</span>
+                        <li><span class="folder">workloads-live-repo/</span> <span class="comment"># Deliverables (foundation-live-repo/ holds the landing zone)</span>
                             <ul>
                                 <li><span class="hcl">root.hcl</span> <span class="comment"># Global config</span></li>
                                 <li><span class="folder">_envcommon/</span> <span class="hcl"># DRY Hub</span></li>
@@ -354,7 +354,7 @@
                                 <li class="last"><span class="folder">scripts/</span> <span class="comment"># smoke-test, generate-module</span></li>
                             </ul>
                         </li>
-                        <li><span class="folder">policies/terraform/</span> <span class="comment"># OPA Rego</span></li>
+                        <li><span class="folder">policy-library-repo/terraform/</span> <span class="comment"># OPA Rego</span></li>
                         <li class="last"><span class="file">renovate.json</span> <span class="comment"># Zero-touch deps</span></li>
                     </ul>
                 </div>

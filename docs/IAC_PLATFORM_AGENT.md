@@ -101,7 +101,7 @@ The validation ladder reuses standard repository tooling:
 - `terraform` (`>=1.15`)
 - `terragrunt` (`>=1.0.3`)
 - `tflint`
-- `conftest` (OPA policies in `policies/terraform/`)
+- `conftest` (OPA policies in `policy-library-repo/terraform/`)
 - `checkov` & `trivy` (optional for local offline runs; runs automatically in CI)
 - `infracost` (optional; used when `--cost-threshold` is set)
 

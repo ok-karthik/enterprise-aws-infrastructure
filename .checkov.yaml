@@ -2,9 +2,10 @@
 # See: https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
 
 directory:
-  - infrastructure-modules
-  - infrastructure-live
-  - infrastructure-bootstrap
+  - iac-modules-repo
+  - foundation-live-repo
+  - workloads-live-repo
+  - foundation-live-repo/_bootstrap
 
 # Output formats
 output:
