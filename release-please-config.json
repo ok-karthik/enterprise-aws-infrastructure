@@ -96,6 +96,12 @@
       "package-name": "break-glass-alerts",
       "component": "break-glass-alerts",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/security/access-analyzer": {
+      "release-type": "terraform-module",
+      "package-name": "access-analyzer",
+      "component": "access-analyzer",
+      "tag-separator": "-"
     }
   }
 }

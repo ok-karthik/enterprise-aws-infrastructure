@@ -59,6 +59,15 @@
   ],
   "packageRules": [
     {
+      "description": "access_analyzer pin in security-tooling: own PR, no automerge",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["access_analyzer"],
+      "matchFileNames": ["**/security-tooling/env.hcl"],
+      "groupName": "iac-modules: access_analyzer pin (security-tooling)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "security-tooling"]
+    },
+    {
       "description": "break_glass_alerts pin in management: own PR, no automerge, so the promotion order is kept",
       "matchManagers": ["custom.regex"],
       "matchDepTypes": ["break_glass_alerts"],
