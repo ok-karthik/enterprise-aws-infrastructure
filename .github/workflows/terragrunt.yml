@@ -66,35 +66,62 @@ jobs:
 
 
   # ─────────────────────────────────────────────────────────────
-  # Gate 2-4: Multi-Environment Orchestration (Reusable)
+  # Account matrix: which accounts does the pipeline run for?
+  # Generated from foundation-live-repo/_config/accounts.hcl (ci = true, a live folder and a real
+  # account id). Placeholders are skipped with a notice, never a red build.
   # ─────────────────────────────────────────────────────────────
-  dev-stack:
-    name: 'Dev'
+  matrix:
+    name: '🧭 Account matrix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      count: ${{ steps.matrix.outputs.count }}
+    steps:
+      - name: "Git Checkout"
+        uses: actions/checkout@v6
+
+      - name: "Generate account matrix"
+        id: matrix
+        run: python3 workloads-live-repo/scripts/generate_account_matrix.py --github-output
+
+  # ─────────────────────────────────────────────────────────────
+  # Gate 2-4: plan, governance and cost per account (Reusable)
+  # Each job assumes github-actions-plan in its own account directly over OIDC (no role chaining, no
+  # per-environment role variables): arn:aws:iam::<account-id>:role/github-actions-plan.
+  # ─────────────────────────────────────────────────────────────
+  stack:
+    name: '${{ matrix.account }}'
+    needs: [matrix]
+    if: needs.matrix.outputs.count != '0'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
     uses: ./.github/workflows/reusable-terragrunt.yml
     with:
-      environment: 'dev'
-      working_directory: 'workloads-live-repo/dev'
-      aws_plan_role_arn: ${{ vars.AWS_DEV_PLAN_ROLE_ARN }}
+      account: ${{ matrix.account }}
+      working_directory: ${{ matrix.working_directory }}
+      aws_plan_role_arn: ${{ matrix.plan_role_arn }}
     secrets:
       INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
 
-  prod-stack:
-    name: 'Prod'
-    uses: ./.github/workflows/reusable-terragrunt.yml
-    with:
-      environment: 'prod'
-      working_directory: 'workloads-live-repo/prod'
-      aws_plan_role_arn: ${{ vars.AWS_PROD_PLAN_ROLE_ARN }}
-    secrets:
-      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
-
   # ─────────────────────────────────────────────────────────────
-  # Phase 5: Deployment (Compliance-First Promotion)
+  # Deployment (Compliance-First Promotion)
+  # One job per account, one at a time, in this order: management, core, dev, staging, prod. It only
+  # starts after EVERY account's plan and governance checks passed, and it stops at the first failure.
+  # Each job runs in the account's GitHub Environment (manual approval where it is configured, e.g.
+  # prod) and assumes github-actions-apply, which only trusts that one Environment.
   # ─────────────────────────────────────────────────────────────
-  apply-dev:
-    name: '🚀 Apply: Dev'
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [dev-stack]
+  apply:
+    name: '🚀 Apply: ${{ matrix.account }}'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.matrix.outputs.count != '0'
+    needs: [matrix, stack]
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
@@ -103,7 +130,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 30
-    environment: dev
+    environment: ${{ matrix.github_environment }}
     steps:
       - name: "Git Checkout"
         uses: actions/checkout@v6
@@ -112,35 +139,8 @@ jobs:
         uses: ./.github/actions/setup-platform
         with:
           aws_region: ${{ env.AWS_REGION }}
-          aws_role_arn: ${{ vars.AWS_DEV_APPLY_ROLE_ARN }}
+          aws_role_arn: ${{ matrix.apply_role_arn }}
 
       - name: "Terragrunt Apply"
         run: terragrunt run --all apply --non-interactive -auto-approve
-        working-directory: workloads-live-repo/dev
-
-  apply-prod:
-    name: '🚀 Apply: Prod'
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [apply-dev, prod-stack]
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
-      options: --user root
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    timeout-minutes: 30
-    environment: prod
-    steps:
-      - name: "Git Checkout"
-        uses: actions/checkout@v6
-
-      - name: "Setup Platform"
-        uses: ./.github/actions/setup-platform
-        with:
-          aws_region: ${{ env.AWS_REGION }}
-          aws_role_arn: ${{ vars.AWS_PROD_APPLY_ROLE_ARN }}
-
-      - name: "Terragrunt Apply"
-        run: terragrunt run --all apply --non-interactive -auto-approve
-        working-directory: workloads-live-repo/prod
+        working-directory: ${{ matrix.working_directory }}

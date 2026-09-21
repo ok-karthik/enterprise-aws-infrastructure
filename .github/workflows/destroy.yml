@@ -1,19 +1,16 @@
 name: 'Terragrunt Teardown (Manual)'
 
-# This workflow takes manual inputs for environment selection and safety confirmation.
+# This workflow takes manual inputs for account selection and safety confirmation.
 # Slating Checkov CKV_GHA_7 as a skip because inputs are required for surgical teardown.
-# checkov:skip=CKV_GHA_7: Manual inputs are required for environment selection and safety confirmation.
+# checkov:skip=CKV_GHA_7: Manual inputs are required for account selection and safety confirmation.
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Environment to destroy (dev or prod)'
+      account:
+        description: 'Account to destroy, as named in the account registry (e.g. workloads-dev). Not management.'
         required: true
-        default: 'dev'
-        type: choice
-        options:
-          - dev
-          - prod
+        default: 'workloads-dev'
+        type: string
       confirm_destruction:
         description: 'Type "DESTROY" to confirm'
         required: true
@@ -33,25 +30,33 @@ env:
 
 jobs:
   discover:
-    name: '🔍 Discover Modules'
+    name: '🔍 Discover Account'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      modules: ${{ steps.set-modules.outputs.modules }}
+      working_directory: ${{ steps.account.outputs.working_directory }}
+      github_environment: ${{ steps.account.outputs.github_environment }}
+      apply_role_arn: ${{ steps.account.outputs.apply_role_arn }}
     steps:
       - name: Git Checkout
         uses: actions/checkout@v6
 
-      - name: Discover Modules
-        id: set-modules
+      - name: Resolve account from the registry
+        id: account
+        env:
+          ACCOUNT: ${{ github.event.inputs.account }}
         run: |
-          # Find all directories with terragrunt.hcl in the selected environment
-          MODULES=$(find workloads-live-repo/${{ github.event.inputs.environment }} -name "terragrunt.hcl" -not -path "*/.terragrunt-cache/*" | xargs -I {} dirname {} | jq -R . | jq -s -c .)
-          echo "modules=$MODULES" >> $GITHUB_OUTPUT
-          echo "Found modules: $MODULES"
+          # The management account holds the organization and the Day-0 bootstrap: it is never torn
+          # down from CI (the organization has prevent_destroy, and the apply boundary denies it).
+          if [ "$ACCOUNT" = "management" ]; then
+            echo "::error::The management account cannot be destroyed from CI."
+            exit 1
+          fi
+          # Fails unless the account is in the CI matrix (ci = true, a live folder, a real account id).
+          python3 workloads-live-repo/scripts/generate_account_matrix.py --account "$ACCOUNT" --github-output
 
   destroy:
-    name: '🌪️ Destroy: ${{ github.event.inputs.environment }}'
+    name: '🌪️ Destroy: ${{ github.event.inputs.account }}'
     needs: [discover]
     if: github.event.inputs.confirm_destruction == 'DESTROY'
     runs-on: ubuntu-latest
@@ -61,7 +66,8 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 40
-    environment: ${{ github.event.inputs.environment }}
+    # The account's GitHub Environment: it holds the approval, and github-actions-apply only trusts it.
+    environment: ${{ needs.discover.outputs.github_environment }}
     steps:
       - name: Git Checkout
         uses: actions/checkout@v6
@@ -70,10 +76,10 @@ jobs:
         uses: ./.github/actions/setup-platform
         with:
           aws_region: ${{ env.AWS_REGION }}
-          aws_role_arn: ${{ github.event.inputs.environment == 'dev' && vars.AWS_DEV_APPLY_ROLE_ARN || vars.AWS_PROD_APPLY_ROLE_ARN }}
+          aws_role_arn: ${{ needs.discover.outputs.apply_role_arn }}
 
       - name: Terragrunt Destroy (Sequential)
         run: |
           # Terragrunt 1.x uses 'run --all' and '--non-interactive'
           terragrunt run --all destroy --non-interactive -auto-approve
-        working-directory: workloads-live-repo/${{ github.event.inputs.environment }}
+        working-directory: ${{ needs.discover.outputs.working_directory }}

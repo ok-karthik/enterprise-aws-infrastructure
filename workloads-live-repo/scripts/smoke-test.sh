@@ -5,14 +5,16 @@ set -e
 # Validates that the platform code is syntactically correct, follows the account-first layout, and
 # (with AWS access) that the Terragrunt dependency graph of one account initialises and validates.
 #
-# Usage: smoke-test.sh [account-folder]     e.g. workloads-dev (default). The graph step needs AWS
-# credentials for that account; every other step works offline.
+# Usage: smoke-test.sh [account-directory]   e.g. workloads-live-repo/workloads-dev (default) or
+# foundation-live-repo/management. The graph step needs AWS credentials for that account; every other
+# step works offline.
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
-ACCOUNT_DIR_NAME="${1:-workloads-dev}"
+ACCOUNT_DIR="${1:-workloads-live-repo/workloads-dev}"
+ACCOUNT_DIR_NAME=$(basename "$ACCOUNT_DIR")
 
 # Always run from the repository root, whatever directory the script is called from.
 cd "$(git rev-parse --show-toplevel)"
@@ -73,7 +75,6 @@ else
 fi
 
 # 3. Dependency Graph Validation (needs AWS credentials for the account)
-ACCOUNT_DIR="workloads-live-repo/$ACCOUNT_DIR_NAME"
 echo -e "\n3. Validating Terragrunt dependency graph ($ACCOUNT_DIR_NAME)..."
 if [ ! -d "$ACCOUNT_DIR" ]; then
   echo "❌ ERROR: $ACCOUNT_DIR does not exist."
