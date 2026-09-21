@@ -59,7 +59,7 @@ jobs:
           else
             echo "No drift detected. Infrastructure matches code."
           fi
-        working-directory: infrastructure-live/${{ matrix.environment }}
+        working-directory: workloads-live-repo/${{ matrix.environment }}
 
       - name: "Alert or Resolve Drift Issue"
         if: always() && steps.plan.outcome == 'success'

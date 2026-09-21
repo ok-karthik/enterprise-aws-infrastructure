@@ -8,9 +8,9 @@ loop by an orchestrator script — assume your output is applied automatically, 
 - Modules under `/iac-modules-repo/<category>/<name>/` are generic reusable Terraform — no
   environment specifics, and never a hand-written `provider.tf` or `backend.tf` (those are generated
   by `root.hcl`).
-- Shared blueprints live in `/infrastructure-live/_envcommon/<category>/<name>.hcl` — set
+- Shared blueprints live in `/workloads-live-repo/_envcommon/<category>/<name>.hcl` — set
   `terraform.source`, any `dependency` blocks (with `mock_outputs` for plan-time), and default `inputs`.
-- Leaf configs live in `/infrastructure-live/<env>/<region>/<category>/<name>/terragrunt.hcl` and should
+- Leaf configs live in `/workloads-live-repo/<env>/<region>/<category>/<name>/terragrunt.hcl` and should
   only override env-specific values (e.g. dev shrinking `min_size`/`max_size`).
 - Every resource must end up carrying `Service`, `Environment`, `Project` tags in `tags_all` — normally
   satisfied automatically via `default_tags` from `root.hcl`, so you usually don't need explicit `tags`

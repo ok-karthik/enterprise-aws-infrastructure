@@ -30,15 +30,21 @@ A production-grade, multi-environment AWS platform built with **Terragrunt + Ter
 
 ## Architecture at a glance
 
-Strict separation of a generic **blueprint library** (`iac-modules-repo/`) from **live environment config** (`infrastructure-live/`), keeping configuration fully DRY. A single leaf module inherits everything from the layers above it.
+Strict separation of a generic **blueprint library** (`iac-modules-repo/`) from **live config** (`foundation-live-repo/` for the landing zone, `workloads-live-repo/` for platform stacks), keeping configuration fully DRY. A single leaf module inherits everything from the layers above it.
 
 ```text
-iac-modules-repo/     # Reusable Terraform (hardened VPC, EKS)
-infrastructure-live/        # Terragrunt config per env/region
+# A directory ending in -repo is a separate Git repository in a real company (docs/adr/0001).
+iac-modules-repo/           # Reusable, versioned Terraform (hardened VPC, EKS, organization)
+foundation-live-repo/       # Landing zone (management account)
 ├── root.hcl                #   generates provider.tf + backend.tf, injects default_tags
+├── _bootstrap/             #   Day-0 CloudFormation: S3 state bucket, OIDC provider, CI plan/apply roles
+├── _envcommon/governance/  #   blueprints for organization + bootstrap StackSets
+└── _global/                #   organization, bootstrap StackSets
+workloads-live-repo/        # Platform stacks in workload accounts
+├── root.hcl                #   same root, own copy
 ├── _envcommon/             #   shared module inputs + cross-module wiring
+├── scripts/                #   smoke test, module generator
 └── <env>/<region>/<cat>/<module>/terragrunt.hcl   # ~10-line leaf: includes + overrides
-infrastructure-bootstrap/   # Day-0 CloudFormation: S3 state bucket, OIDC provider, CI plan/apply roles
 policies/terraform/         # OPA/Rego governance rules (+ unit tests)
 .agents/                    # Self-healing CI agent
 .github/                    # Workflows, composite actions, toolchain image
@@ -110,7 +116,7 @@ make test           # run the OPA policy unit tests
 
 Run `make help` for the full command surface. Plan a single environment with `make plan ENV=dev`.
 
-**Day-0 bootstrap** (first-time only, CloudFormation stack `platform-bootstrap`) provisions the S3 state bucket, the OIDC provider and the two CI roles (plan / apply) — see [infrastructure-bootstrap/README.md](infrastructure-bootstrap/README.md).
+**Day-0 bootstrap** (first-time only, CloudFormation stack `platform-bootstrap`) provisions the S3 state bucket, the OIDC provider and the two CI roles (plan / apply) — see [foundation-live-repo/_bootstrap/README.md](foundation-live-repo/_bootstrap/README.md).
 
 ---
 

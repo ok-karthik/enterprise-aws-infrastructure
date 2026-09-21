@@ -4,14 +4,14 @@ version: 0.1
 # This eliminates the need for complex Bash loops in GitHub Actions.
 
 projects:
-  - path: infrastructure-live/dev
+  - path: workloads-live-repo/dev
     name: dev
     include_all_paths: true
     exclude_paths:
       - "**/_envcommon/**"
       - "**/.terragrunt-cache/**"
 
-  - path: infrastructure-live/prod
+  - path: workloads-live-repo/prod
     name: prod
     include_all_paths: true
     exclude_paths:

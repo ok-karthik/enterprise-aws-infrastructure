@@ -3,7 +3,7 @@ package main
 import rego.v1
 
 # Member-account bootstrap StackSets (identified by the GitHubEnvironment parameter of
-# infrastructure-bootstrap/cloudformation/account-bootstrap.yaml):
+# foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml):
 #   1. must never pass AllowOrganizationsAdmin other than "false", or the apply role in every
 #      member account could manage AWS Organizations;
 #   2. must be named bootstrap-*, because the apply role's permissions boundary only protects

@@ -1,0 +1,4 @@
+# Becomes <org>/aws-workloads-live — extract with: git subtree split -P workloads-live-repo -b aws-workloads-live
+# Platform stacks in workload accounts (VPC, EKS, data). The platform team approves changes.
+
+*   @ok-karthik

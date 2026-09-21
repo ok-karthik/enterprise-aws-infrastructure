@@ -6,7 +6,8 @@
 
 # Module-specific owners
 /iac-modules-repo/   @ok-karthik
-/infrastructure-live/      @ok-karthik
+/foundation-live-repo/     @ok-karthik
+/workloads-live-repo/      @ok-karthik
 
 # Security & Compliance policies
 /policies/                 @ok-karthik

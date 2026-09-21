@@ -3,8 +3,9 @@
 
 directory:
   - iac-modules-repo
-  - infrastructure-live
-  - infrastructure-bootstrap
+  - foundation-live-repo
+  - workloads-live-repo
+  - foundation-live-repo/_bootstrap
 
 # Output formats
 output:

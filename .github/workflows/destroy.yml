@@ -42,7 +42,7 @@ jobs:
         id: set-modules
         run: |
           # Find all directories with terragrunt.hcl in the selected environment
-          MODULES=$(find infrastructure-live/${{ github.event.inputs.environment }} -name "terragrunt.hcl" -not -path "*/.terragrunt-cache/*" | xargs -I {} dirname {} | jq -R . | jq -s -c .)
+          MODULES=$(find workloads-live-repo/${{ github.event.inputs.environment }} -name "terragrunt.hcl" -not -path "*/.terragrunt-cache/*" | xargs -I {} dirname {} | jq -R . | jq -s -c .)
           echo "modules=$MODULES" >> $GITHUB_OUTPUT
           echo "Found modules: $MODULES"
 
@@ -72,4 +72,4 @@ jobs:
         run: |
           # Terragrunt 1.x uses 'run --all' and '--non-interactive'
           terragrunt run --all destroy --non-interactive -auto-approve
-        working-directory: infrastructure-live/${{ github.event.inputs.environment }}
+        working-directory: workloads-live-repo/${{ github.event.inputs.environment }}

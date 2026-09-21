@@ -1,0 +1,5 @@
+# Becomes <org>/aws-foundation-live — extract with: git subtree split -P foundation-live-repo -b aws-foundation-live
+# Landing zone: organization, SCPs, bootstrap, (later) identity, logging, security tooling, network hub.
+# A bad change here can affect every account, so security and cloud-infra both approve.
+
+*   @ok-karthik

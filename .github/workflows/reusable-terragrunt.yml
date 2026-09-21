@@ -46,7 +46,7 @@ jobs:
           aws_role_arn: ${{ inputs.aws_plan_role_arn }}
 
       - name: "Disaster Recovery (Smoke Test)"
-        run: ./infrastructure-live/scripts/smoke-test.sh
+        run: ./workloads-live-repo/scripts/smoke-test.sh
 
       - name: "Terragrunt Plan"
         run: |

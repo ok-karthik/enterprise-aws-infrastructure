@@ -5,22 +5,22 @@ set -euo pipefail
 #
 # Deploys the CloudFormation stack `platform-bootstrap`: the Terraform state bucket, the GitHub
 # OIDC provider and the two CI roles. Steps (PLAN 2.0a-2):
-#   1. Preflight: are these credentials for the account in infrastructure-live/_global/account.hcl?
+#   1. Preflight: are these credentials for the account in foundation-live-repo/_global/account.hcl?
 #   2. Make sure the AWS Organization exists (all features) and StackSets trusted access is on.
 #   3. Deploy through a reviewed change set (you are shown it and asked before it runs).
 #   4. Turn on termination protection, set the stack policy, print the outputs.
 # Then it prints the GitHub wiring. It does not touch GitHub.
 #
 # Use an SSO profile for the management account. The default profile is never used:
-#   AWS_PROFILE=<management-admin-profile> ./infrastructure-bootstrap/bootstrap.sh
+#   AWS_PROFILE=<management-admin-profile> ./foundation-live-repo/_bootstrap/bootstrap.sh
 #
 # Usage: bootstrap.sh [--yes]     (--yes skips the confirmation prompts)
 
 STACK_NAME="platform-bootstrap"
-TEMPLATE="infrastructure-bootstrap/cloudformation/account-bootstrap.yaml"
-STACK_POLICY="infrastructure-bootstrap/cloudformation/stack-policy.json"
-ACCOUNT_HCL="infrastructure-live/_global/account.hcl"
-REGION_HCL="infrastructure-live/_global/region.hcl"
+TEMPLATE="foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml"
+STACK_POLICY="foundation-live-repo/_bootstrap/cloudformation/stack-policy.json"
+ACCOUNT_HCL="foundation-live-repo/_global/account.hcl"
+REGION_HCL="foundation-live-repo/_global/region.hcl"
 GITHUB_ENVIRONMENT="management"
 GITHUB_REPO="${GITHUB_REPOSITORY:-ok-karthik/enterprise-aws-infrastructure}"
 
@@ -56,7 +56,7 @@ hcl_value() {
   sed -n "s/^[[:space:]]*$2[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p" "$1" | head -n 1
 }
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 export AWS_PAGER=""
 
 EXPECTED_ACCOUNT=$(hcl_value "$ACCOUNT_HCL" aws_account_id)

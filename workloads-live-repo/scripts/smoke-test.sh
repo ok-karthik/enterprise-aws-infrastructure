@@ -9,12 +9,20 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
+# Always run from the repository root, whatever directory the script is called from.
+cd "$(git rev-parse --show-toplevel)"
+
+# Module versions are pinned per environment (module_versions in env.hcl), but the pinned tags do
+# not exist at the new iac-modules-repo path until every module is released again (PLAN 1.4).
+# Until then use the modules from this checkout. Set IAC_MODULES_LOCAL= (empty) to use the pins.
+export IAC_MODULES_LOCAL="${IAC_MODULES_LOCAL-1}"
+
 echo "🧪 Starting Platform Smoke Test..."
 
 # 1. HCL Syntax Check
 echo "1. Checking Platform Compliance & Standards..."
 # Verify environment names
-for env_dir in infrastructure-live/dev infrastructure-live/prod infrastructure-live/staging; do
+for env_dir in workloads-live-repo/dev workloads-live-repo/prod workloads-live-repo/staging; do
   if [ -d "$env_dir" ]; then
     env_name=$(basename "$env_dir")
     if [[ ! "$env_name" =~ ^(dev|prod|staging)$ ]]; then
@@ -24,19 +32,20 @@ for env_dir in infrastructure-live/dev infrastructure-live/prod infrastructure-l
   fi
 done
 
-# Verify regional compliance in region.hcl files
-for region_file in $(find infrastructure-live -name "region.hcl"); do
+# Verify regional compliance in region.hcl files (both live repos)
+while IFS= read -r region_file; do
   region=$(grep "aws_region" "$region_file" | cut -d'"' -f2)
   if [[ ! "$region" =~ ^(eu-|us-) ]]; then
     echo "❌ ERROR: Region '$region' in $region_file is not supported (EU/US only)."
     exit 1
   fi
-done
+done < <(find foundation-live-repo workloads-live-repo -name "region.hcl" -not -path "*/.terragrunt-cache/*")
 echo "✅ Compliance checks passed."
 
 echo -e "\n2. Checking HCL formatting..."
 if terraform fmt -check -recursive iac-modules-repo && \
-   terraform fmt -check -recursive infrastructure-live && \
+   terraform fmt -check -recursive foundation-live-repo && \
+   terraform fmt -check -recursive workloads-live-repo && \
    terraform fmt -check -recursive policies; then
     echo -e "${GREEN}✅ HCL Formatting is correct.${NC}"
 else
@@ -46,7 +55,7 @@ fi
 
 # 2. Dependency Graph Validation
 echo -e "\n2. Validating Terragrunt dependency graph (Dev)..."
-cd infrastructure-live/dev
+cd workloads-live-repo/dev
 # We run init first to ensure local caches are updated with any new module versions from Renovate
 terragrunt run --all init --non-interactive
 if terragrunt run --all validate --non-interactive; then

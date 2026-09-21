@@ -1,5 +1,5 @@
 # Common configuration for the member-account bootstrap StackSets (PLAN 2.0b).
-# Applied from the management account only (infrastructure-live/_global/...), by the owner.
+# Applied from the management account only (foundation-live-repo/_global/...), by the owner.
 
 terraform {
   source = "${get_repo_root()}/iac-modules-repo/governance/bootstrap-stacksets"
@@ -12,7 +12,7 @@ locals {
 
 inputs = {
   # The module stays pure: the template is read here, not inside the module.
-  template_body = file("${get_repo_root()}/infrastructure-bootstrap/cloudformation/account-bootstrap.yaml")
+  template_body = file("${get_repo_root()}/foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml")
   region        = local.aws_region
 
   # CloudFormation copies these onto every resource the stacks create in member accounts.

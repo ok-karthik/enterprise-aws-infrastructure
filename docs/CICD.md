@@ -23,11 +23,11 @@ Jobs assume short-lived IAM roles via GitHub Actions OIDC through the `setup-pla
 | `github-actions-plan` | plan, governance and drift-detection jobs | `repo:<repo>:*` (any job of this repository, whatever the trigger; read-only, so this was widened from `pull_request` + `refs/heads/main` on purpose. Narrow it again if collaborators are added) | `ReadOnlyAccess`; on the state bucket: read state, write/delete `*.tflock` lock files only |
 | `github-actions-apply` | `apply-dev`, `apply-prod`, `destroy` | `repo:<repo>:environment:<GitHubEnvironment>`, exactly one per account (`management` in the management account) | `AdministratorAccess` capped by the `github-actions-apply-boundary` permissions boundary (denies Identity Center, CloudTrail changes, organization destruction, edits to the boundary, the `github-actions-*` roles, the OIDC provider, the state bucket's settings and the bootstrap stack; also `organizations:*` / `account:*` everywhere except management). Narrowed further in PLAN 3.4 |
 
-Both roles, the OIDC provider and the state bucket come from the Day-0 CloudFormation stack `platform-bootstrap` (`infrastructure-bootstrap/`, see its README).
+Both roles, the OIDC provider and the state bucket come from the Day-0 CloudFormation stack `platform-bootstrap` (`foundation-live-repo/_bootstrap/`, see its README).
 
 Because the apply role trusts only one GitHub Environment, the manual-approval gate on that Environment cannot be bypassed from a branch or PR. **Today only the `management` account exists**, so create the `management` Environment (owner as required reviewer); its apply role trusts `environment:management` and nothing else.
 
-**Repository variables** (Settings → Secrets and variables → Actions → Variables). `infrastructure-bootstrap/bootstrap.sh` prints the exact `gh` commands (it does not run them):
+**Repository variables** (Settings → Secrets and variables → Actions → Variables). `foundation-live-repo/_bootstrap/bootstrap.sh` prints the exact `gh` commands (it does not run them):
 
 | Variable | Value |
 |---|---|

@@ -12,7 +12,7 @@
   description: >-
     Encrypted, versioned, private S3 bucket. Reuses the vetted
     terraform-aws-modules/s3-bucket/aws registry module — same pattern as the existing
-    infrastructure-live/_envcommon/data/s3.hcl — rather than a hand-rolled resource block.
+    workloads-live-repo/_envcommon/data/s3.hcl — rather than a hand-rolled resource block.
   module_path: data/s3-encrypted
   resource_hint: aws_s3_bucket
   keywords:

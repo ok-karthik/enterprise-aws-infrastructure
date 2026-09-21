@@ -57,7 +57,7 @@ remote_state {
     if_exists = "overwrite_terragrunt"
   }
   config = {
-    # The state bucket is created by the Day-0 CloudFormation stack (infrastructure-bootstrap/),
+    # The state bucket is created by the Day-0 CloudFormation stack (foundation-live-repo/_bootstrap/),
     # never by Terragrunt: no command in this repo may pass --backend-bootstrap. The name must
     # match the template: tg-state-<account-id>-<region>.
     bucket       = "tg-state-${local.account_id}-${local.aws_region}"

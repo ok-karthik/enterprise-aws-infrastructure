@@ -9,7 +9,8 @@ runs:
       run: |
         echo "🎨 Checking HCL formatting..."
         terraform fmt -check -recursive iac-modules-repo
-        terraform fmt -check -recursive infrastructure-live
+        terraform fmt -check -recursive foundation-live-repo
+        terraform fmt -check -recursive workloads-live-repo
         terraform fmt -check -recursive policies
 
     - name: Terraform Validate
@@ -37,7 +38,7 @@ runs:
       run: |
         echo "☁️ Linting CloudFormation templates..."
         pip3 install --quiet --no-cache-dir --break-system-packages cfn-lint
-        cfn-lint infrastructure-bootstrap/cloudformation/*.yaml
+        cfn-lint foundation-live-repo/_bootstrap/cloudformation/*.yaml
 
     - name: Run TFLint
       shell: bash
@@ -45,7 +46,8 @@ runs:
         echo "🔍 Running TFLint..."
         tflint --init
         tflint --chdir=iac-modules-repo --recursive --format=compact
-        tflint --chdir=infrastructure-live --recursive --format=compact
+        tflint --chdir=foundation-live-repo --recursive --format=compact
+        tflint --chdir=workloads-live-repo --recursive --format=compact
       env:
         GITHUB_TOKEN: ${{ github.token }}
 
@@ -91,4 +93,4 @@ runs:
       shell: bash
       run: |
         echo "📜 Checking license compliance..."
-        ./infrastructure-live/scripts/check-licenses.sh
+        ./workloads-live-repo/scripts/check-licenses.sh

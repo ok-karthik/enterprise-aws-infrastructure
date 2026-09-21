@@ -9,10 +9,13 @@ This document serves as the comprehensive single source of truth for AI agents (
 A multi-environment AWS Infrastructure-as-Code platform built with **Terragrunt + Terraform**. There is no application code — the "product" is HCL config, reusable Terraform modules, OPA/Rego policies, and the GitHub Actions pipeline that plans/applies them. An autonomous Python "healer" agent auto-remediates failed CI runs, and an on-demand IaC Platform Agent scaffolds and reconciles compliant modules.
 
 ### Infrastructure Layout
-*   `/infrastructure-live/`: Contains environment-specific configurations (`terragrunt.hcl`) and shared category blueprints (`_envcommon/`).
-*   `/iac-modules-repo/`: Custom reusable Terraform modules. Pure `.tf`, no environment specifics, no provider blocks.
-*   `/infrastructure-bootstrap/`: Day-0 **CloudFormation** stack `platform-bootstrap` (`cloudformation/account-bootstrap.yaml`: S3 state bucket, GitHub OIDC provider, `github-actions-plan` / `github-actions-apply` roles + permissions boundary) and the `bootstrap.sh` that deploys it. Run once by a human in the management account; member accounts get it through StackSets (PLAN 2.0b). Terragrunt never creates the state bucket: **no command may pass `--backend-bootstrap`**.
-*   `/policies/terraform/`: Rego-based OPA compliance rules enforced against Terraform plan JSON.
+A directory ending in `-repo` is a separate Git repository in a real company (see `docs/adr/0001-repository-topology.md`); here they live side by side so the whole foundation can be read from one checkout.
+
+*   `/iac-modules-repo/`: Custom reusable Terraform modules, versioned per module (`<module>-vX.Y.Z`). Pure `.tf`, no environment specifics, no provider blocks.
+*   `/foundation-live-repo/`: The landing zone: `_global/` (organization, bootstrap StackSets; management account), `_envcommon/governance/` blueprints, its own `root.hcl`, and `_bootstrap/`. Security + cloud-infra approve changes.
+*   `/workloads-live-repo/`: Platform stacks in workload accounts: `dev/`, `prod/`, `_envcommon/{compute,data,network}/`, its own `root.hcl`, and `scripts/` (smoke test, module generator). The platform team approves changes.
+*   `/foundation-live-repo/_bootstrap/` (inside the foundation repo): Day-0 **CloudFormation** stack `platform-bootstrap` (`cloudformation/account-bootstrap.yaml`: S3 state bucket, GitHub OIDC provider, `github-actions-plan` / `github-actions-apply` roles + permissions boundary) and the `bootstrap.sh` that deploys it. Run once by a human in the management account; member accounts get it through StackSets (PLAN 2.0b). Terragrunt never creates the state bucket: **no command may pass `--backend-bootstrap`**.
+*   `/policies/terraform/` (becomes `policy-library-repo/` in PLAN 1.3): Rego-based OPA compliance rules enforced against Terraform plan JSON.
 *   `/.agents/`: Catalog, prompts, eval fixtures, SRE policies, and scripts for autonomous agents.
 
 ---
@@ -34,7 +37,7 @@ git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//iac-module
 | `iac-modules-repo/identity/workload-iam` | `iam` | `workload-iam-v1.0.0` | Documented interface stub for workload pod identity / IRSA role vending |
 
 ### 2. Platform Foundation Modules (Internal to this Repository)
-Applied and maintained directly by this platform via Terragrunt environments (`infrastructure-live/{dev,prod}/...` and `_global/`):
+Applied and maintained directly by this platform via Terragrunt environments (`workloads-live-repo/{dev,prod}/...` and `foundation-live-repo/_global/`):
 
 | Module Path | Scope | Release Tag | Purpose |
 |---|---|---|---|
@@ -68,10 +71,10 @@ All tooling is baked into the toolchain container (`.github/docker/Dockerfile`);
 ```bash
 # Full local validation suite — compliance, fmt, terragrunt init+validate (dev), tflint.
 # This is the pre-commit hook and the CI "smoke test"; run it before pushing.
-./infrastructure-live/scripts/smoke-test.sh
+./workloads-live-repo/scripts/smoke-test.sh
 
 # Formatting — MUST cover all four roots or CI fails (see static-analysis action)
-terraform fmt -recursive iac-modules-repo infrastructure-live policies
+terraform fmt -recursive iac-modules-repo foundation-live-repo workloads-live-repo policies
 terragrunt hcl fmt
 
 # Lint / security / policy
@@ -80,14 +83,14 @@ trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --tf-exclude-d
 conftest test --policy policies/terraform <plan.json>   # policy runs against plan JSON, not HCL
 
 # Plan/apply a single environment stack (uses run --all across the dependency graph)
-cd infrastructure-live/dev && terragrunt run --all plan --non-interactive
-cd infrastructure-live/dev && terragrunt run --all apply --non-interactive -auto-approve
+cd workloads-live-repo/dev && terragrunt run --all plan --non-interactive
+cd workloads-live-repo/dev && terragrunt run --all apply --non-interactive -auto-approve
 
 # Plan/apply one module only
-cd infrastructure-live/dev/eu-central-1/compute/eks && terragrunt plan
+cd workloads-live-repo/dev/eu-central-1/compute/eks && terragrunt plan
 
 # Scaffold a new module manually
-./infrastructure-live/scripts/generate-module.sh <category/module-name> [env] [region]
+./workloads-live-repo/scripts/generate-module.sh <category/module-name> [env] [region]
 
 # Install the pre-commit hook (fmt + smoke-test + trivy on every commit)
 pre-commit install
@@ -101,16 +104,16 @@ The core pattern is **strict separation of "blueprint" from "live config"**, kep
 
 1. **`iac-modules-repo/`** — generic, reusable Terraform (`network/vpc`, `compute/eks`). Pure `.tf`, no environment specifics. Security hardening lives *here* (VPC deny-all NACLs, EKS KMS encryption), not just in CI.
 
-2. **`infrastructure-live/root.hcl`** — the global root included by every leaf. It **generates `provider.tf` and `backend.tf`** at runtime (`generate` blocks) and injects `default_tags` (`Environment`, `Service`, `Project`, `ManagedBy`, `Account`). The S3 backend bucket name and `default_tags` are computed here — do not add provider/backend blocks by hand in modules.
+2. **`root.hcl`** (one copy in each live repo, kept identical) — the root included by every leaf. It **generates `provider.tf` and `backend.tf`** at runtime (`generate` blocks) and injects `default_tags` (`Environment`, `Service`, `Project`, `ManagedBy`, `Account`). The S3 backend bucket name and `default_tags` are computed here — do not add provider/backend blocks by hand in modules.
 
-3. **`infrastructure-live/_envcommon/<category>/<module>.hcl`** — the shared blueprint per module type. Sets `terraform.source` (pointing into `iac-modules-repo/` or registry `tfr://`), declares `dependency` blocks (with `mock_outputs` for plan-time), and default `inputs`. Cross-module wiring (EKS → VPC subnets) lives here.
+3. **`workloads-live-repo/_envcommon/<category>/<module>.hcl`** — the shared blueprint per module type. Sets `terraform.source` (pointing into `iac-modules-repo/` or registry `tfr://`), declares `dependency` blocks (with `mock_outputs` for plan-time), and default `inputs`. Cross-module wiring (EKS → VPC subnets) lives here.
 
 4. **Data files loaded via `find_in_parent_folders`:**
    - `<env>/account.hcl` — `aws_account_id`, `account_name`
    - `<env>/env.hcl` — `env`, `cluster_name`, and cost-scaling knobs (`min_size`, `desired_size`, `enable_nat_gateway`)
    - `<env>/<region>/region.hcl` — `aws_region`
 
-5. **`infrastructure-live/<env>/<region>/<category>/<module>/terragrunt.hcl`** — the leaf. Includes `root` + the matching `_envcommon` file (`expose = true`) and only overrides env-specific values (e.g. dev EKS shrinks `min_size`/`max_size`/`desired_size`).
+5. **`workloads-live-repo/<env>/<region>/<category>/<module>/terragrunt.hcl`** — the leaf. Includes `root` + the matching `_envcommon` file (`expose = true`) and only overrides env-specific values (e.g. dev EKS shrinks `min_size`/`max_size`/`desired_size`).
 
 `path_relative_to_include()` drives naming everywhere (state key, `Service` tag, env detection), so **directory layout is load-bearing** — the `<env>/<region>/<category>/<module>` shape is a contract, not a convention. `dev`/`prod`/`staging` are the only allowed env names and regions must be `eu-*`/`us-*` (enforced by `smoke-test.sh`).
 
@@ -147,7 +150,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 - **EKS API endpoint is private by default.** `env.hcl` `api_allowed_cidrs` (empty by default) turns on the public endpoint and restricts it to those CIDRs; the module rejects public access with no CIDRs.
 - **Never hand-write `provider.tf` or `backend.tf`** — they are generated by `root.hcl`. Editing them has no effect (`if_exists = "overwrite_terragrunt"`).
 - When adding a module, create both the blueprint (`_envcommon/.../<m>.hcl` → `terraform.source`) and the leaf `terragrunt.hcl` in each env; don't inline module logic into a live dir.
-- `fmt` must pass across `iac-modules-repo`, `infrastructure-live` **and** `policies` — a stray unformatted `.tf`/`.hcl` in any of the three fails Gate 1. The CloudFormation template in `infrastructure-bootstrap/cloudformation/` is checked by `cfn-lint` instead.
+- `fmt` must pass across `iac-modules-repo`, `foundation-live-repo`, `workloads-live-repo` **and** `policies` — a stray unformatted `.tf`/`.hcl` in any of the four fails Gate 1. The CloudFormation template in `foundation-live-repo/_bootstrap/cloudformation/` is checked by `cfn-lint` instead.
 - Rego policies target Rego v1 (`import rego.v1`) and package `main`.
 - Cost / resilience knobs (spot/scaling, `enable_nat_gateway`, `single_nat_gateway`) live in `env.hcl`; keep dev cheap (spot, min sizes) — the README's FinOps numbers depend on it.
 
@@ -158,7 +161,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 ### 1. IaC Architect (`.agents/prompts/architect.md`)
 *   **Role**: Senior Cloud Infrastructure Architect.
 *   **Responsibility**: Writes valid Terraform/Terragrunt HCL.
-*   **Directives**: Must use dry-run testing (`-backend=false` init / `terraform validate`) and strictly respect variable declarations under `/infrastructure-live`.
+*   **Directives**: Must use dry-run testing (`-backend=false` init / `terraform validate`) and strictly respect variable declarations under `/workloads-live-repo`.
 
 ### 2. Policy Auditor (`.agents/prompts/auditor.md`)
 *   **Role**: Security & Governance Compliance Officer.

@@ -1,5 +1,5 @@
 variable "template_body" {
-  description = "Body of the account-bootstrap CloudFormation template. The live leaf reads infrastructure-bootstrap/cloudformation/account-bootstrap.yaml, so this module stays free of file paths."
+  description = "Body of the account-bootstrap CloudFormation template. The live leaf reads foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml, so this module stays free of file paths."
   type        = string
 
   validation {

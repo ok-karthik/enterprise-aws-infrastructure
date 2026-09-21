@@ -1,7 +1,7 @@
 # Enterprise AWS Platform — task runner
 # Wraps the platform's command surface. Run `make help` for the list.
 
-FMT_DIRS := iac-modules-repo infrastructure-live policies
+FMT_DIRS := iac-modules-repo foundation-live-repo workloads-live-repo policies
 ENV ?= dev
 
 .DEFAULT_GOAL := help
@@ -31,7 +31,7 @@ lint: ## Run TFLint recursively
 
 .PHONY: validate
 validate: ## Full local validation suite (compliance, fmt, init/validate, tflint)
-	./infrastructure-live/scripts/smoke-test.sh
+	./workloads-live-repo/scripts/smoke-test.sh
 
 .PHONY: security
 security: ## Trivy security scan of the repo
@@ -39,7 +39,7 @@ security: ## Trivy security scan of the repo
 
 .PHONY: plan
 plan: ## Plan an environment stack: make plan ENV=dev
-	cd infrastructure-live/$(ENV) && terragrunt run --all plan --non-interactive
+	cd workloads-live-repo/$(ENV) && terragrunt run --all plan --non-interactive
 
 .PHONY: test
 test: ## Run OPA policy unit tests and module unit tests (no AWS credentials needed)

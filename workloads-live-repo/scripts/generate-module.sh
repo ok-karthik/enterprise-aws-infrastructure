@@ -14,7 +14,7 @@ if [ -z "$MODULE_PATH" ]; then
     exit 1
 fi
 
-TARGET_DIR="infrastructure-live/$ENV/$REGION/$MODULE_PATH"
+TARGET_DIR="workloads-live-repo/$ENV/$REGION/$MODULE_PATH"
 
 if [ -d "$TARGET_DIR" ]; then
     echo "⚠️ Warning: Module already exists at $TARGET_DIR"
@@ -35,7 +35,7 @@ include "root" {
 }
 
 include "envcommon" {
-  path = "\${get_repo_root()}/infrastructure-live/_envcommon/$MODULE_PATH.hcl"
+  path = "\${get_repo_root()}/workloads-live-repo/_envcommon/$MODULE_PATH.hcl"
 }
 
 # Add module-specific inputs here if they differ from _envcommon

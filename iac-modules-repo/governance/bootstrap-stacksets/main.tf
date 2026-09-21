@@ -1,5 +1,5 @@
 # Member-account Day-0 bootstrap: deploys the same template as the management account's
-# platform-bootstrap stack (infrastructure-bootstrap/cloudformation/account-bootstrap.yaml) to
+# platform-bootstrap stack (foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml) to
 # every account in the targeted OUs, with no human step when a new account joins.
 #
 # Requires: AWS Organizations with all features, and StackSets trusted access enabled
