@@ -48,6 +48,12 @@
       "package-name": "organization",
       "component": "organization",
       "tag-separator": "-v"
+    },
+    "infrastructure-modules/governance/bootstrap-stacksets": {
+      "release-type": "terraform-module",
+      "package-name": "bootstrap-stacksets",
+      "component": "bootstrap-stacksets",
+      "tag-separator": "-v"
     }
   }
 }

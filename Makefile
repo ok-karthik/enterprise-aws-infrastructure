@@ -60,3 +60,4 @@ docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/identity/human-access
 	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/identity/workload-identity
 	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/governance/organization
+	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/governance/bootstrap-stacksets
