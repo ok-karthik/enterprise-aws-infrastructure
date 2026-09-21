@@ -571,7 +571,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   *Done when (2.0b):* a new account created in NonProd gets its bucket and roles with no
   manual step, and a PR can run `plan` against it.
 
-- [ ] **2.1 Account and region registry.** `foundation-live-repo/_config/accounts.hcl`:
+- [x] **2.1 Account and region registry.** `foundation-live-repo/_config/accounts.hcl`:
   ```hcl
   locals {
     accounts = {
@@ -624,7 +624,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   the ACK hub/spoke resources into their own module, `identity/ack-cross-account`, because
   they are applied per account, not in management.
 
-- [ ] **2.4 New module `governance/account-factory`.** It takes the registry and creates
+- [x] **2.4 New module `governance/account-factory`.** It takes the registry and creates
   `aws_organizations_account` resources (with `close_on_deletion = false`,
   `lifecycle { prevent_destroy = true }`, placed in the right OU, and IAM billing access
   allowed). Apply it from `foundation-live-repo/management/_global/governance/account-factory`.
@@ -1166,3 +1166,22 @@ Everything goes under `docs/`.
   - **Before the owner applies:** the organization and any hand-made OUs must be **imported** (`terragrunt import ...`); the live leaf lists the exact commands.
   - **Checked (offline):** `terraform validate`, `terraform test` (9 for the organization module, 3 for `ack-cross-account`), `terragrunt hcl validate --inputs` on the leaf,
     `tflint`, `trivy config`, `terraform fmt`, `terragrunt hcl fmt --check`. **Not checked:** a real plan (needs the import and AWS access), the SCP JSON against AWS.
+- **2026-09-21 (2.1 + 2.4, branch `feat/p2-account-factory`, stacked on `feat/p2-org-v2`)** — Account registry and account factory. Nothing applied, no AWS
+  credentials used, no account created.
+  - **2.1** `foundation-live-repo/_config/accounts.hcl` (management keeps `954171757349`; every other id and every email is a placeholder marked `TODO(owner)`),
+    `_config/regions.hcl` (primary `eu-central-1`, secondary `eu-west-1`, `allowed_regions_by_ou`), and `workloads-live-repo/scripts/check-account-registry.sh`
+    (fails if any `account.hcl` uses an ID that is not in the registry; run by the smoke test and the static-analysis action). Checked with a positive run and a
+    negative run on a tampered `account.hcl`. **Not done from 2.1:** the region SCP still takes one global `allowed_regions`; per-OU lists are wired in with 4.6.
+    Placeholder emails use `@example.com`, not your real address, to keep it out of the repo.
+  - **2.4** New module `governance/account-factory` (`aws_organizations_account`, `close_on_deletion = false`, `prevent_destroy`, IAM billing access allowed, OU from the
+    registry), release-please entry at `1.0.0`, `_envcommon` blueprint (dependency on the organization stack for OU IDs) and leaf
+    `foundation-live-repo/_global/governance/account-factory`.
+  - **Addition to the plan:** each registry entry has `create = true|false`. Only `create = true` entries (log-archive, security-tooling, workloads-dev) reach the factory,
+    so the placeholders (network-hub, shared-services, workloads-prod) and the management account can never be created by accident. The module also refuses an
+    `@example.com` email, a duplicate email and an unknown OU, so a registry entry you have not filled in fails at plan time. **Please confirm the `create` flag.**
+  - **Before the owner applies:** fill in the real emails and IDs; **import** the accounts you already created by hand (`terragrunt import ...`, commands in the leaf); apply the
+    organization stack first (its OU IDs feed the factory).
+  - **Checked (offline):** `terraform validate`, `terraform test` (5), `terragrunt hcl validate --inputs` and `render` on the leaf (exactly the 3 `create = true` accounts are
+    passed), `shellcheck`, `tflint`, `trivy config`, `conftest verify` (63), fmt, `.agents` tests. **Not checked:** a real plan or apply, the imports.
+  - **Still open in Phase 2:** 2.2 (account-first layout, `root.hcl` rework, state-key migration), 2.5 (account-baseline), 2.6 (CI identity chain and the pipeline retargeting
+    to vended accounts), 2.7 (discovery contract per account), 2.8 (budgets). Not started; 2.2 changes state keys and needs your run of the migration script.
