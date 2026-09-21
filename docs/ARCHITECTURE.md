@@ -14,8 +14,8 @@ To understand any live module you read it top-down through these layers — a le
 1. **`infrastructure-live/root.hcl`** — included by every leaf. Generates `provider.tf` and `backend.tf` at runtime and injects `default_tags` (`Environment`, `Service`, `Project`, `ManagedBy`, `Account`). The S3 backend bucket name and tags are computed here — modules never hand-write provider/backend blocks.
 2. **`_envcommon/<category>/<module>.hcl`** — the shared blueprint per module type. Sets `terraform.source` (into `infrastructure-modules/`), declares `dependency` blocks with `mock_outputs` for plan-time, and default `inputs`. Cross-module wiring (EKS → VPC subnets) lives here.
 3. **Data files** loaded via `find_in_parent_folders`:
-   - `<env>/account.hcl` — account id, alias
-   - `<env>/env.hcl` — `env`, `cluster_name`, cost knobs (`min_size`, `desired_size`, `enable_nat_gateway`)
+   - `<env>/account.hcl` — account id (the account the stack is *allowed* to run in), alias, `owner`, `data_classification`
+   - `<env>/env.hcl` — `env`, `cluster_name`, cost / resilience knobs (`min_size`, `desired_size`, `enable_nat_gateway`, `single_nat_gateway`) and `api_allowed_cidrs` (EKS public API allow-list; empty = private endpoint only)
    - `<env>/<region>/region.hcl` — `aws_region`
 4. **Leaf** `<env>/<region>/<category>/<module>/terragrunt.hcl` — includes `root` + the matching `_envcommon` file and only overrides env-specific values (e.g. dev shrinks EKS node counts; prod runs `desired_size = 0`).
 
@@ -23,7 +23,7 @@ To understand any live module you read it top-down through these layers — a le
 
 ## Bootstrap (day-0)
 
-`infrastructure-bootstrap/` is a separate stack that must exist before `infrastructure-live` can deploy. It provisions the GitHub OIDC identity provider, CI IAM roles, the S3 state bucket, and the DynamoDB lock table — i.e. the very backend the live stacks depend on.
+`infrastructure-bootstrap/` is a separate stack that must exist before `infrastructure-live` can deploy. It provisions the S3 state bucket, the GitHub OIDC identity provider, the `github-actions-apply` permissions boundary and the two CI roles (`github-actions-plan`, `github-actions-apply`) — i.e. the very backend and trust the live stacks depend on. `bootstrap.sh` refuses to run unless your credentials belong to the account in `account.hcl`.
 
 ## State backend
 

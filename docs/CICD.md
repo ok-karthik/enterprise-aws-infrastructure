@@ -16,18 +16,42 @@ A change can pass `terraform validate` and still fail the governance gates — t
 
 ## Authentication — zero-key OIDC
 
-Jobs assume short-lived IAM roles (`vars.AWS_DEV_ROLE_ARN` / `vars.AWS_PROD_ROLE_ARN`) via GitHub Actions OIDC through the `setup-platform` composite action. No static AWS credentials exist in the repo or CI.
+Jobs assume short-lived IAM roles via GitHub Actions OIDC through the `setup-platform` composite action. No static AWS credentials exist in the repo or CI. There are **two roles**, so a pull request can never become admin:
+
+| Role | Used by | Trusted OIDC subjects | Permissions |
+|---|---|---|---|
+| `github-actions-plan` | plan, governance and drift-detection jobs | `repo:<repo>:pull_request`, `repo:<repo>:ref:refs/heads/main` | `ReadOnlyAccess`; on the state bucket: read state, write/delete `*.tflock` lock files only |
+| `github-actions-apply` | `apply-dev`, `apply-prod`, `destroy` | `repo:<repo>:environment:dev`, `repo:<repo>:environment:prod` | `AdministratorAccess` capped by the `github-actions-apply-boundary` permissions boundary (denies organizations, Identity Center, CloudTrail changes, and edits to the boundary, the `github-actions-*` roles and the OIDC provider). Narrowed further in PLAN 3.4 |
+
+Because the apply role trusts only the `dev` / `prod` GitHub Environments, the `prod` manual-approval gate cannot be bypassed from a branch or PR.
+
+**Repository variables** (Settings → Secrets and variables → Actions → Variables). `infrastructure-bootstrap/bootstrap.sh` prints the exact `gh variable set` commands:
+
+| Variable | Value |
+|---|---|
+| `AWS_REGION` | primary region, e.g. `eu-central-1` |
+| `AWS_DEV_PLAN_ROLE_ARN` / `AWS_PROD_PLAN_ROLE_ARN` | ARN of `github-actions-plan` in the dev / prod account |
+| `AWS_DEV_APPLY_ROLE_ARN` / `AWS_PROD_APPLY_ROLE_ARN` | ARN of `github-actions-apply` in the dev / prod account |
+
+The old `AWS_DEV_ROLE_ARN` / `AWS_PROD_ROLE_ARN` variables are no longer read and can be deleted.
+
+**Account guard:** `root.hcl` takes the account ID from `account.hcl` (not from the caller's credentials) and sets it as `allowed_account_ids`, so running a stack with credentials for the wrong account fails at provider init.
 
 ## Governance rules (`policies/terraform/`)
 
-- `require_service_tag.rego` — every created/updated resource must carry `Service`, `Environment`, `Project` (checked in `tags_all`; normally satisfied by `root.hcl` default tags).
+- `require_tags.rego` — every created/updated resource must carry `Service`, `Environment`, `Project`, `Owner` and `DataClassification` (checked in `tags_all`; satisfied by `root.hcl` default tags, which read `owner` / `data_classification` from `account.hcl`).
 - `no_legacy_instances.rego` — blocks `t2.`, `m3.`, `m4.`, `c3.`, `c4.` families.
+- `deny_admin_attachments.rego` — `AdministratorAccess` / `IAMFullAccess` may only be attached to roles named `github-actions-apply*` or `break-glass*` (and the break-glass permission set).
+- `deny_public_s3.rego` — S3 Block Public Access must be fully on; no `Principal: "*"` bucket policy without an `aws:PrincipalOrgID` condition.
+- `deny_open_ingress.rego` — no `0.0.0.0/0` / `::/0` ingress on 22, 3389, 5432, 3306, 6379, 27017, 9200 (or all-traffic rules). Open 443 is *not* blocked: a plan cannot tell a public ALB security group from a private one.
+- `deny_iam_wildcards.rego` — no `Allow` + `Action: "*"` + `Resource: "*"` in IAM policy documents (small named allow-list for permissions boundaries).
+- `require_encryption.rego` — RDS `storage_encrypted`, EBS `encrypted` (volumes, instances, launch templates), S3 server-side encryption, SQS (SSE-SQS or KMS) and SNS (KMS).
 
 Both are Rego v1 (`import rego.v1`, `package main`) and are unit-tested with `conftest verify` (see `*_test.rego`).
 
 ## Nightly drift detection (`drift-detection.yml`)
 
-A matrix job over dev/prod compares live AWS against state each night and self-manages **one GitHub Issue per environment**: creates on new drift, comments while it persists, and auto-closes when resolved. Each env uses its own IAM role for isolation.
+A matrix job over dev/prod compares live AWS against state each night and self-manages **one GitHub Issue per environment**: creates on new drift, comments while it persists, and auto-closes when resolved. Each env uses its own read-only plan role (`AWS_<ENV>_PLAN_ROLE_ARN`).
 
 ## Self-healing CI (`pipeline_healer.yml` + `.agents/`)
 
