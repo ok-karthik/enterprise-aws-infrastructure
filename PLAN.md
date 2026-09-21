@@ -393,7 +393,7 @@ the management account**, so none of the guardrails actually protect those workl
 has been applied there yet, so there is no state or resource to migrate. Until
 `workloads-dev` exists (2.1), don't apply the `dev` / `prod` live stacks into it.
 
-- [~] **2.0 Day-0 bootstrap with CloudFormation (replaces the Terragrunt bootstrap).** *(2.0a code done 2026-09-21, branch `feat/p2-cfn-bootstrap`; still open: owner deploys `platform-bootstrap` (2.0a "Done when"), and 2.0b.)*
+- [~] **2.0 Day-0 bootstrap with CloudFormation (replaces the Terragrunt bootstrap).** *(2.0a deployed by the owner and merged (PR #49). 2.0b code done 2026-09-21 on branch `feat/p2-bootstrap-stacksets`; still open: the owner replaces the `ou-0000-00000000` placeholders in the live leaf and applies it.)*
   **May be done before Phase 1**: it only rewrites `infrastructure-bootstrap/`, and 1.2 moves
   that folder as-is. **Never run the Terragrunt `bootstrap.sh` in `954171757349`.**
   Why: `--backend-bootstrap` creates the state bucket outside any state, so nobody can plan or
@@ -1093,3 +1093,32 @@ Everything goes under `docs/`.
   - **Left as is, flagging:** (1) with the apply variables unset (as 2.0a-2 says) the `apply-dev` / `apply-prod` jobs on `main` will run without
     credentials and fail, which also triggers the pipeline healer; consider `if: vars.AWS_*_APPLY_ROLE_ARN != ''` on those jobs (not done, it is
     not in 2.0a). (2) `DISASTER_RECOVERY.md` still mentions DynamoDB locking. (3) The live `dev` / `prod` leaves keep account `954171757349` until 2.1.
+- **2026-09-21 (2.0b, branch `feat/p2-bootstrap-stacksets`, from `main` after PR #49)** — Code for 2.0b only. Nothing was applied and no
+  AWS command or credentials were used.
+  - **Added** module `governance/bootstrap-stacksets` (`aws_cloudformation_stack_set` per GitHub Environment, `SERVICE_MANAGED`, auto-deployment
+    with retain-on-removal, 25% concurrency, zero failure tolerance; `aws_cloudformation_stack_set_instance` per StackSet in the primary region only,
+    `retain_stack = true`; `AllowOrganizationsAdmin` hardcoded to `"false"`; template body is an input), release-please entries at `1.0.0`, a live
+    leaf `infrastructure-live/_global/governance/bootstrap-stacksets` + `_envcommon` blueprint, and `policies/terraform/deny_member_org_admin.rego`
+    (fails a plan where a bootstrap StackSet sets `AllowOrganizationsAdmin` to anything but `"false"` or is not named `bootstrap-*`).
+  - **Deviations from the request in chat (please confirm):** (1) three StackSets (`bootstrap-nonprod`, `bootstrap-prod`, `bootstrap-core`), not one
+    `platform-member-bootstrap`: auto-deployment can only use the StackSet's own parameters, so a single set would give every new account the same
+    `GitHubEnvironment` (apply-role trust subject). (2) Names start with `bootstrap-`: the apply boundary only protects `StackSet-bootstrap-*` stacks.
+    (3) Deployed from Terraform (as 2.0b says), not by hand in the console, so it is reviewable and drift-checked.
+  - **OU IDs are placeholders** (`ou-0000-00000000`, `TODO(owner)`); the module refuses to plan while any remain. Not applied: 2.0b also needs the OUs to exist.
+  - **Repo now matches the live stack** after your two manual edits (PR #49): thumbprints and `PlanRole` `StringLike repo:<repo>:*`. I updated the
+    stale comments/docs. Two flags: the plan role now trusts *any* job of the repo (it is read-only but can read all state files, and member accounts inherit
+    it through the StackSet); and the second thumbprint (`1c5876bd...`) differs from the value I remember as GitHub's published one (`1c58a3a8...`).
+    I could not check offline, and AWS does not validate GitHub thumbprints, so it is harmless, but please verify.
+  - **Checked (offline):** `terraform validate`, `terraform test` (8 for the new module; the 11 existing still pass), `conftest verify` (63), `cfn-lint`,
+    `checkov -f` on the template (24 passed / 0 failed / 1 reasoned skip), `terragrunt hcl validate --inputs` and `render` on the new leaf, `tflint`,
+    `trivy config`, `terraform fmt`, `terragrunt hcl fmt --check`, `.agents` tests. **Not checked:** a real plan/apply, the StackSet against AWS, and that a
+    new account in an OU actually receives the stack ("Done when (2.0b)").
+  - **Review of the current `governance/organization` SCPs (your item 2), nothing changed here:** it has deny-leave-organization, deny-CloudTrail-tampering
+    and the region allow-list (`allowed_regions`, Phase 0.4). "Protect security services" (GuardDuty / Config / Security Hub / Access Analyzer / Macie) is
+    **not** there: that is 4.6 and only makes sense once those services are enabled. All three SCPs attach to two hardcoded OUs (Production,
+    NonProduction) and nothing is created while `root_id = ""` (live). 2.3 replaces the OUs and moves the ACK resources out.
+  - **Not done, and why:** (a) *Apply of the org stack / vending accounts*: implementing agents never apply (rule 4), and the OUs and `account-factory`
+    do not exist yet (2.3, 2.4 are separate PRs). (b) *Pipeline alignment / retargeting dev and prod roles*: needs the vended accounts and the account
+    registry first (2.1, 2.6). The management `_global` stack is already outside the workflows (they only run `infrastructure-live/dev` and `prod`).
+    (c) The OU layout in the chat message (Core / Workloads / Sandbox) differs from PLAN 2.3 (Security, Infrastructure, Workloads{Prod,NonProd}, Sandbox,
+    Policy-Staging, Suspended); I followed the plan.
