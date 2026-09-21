@@ -13,7 +13,7 @@ Template: [`cloudformation/account-bootstrap.yaml`](cloudformation/account-boots
 | `StateBucket` | `tg-state-<account-id>-<region>` | Versioned, SSE-S3, all Block Public Access on, `BucketOwnerEnforced`, old versions expire after 90 days. `Retain` on delete. TLS 1.2+ only (bucket policy). KMS and access logging come with PLAN 2.2 |
 | `GitHubOidcProvider` | IAM OIDC provider for `token.actions.githubusercontent.com` | No thumbprint needed |
 | `ApplyBoundary` | `github-actions-apply-boundary` | Caps the apply role. Denies Identity Center, CloudTrail changes, organization destruction, edits to the CI roles/OIDC provider/boundary, changes to the state bucket's settings and to this stack. Denies `organizations:*` / `account:*` too, except where `AllowOrganizationsAdmin=true` (management) |
-| `PlanRole` | `github-actions-plan` | `ReadOnlyAccess`; on the state bucket: read state, write/delete `*.tflock` only. Trusts `pull_request` and `refs/heads/main` |
+| `PlanRole` | `github-actions-plan` | `ReadOnlyAccess`; on the state bucket: read state, write/delete `*.tflock` only. Trusts any job of this repo (`repo:<repo>:*`, widened by hand from `pull_request` + `main`; read-only, but it can read every state file, so narrow it if you add collaborators) |
 | `ApplyRole` | `github-actions-apply` | `AdministratorAccess` **with** the boundary. Trusts exactly one GitHub Environment (`management` here) |
 
 Tags come from the stack, not the template: `Project`, `ManagedBy=CloudFormation`, `Owner`, `DataClassification` (read from `infrastructure-live/_global/account.hcl`). There are no `Export`s: an export locks the exported resource against changes.

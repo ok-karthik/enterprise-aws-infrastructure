@@ -114,8 +114,9 @@ Resources:
   # ---------------------------------------------------------------------------
   # GitHub OIDC provider. An account can have only ONE provider for this URL, so the stack
   # fails if one already exists (delete it or import it first).
-  # ThumbprintList is left out on purpose: it is optional in CloudFormation, and AWS validates
-  # GitHub's certificate against its trusted CA library instead of a pinned thumbprint.
+  # ThumbprintList: optional in CloudFormation, and AWS validates GitHub's certificate against its
+  # trusted CA library rather than a pinned thumbprint, so these values are belt and braces. They were
+  # added to the live stack by hand; keep them in sync with GitHub's published thumbprints.
   # ---------------------------------------------------------------------------
   GitHubOidcProvider:
     Type: AWS::IAM::OIDCProvider
@@ -238,7 +239,8 @@ Resources:
               - !Sub "arn:aws:cloudformation:*:${AWS::AccountId}:stack/StackSet-bootstrap-*"
 
   # ---------------------------------------------------------------------------
-  # github-actions-plan: plan / governance / drift jobs (read-only).
+  # github-actions-plan: plan / governance / drift jobs (read-only). Trusts any job of the repo
+  # (repo:<repo>:*). It cannot change anything, but ReadOnlyAccess can read all state files.
   # ---------------------------------------------------------------------------
   PlanRole:
     Type: AWS::IAM::Role
