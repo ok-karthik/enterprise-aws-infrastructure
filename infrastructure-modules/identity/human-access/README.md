@@ -23,18 +23,23 @@ No modules.
 | [aws_eks_access_entry.team](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eks_access_entry) | resource |
 | [aws_eks_access_policy_association.team_view](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eks_access_policy_association) | resource |
 | [aws_ssoadmin_managed_policy_attachment.auditor_security](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_managed_policy_attachment) | resource |
+| [aws_ssoadmin_managed_policy_attachment.break_glass_admin](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_managed_policy_attachment) | resource |
 | [aws_ssoadmin_managed_policy_attachment.developer_view](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_managed_policy_attachment) | resource |
-| [aws_ssoadmin_managed_policy_attachment.platform_admin](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_managed_policy_attachment) | resource |
+| [aws_ssoadmin_managed_policy_attachment.platform_engineer_power_user](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_managed_policy_attachment) | resource |
 | [aws_ssoadmin_permission_set.auditor](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_permission_set) | resource |
+| [aws_ssoadmin_permission_set.break_glass](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_permission_set) | resource |
 | [aws_ssoadmin_permission_set.developer](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_permission_set) | resource |
-| [aws_ssoadmin_permission_set.platform_admin](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_permission_set) | resource |
+| [aws_ssoadmin_permission_set.platform_engineer](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_permission_set) | resource |
+| [aws_ssoadmin_permission_set_inline_policy.platform_engineer_iam](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_permission_set_inline_policy) | resource |
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
+| <a name="input_break_glass_session_duration"></a> [break\_glass\_session\_duration](#input\_break\_glass\_session\_duration) | Session length for the BreakGlassAdmin permission set. Keep it short (ISO 8601, max PT1H). | `string` | `"PT1H"` | no |
 | <a name="input_cluster_name"></a> [cluster\_name](#input\_cluster\_name) | Name of the EKS cluster to grant access entries for | `string` | `""` | no |
 | <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | Prefix prepended to permission set names (e.g. Enterprise, Dev, Prod) | `string` | `"Enterprise"` | no |
+| <a name="input_permissions_boundary_arn"></a> [permissions\_boundary\_arn](#input\_permissions\_boundary\_arn) | Optional permissions boundary ARN. When set, PlatformEngineers can only create or modify roles under role/platform/* that carry this boundary. | `string` | `""` | no |
 | <a name="input_session_duration"></a> [session\_duration](#input\_session\_duration) | The length of time that the application user sessions are valid (e.g. PT4H, PT8H, PT12H) | `string` | `"PT8H"` | no |
 | <a name="input_sso_instance_arn"></a> [sso\_instance\_arn](#input\_sso\_instance\_arn) | The Amazon Resource Name (ARN) of the IAM Identity Center instance (leave empty if managing cluster access entries only) | `string` | `""` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | A map of tags to add to all resources | `map(string)` | `{}` | no |
@@ -46,6 +51,7 @@ No modules.
 | ---- | ----------- |
 | <a name="output_access_entry_arns"></a> [access\_entry\_arns](#output\_access\_entry\_arns) | Map of EKS Access Entry ARNs created for teams |
 | <a name="output_auditor_permission_set_arn"></a> [auditor\_permission\_set\_arn](#output\_auditor\_permission\_set\_arn) | The ARN of the AuditorReadOnly permission set |
+| <a name="output_break_glass_permission_set_arn"></a> [break\_glass\_permission\_set\_arn](#output\_break\_glass\_permission\_set\_arn) | The ARN of the BreakGlassAdmin permission set (not assigned to anyone by this module) |
 | <a name="output_developer_permission_set_arn"></a> [developer\_permission\_set\_arn](#output\_developer\_permission\_set\_arn) | The ARN of the Developer permission set |
-| <a name="output_platform_admin_permission_set_arn"></a> [platform\_admin\_permission\_set\_arn](#output\_platform\_admin\_permission\_set\_arn) | The ARN of the PlatformAdmin permission set |
+| <a name="output_platform_engineer_permission_set_arn"></a> [platform\_engineer\_permission\_set\_arn](#output\_platform\_engineer\_permission\_set\_arn) | The ARN of the PlatformEngineer permission set |
 <!-- END_TF_DOCS -->
