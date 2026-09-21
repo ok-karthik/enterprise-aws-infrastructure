@@ -393,7 +393,7 @@ the management account**, so none of the guardrails actually protect those workl
 has been applied there yet, so there is no state or resource to migrate. Until
 `workloads-dev` exists (2.1), don't apply the `dev` / `prod` live stacks into it.
 
-- [ ] **2.0 Day-0 bootstrap with CloudFormation (replaces the Terragrunt bootstrap).**
+- [~] **2.0 Day-0 bootstrap with CloudFormation (replaces the Terragrunt bootstrap).** *(2.0a code done 2026-09-21, branch `feat/p2-cfn-bootstrap`; still open: owner deploys `platform-bootstrap` (2.0a "Done when"), and 2.0b.)*
   **May be done before Phase 1**: it only rewrites `infrastructure-bootstrap/`, and 1.2 moves
   that folder as-is. **Never run the Terragrunt `bootstrap.sh` in `954171757349`.**
   Why: `--backend-bootstrap` creates the state bucket outside any state, so nobody can plan or
@@ -1062,3 +1062,34 @@ Everything goes under `docs/`.
   OU, and Security holds only log-archive and security-tooling. 2.0 is split into 2.0a (template spec,
   one-time CLI commands, `infrastructure-bootstrap/` cleanup list) and 2.0b (StackSets). Plan text only.
 - **2026-09-21 (cont.)** — Disabled the `platform-smoke-test` pre-commit hook on commit (`stages: [manual]` in `.pre-commit-config.yaml`): it needs real AWS credentials for the account in `account.hcl`, so it failed on every commit. Re-enable it (delete that line) once the PLAN 2.0-2.6 setup is done. The other hooks (fmt, whitespace, trivy) still run.
+- **2026-09-21 (2.0a, branch `feat/p2-cfn-bootstrap`, from `feat/p0-fix-current-layout`)** — Day-0 CloudFormation bootstrap
+  for the management account `954171757349` (task 2.0a only; 2.0b not started). No AWS command was run: the only `aws` calls
+  were to a stub script, and no credentials were used.
+  - **Added** `infrastructure-bootstrap/cloudformation/account-bootstrap.yaml` and `stack-policy.json`; **rewrote** `bootstrap.sh`
+    (reads account, owner, data classification and region from `infrastructure-live/_global/{account,region}.hcl`; needs `AWS_PROFILE`
+    or key env vars, never the default profile; org + StackSets access; change set with confirm, `--yes` to skip; "stack exists" →
+    update path; "no changes" → success; termination protection, stack policy, prints `gh` wiring) and `README.md`.
+    **Deleted** `infrastructure-bootstrap/root.hcl` and all of `dev/`.
+  - **Ported before deleting:** I rendered the old boundary and plan-role units and compared them with the template by script:
+    every statement (Sid, Effect, Actions, Resources) matches, the old `DenyOrganizationAndIdentityCenter` is split into
+    `DenyOrganizationsAndAccount` (only `!If DenyOrganizations`) + always-on `DenyIdentityCenter` (same action union), and the three
+    plan-role inline statements and trust subjects match. New statements: `DenyOrgDestruction`, `ProtectStateBucket`, `ProtectBootstrapStack`.
+  - **Other files:** `infrastructure-live/root.hcl` bucket is now `tg-state-${account_id}-${region}` (`s3_bucket_tags` and the auto-create
+    note removed); `infrastructure-bootstrap` removed from the fmt lists (`Makefile`, `.pre-commit-config.yaml`, static-analysis action,
+    `smoke-test.sh`, `iac_agent.py`) and kept in `.checkov.yaml`; `cfn-lint` added to pre-commit and to the static-analysis action;
+    docs updated (`AGENTS.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/CICD.md`, `visualizer.html`).
+  - **Checked (offline):** `cfn-lint` clean (also confirms `ThumbprintList` is not required); `checkov -f` on the template: 24 passed,
+    0 failed, 1 skipped (`CKV_AWS_18` access logging, reason in the template; the plan's `CKV_AWS_145` KMS skip is also in the template,
+    but this Checkov version does not flag it); `shellcheck` clean and `bash -n` (shellcheck caught a backtick in an error message that would
+    have run `delete-stack`; fixed); stubbed-`aws` runs of 7 scenarios (no profile, no credentials, wrong account: exit 1 with no mutating
+    call; fresh create; existing stack with no changes: nothing executed; declined prompt: change set and empty stack discarded, nothing
+    executed; ROLLBACK_COMPLETE: fails, `delete-stack` not called); `terragrunt render` on the org leaf shows bucket
+    `tg-state-954171757349-eu-central-1` and `allowed_account_ids = ["954171757349"]`; repo-wide `git grep`: no `infrastructure-bootstrap/dev`
+    reference and no command that passes `--backend-bootstrap` (only prose that forbids it); `terraform fmt`, `terragrunt hcl fmt --check`,
+    `conftest verify` (58), `tflint`, `trivy config` (no CRITICAL/HIGH), `.agents` tests and eval all pass.
+  - **Not checked:** the template was never deployed or run through `aws cloudformation validate-template` or a real change set (that needs
+    AWS access); the trust and boundary policies were not run through the IAM policy simulator; `smoke-test.sh` was not run (needs credentials).
+    The `cfn-lint` pre-commit hook fetches its repo (`v1.57.0`) on first use.
+  - **Left as is, flagging:** (1) with the apply variables unset (as 2.0a-2 says) the `apply-dev` / `apply-prod` jobs on `main` will run without
+    credentials and fail, which also triggers the pipeline healer; consider `if: vars.AWS_*_APPLY_ROLE_ARN != ''` on those jobs (not done, it is
+    not in 2.0a). (2) `DISASTER_RECOVERY.md` still mentions DynamoDB locking. (3) The live `dev` / `prod` leaves keep account `954171757349` until 2.1.
