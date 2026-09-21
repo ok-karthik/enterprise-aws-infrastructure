@@ -307,7 +307,7 @@ so history follows the files. About 20 files mention `infrastructure-modules`, 2
 `infrastructure-live`, 12 mention `infrastructure-bootstrap` and 11 mention `policies/`, so
 find them with `git grep`.
 
-- [ ] **1.1 Modules.** `git mv infrastructure-modules iac-modules-repo`. Update:
+- [x] **1.1 Modules.** `git mv infrastructure-modules iac-modules-repo`. Update:
   - `release-please-config.json` package keys and `.release-please-manifest.json` keys
   - `.github/actions/static-analysis/action.yml`, `.pre-commit-config.yaml`, `Makefile`,
     `.checkov.yaml`, `.tflint.hcl` if it uses paths, `.github/CODEOWNERS`
@@ -317,7 +317,7 @@ find them with `git grep`.
   Add `iac-modules-repo/CODEOWNERS` whose header says:
   `# Becomes <org>/iac-modules — extract with: git subtree split -P iac-modules-repo -b iac-modules`.
 
-- [ ] **1.2 Split live into foundation and workloads.**
+- [x] **1.2 Split live into foundation and workloads.**
   - `foundation-live-repo/` gets `_global/governance/organization`, the whole
     `infrastructure-bootstrap/` (as `foundation-live-repo/_bootstrap/`, including
     `bootstrap.sh` and its README), and the `_envcommon/governance/` blueprint.
@@ -330,11 +330,11 @@ find them with `git grep`.
     `terragrunt render --format json` (or print `path_relative_to_include()`) for one leaf
     before and after, and confirm the `key` matches.
 
-- [ ] **1.3 Policies.** `git mv policies policy-library-repo` (keep `terraform/` inside).
+- [x] **1.3 Policies.** `git mv policies policy-library-repo` (keep `terraform/` inside).
   Update the conftest paths in CI, `smoke-test.sh`, the fmt commands, `iac_agent.py`
   (`build_policy_digest`) and the docs. Add a CODEOWNERS header.
 
-- [ ] **1.4 Pin modules by version so you can promote dev → prod.** Stop using
+- [x] **1.4 Pin modules by version so you can promote dev → prod.** Stop using
   `${get_repo_root()}/infrastructure-modules/...` in the `_envcommon` files:
   - Each account's `env.hcl` gets a `module_versions` map, for example
     `module_versions = { vpc = "vpc-v1.1.0", eks = "eks-v1.1.0" }`.
@@ -355,7 +355,7 @@ find them with `git grep`.
   - Promotion flow: bump the pin in `dev/env.hcl`, merge, check it; then open a second PR
     that bumps `prod/env.hcl`. Write this down in `docs/CICD.md`.
 
-- [ ] **1.5 Renovate tracks module tags (second half of old Phase G).** Add a
+- [x] **1.5 Renovate tracks module tags (second half of old Phase G).** Add a
   `customManagers` regex entry for the `module_versions` maps in `env.hcl` (datasource
   `github-tags`, depName `ok-karthik/enterprise-aws-infrastructure`, with
   `extractVersionTemplate` removing the `<module>-v` prefix). Add one `packageRules` entry per
@@ -363,7 +363,7 @@ find them with `git grep`.
   `"matchFileNames": ["**/dev/**"]` automerge = false, and group dev and prod bumps into
   **separate** PRs so the promotion order is kept.
 
-- [ ] **1.6 Fix scripts and CI for the new paths.** `smoke-test.sh` currently loops over
+- [x] **1.6 Fix scripts and CI for the new paths.** `smoke-test.sh` currently loops over
   `infrastructure-live/{dev,prod,staging}` and runs `validate` in dev. Change it to loop
   over both live repos, and keep the env and region name checks. Update
   `terragrunt.yml`, `reusable-terragrunt.yml`, `drift-detection.yml` and `destroy.yml`
@@ -378,7 +378,7 @@ find them with `git grep`.
     → `3-tenant-repos/tenant-a/{workloads-repo,gitops-repo}` with `services/` / `platform/`
     naming as the ADR describes.
 
-- [ ] **1.8 ADR.** Add `docs/adr/0001-repository-topology.md` in this repo (create
+- [x] **1.8 ADR.** Add `docs/adr/0001-repository-topology.md` in this repo (create
   `docs/adr/`). It records the `-repo` convention, the reason for splitting foundation from
   workloads (different approvers and blast radius), why `.github/` stays at the root, and why
   bootstrap folds into foundation.
@@ -386,6 +386,11 @@ find them with `git grep`.
 ---
 
 ## Phase 2 — Real multi-account layout and account vending
+
+> **Path note (Phase 1 is done):** the Phase 2 text below was written before the rename. Read
+> `infrastructure-bootstrap/` as `foundation-live-repo/_bootstrap/`, `infrastructure-live/_global` as
+> `foundation-live-repo/_global`, `infrastructure-live/{dev,prod}` as `workloads-live-repo/{dev,prod}`,
+> `infrastructure-modules/` as `iac-modules-repo/` and `policies/` as `policy-library-repo/`.
 
 Today `management`, `dev` and `prod` all use account `954171757349`. SCPs **do not apply to
 the management account**, so none of the guardrails actually protect those workloads.
@@ -1122,3 +1127,29 @@ Everything goes under `docs/`.
     registry first (2.1, 2.6). The management `_global` stack is already outside the workflows (they only run `infrastructure-live/dev` and `prod`).
     (c) The OU layout in the chat message (Core / Workloads / Sandbox) differs from PLAN 2.3 (Security, Infrastructure, Workloads{Prod,NonProd}, Sandbox,
     Policy-Staging, Suspended); I followed the plan.
+- **2026-09-21 (Phase 1, branch `feat/p1-repo-topology`, on top of `feat/p2-bootstrap-stacksets`)** — Tasks 1.1–1.6 and 1.8 done; **1.7 not done**
+  (separate PR in `internal-developer-platform`, and it needs tags that exist at the new path first). Nothing applied, no AWS credentials used. All Phase 2
+  work from `feat/p2-bootstrap-stacksets` is kept and now lives in its Phase 1 home (the StackSets leaf and blueprint are in `foundation-live-repo/`,
+  `bootstrap.sh` and the CloudFormation template are in `foundation-live-repo/_bootstrap/`). This branch is stacked: merge order is Phase 2 (2.0b) first, then this.
+  - **1.1** `git mv infrastructure-modules iac-modules-repo`; release-please config and manifest, CI, pre-commit, Makefile, Checkov, CODEOWNERS, `.agents/**`
+    (prompts, `iac_agent.py`, tests) and docs updated; `iac-modules-repo/CODEOWNERS` added.
+  - **1.2** `foundation-live-repo/` = `_global` (organization, bootstrap StackSets), `_envcommon/governance`, `_bootstrap`, `root.hcl`;
+    `workloads-live-repo/` = `dev`, `prod`, `_envcommon/{compute,data,network}`, `scripts`, `root.hcl`. The two `root.hcl` files are identical copies.
+    **State keys verified:** I rendered all 6 leaves before the move and after each step; keys and bucket names are byte-identical.
+  - **1.3** `git mv policies policy-library-repo`; conftest paths in CI, the static-analysis action, Makefile, smoke test and `iac_agent.py`
+    (`build_policy_digest` and the conftest gate); the digest still finds the rules.
+  - **1.4** `module_versions` maps in `workloads-live-repo/{dev,prod}/env.hcl` and `foundation-live-repo/_global/env.hcl`; the four `_envcommon` blueprints build
+    `terraform.source` from them or from the checkout when `IAC_MODULES_LOCAL` is set (both modes checked with `terragrunt render`).
+    **Tags created before the rename point at the old path, so no module has a usable release tag yet:** the pins are set to the current manifest versions but
+    unusable, and the workflows and `smoke-test.sh` set `IAC_MODULES_LOCAL=1` until each module is released again (for example one
+    `feat(<module>): relocate to iac-modules-repo` commit per module). Then remove the variable from the four workflows. I did not create releases or tags.
+    The IaC agent's generated `_envcommon` files still use the checkout path (new modules have no tag).
+  - **1.5** Renovate: a custom manager for the `module_versions` maps plus one rule per module and environment (own PR, no automerge, dev and prod separate).
+    Checked: `renovate-config-validator` passes and the regex extracts exactly the 6 pins; **not** run in Renovate itself, so how it groups PRs is unproven.
+  - **1.6** `smoke-test.sh` loops over both live repos (env names, region checks, fmt of four roots) and validates dev; workflows use `workloads-live-repo/{dev,prod}`;
+    `.agents/AGENTS.md` §3 fmt command covers `iac-modules-repo foundation-live-repo workloads-live-repo policy-library-repo`; `.checkov.yaml`, tflint and Infracost updated.
+  - **1.8** `docs/adr/0001-repository-topology.md` is a **draft written by a model**, marked as such at the top: rewrite it in your own words (Phase 10).
+  - **Checked (offline):** state-key comparison above, `terragrunt hcl validate --inputs` on all 6 leaves (local mode), `terraform fmt` (4 roots),
+    `terragrunt hcl fmt --check`, `conftest verify` (63), `terraform test` for all modules (`make test`), `cfn-lint`, `shellcheck`, `tflint`, `trivy config`,
+    `.agents` tests and eval, workflow YAML parse, `git grep` for stale old paths (only a deliberate explanation in `docs/CICD.md` remains).
+    **Not checked:** a real plan or `terragrunt init` (needs credentials, so `smoke-test.sh` was only run up to its init step), the workflows on GitHub, Renovate itself.

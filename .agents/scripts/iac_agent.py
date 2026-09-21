@@ -39,7 +39,7 @@ REPO_ROOT = BASE_DIR.parent
 sys.path.insert(0, str(BASE_DIR / "scripts"))
 PROMPT_PATH = BASE_DIR / "prompts" / "iac_agent.md"
 AUDITOR_PROMPT_PATH = BASE_DIR / "prompts" / "auditor.md"
-GENERATE_MODULE_SCRIPT = REPO_ROOT / "infrastructure-live" / "scripts" / "generate-module.sh"
+GENERATE_MODULE_SCRIPT = REPO_ROOT / "workloads-live-repo" / "scripts" / "generate-module.sh"
 CATALOG_PATH = BASE_DIR / "catalog" / "golden-paths.yaml"
 CATALOG_TEMPLATES_DIR = BASE_DIR / "catalog" / "templates"
 METRICS_PATH = BASE_DIR / "metrics" / "runs.jsonl"
@@ -237,9 +237,9 @@ def scaffold_from_template(entry: dict, module_path: str, env: str, region: str,
     print(res.stdout.strip())
     if res.returncode != 0:
         print(res.stderr.strip())
-    leaf_file = REPO_ROOT / "infrastructure-live" / env / region / module_path / "terragrunt.hcl"
+    leaf_file = REPO_ROOT / "workloads-live-repo" / env / region / module_path / "terragrunt.hcl"
 
-    envcommon_path = REPO_ROOT / "infrastructure-live" / "_envcommon" / f"{module_path}.hcl"
+    envcommon_path = REPO_ROOT / "workloads-live-repo" / "_envcommon" / f"{module_path}.hcl"
     envcommon_path.parent.mkdir(parents=True, exist_ok=True)
     slug = _slugify(request)
     rendered = (
@@ -267,12 +267,12 @@ def scaffold_skeleton(module_path: str, env: str, region: str, dependencies: Opt
     if res.returncode != 0:
         print(res.stderr.strip())
 
-    leaf_dir = REPO_ROOT / "infrastructure-live" / env / region / module_path
+    leaf_dir = REPO_ROOT / "workloads-live-repo" / env / region / module_path
     leaf_file = leaf_dir / "terragrunt.hcl"
     if leaf_file.exists():
         created.append(leaf_file)
 
-    envcommon_path = REPO_ROOT / "infrastructure-live" / "_envcommon" / f"{module_path}.hcl"
+    envcommon_path = REPO_ROOT / "workloads-live-repo" / "_envcommon" / f"{module_path}.hcl"
     if not envcommon_path.exists():
         envcommon_path.parent.mkdir(parents=True, exist_ok=True)
         dep_blocks = ""
@@ -292,7 +292,7 @@ def scaffold_skeleton(module_path: str, env: str, region: str, dependencies: Opt
         envcommon_path.write_text(
             f"# Common configuration for {module_path} modules across all environments.\n\n"
             f"terraform {{\n"
-            f'  source = "${{get_repo_root()}}/infrastructure-modules/{module_path}"\n'
+            f'  source = "${{get_repo_root()}}/iac-modules-repo/{module_path}"\n'
             f"}}\n\n"
             f"locals {{\n"
             f'  env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))\n'
@@ -305,7 +305,7 @@ def scaffold_skeleton(module_path: str, env: str, region: str, dependencies: Opt
     else:
         created.append(envcommon_path)
 
-    module_dir = REPO_ROOT / "infrastructure-modules" / module_path
+    module_dir = REPO_ROOT / "iac-modules-repo" / module_path
     main_tf_header = (
         "# Primary resources for this module.\n\n"
         "terraform {\n"
@@ -375,7 +375,7 @@ fetch_aws_doc = fetch_docs
 # ==========================================
 def build_policy_digest() -> str:
     lines = ["## Active governance rules (auto-extracted — treat as binding constraints, not suggestions)"]
-    rego_dir = REPO_ROOT / "policies" / "terraform"
+    rego_dir = REPO_ROOT / "policy-library-repo" / "terraform"
     for rego_file in sorted(rego_dir.glob("*.rego")) if rego_dir.exists() else []:
         if rego_file.name.endswith("_test.rego"):
             continue
@@ -553,7 +553,7 @@ def _tail(res: subprocess.CompletedProcess, n: int = 60) -> str:
 @contextmanager
 def mock_account_id():
     targets = []
-    for path in (REPO_ROOT / "infrastructure-live").rglob("*.hcl"):
+    for path in (REPO_ROOT / "workloads-live-repo").rglob("*.hcl"):
         if ".terragrunt-cache" in path.parts:
             continue
         content = path.read_text()
@@ -602,14 +602,14 @@ def validation_ladder(
     Validation ladder with syntax, static lint, offline validation, OPA/Checkov/Trivy,
     and Infracost monthly budget enforcement.
     """
-    leaf_dir = REPO_ROOT / "infrastructure-live" / env / region / module_path
-    module_dir = REPO_ROOT / "infrastructure-modules" / module_path
+    leaf_dir = REPO_ROOT / "workloads-live-repo" / env / region / module_path
+    module_dir = REPO_ROOT / "iac-modules-repo" / module_path
 
     fmt_step = (
         "terraform fmt",
         [
             "terraform", "fmt", "-check", "-recursive",
-            "infrastructure-modules", "infrastructure-live", "policies",
+            "iac-modules-repo", "foundation-live-repo", "workloads-live-repo", "policy-library-repo",
         ],
         REPO_ROOT,
     )
@@ -672,7 +672,7 @@ def validation_ladder(
         else:
             print("   ⏭️  Skipping Infracost cost check (infracost CLI or API key unavailable).")
 
-    gates = [("conftest", ["conftest", "test", "--policy", str(REPO_ROOT / "policies" / "terraform"), str(plan_json)], REPO_ROOT)]
+    gates = [("conftest", ["conftest", "test", "--policy", str(REPO_ROOT / "policy-library-repo" / "terraform"), str(plan_json)], REPO_ROOT)]
     if module_dir.exists():
         gates.append(("checkov", ["checkov", "-d", str(module_dir), "--config-file", str(REPO_ROOT / ".checkov.yaml")], REPO_ROOT))
         gates.append((
@@ -776,8 +776,8 @@ class IaCPlatformAgent:
         region = classification["region"]
         has_template = bool(catalog_entry and catalog_entry.get("template"))
 
-        leaf_file = REPO_ROOT / "infrastructure-live" / env / region / module_path / "terragrunt.hcl"
-        envcommon_path = REPO_ROOT / "infrastructure-live" / "_envcommon" / f"{module_path}.hcl"
+        leaf_file = REPO_ROOT / "workloads-live-repo" / env / region / module_path / "terragrunt.hcl"
+        envcommon_path = REPO_ROOT / "workloads-live-repo" / "_envcommon" / f"{module_path}.hcl"
 
         if req.dry_run:
             files = [leaf_file, envcommon_path]
@@ -832,10 +832,10 @@ class IaCPlatformAgent:
             )
             if passed:
                 # Commit locally
-                run(["git", "add", "--", str(REPO_ROOT / "infrastructure-live" / env / region / module_path)], cwd=REPO_ROOT)
-                run(["git", "add", "--", str(REPO_ROOT / "infrastructure-live" / "_envcommon" / f"{module_path}.hcl")], cwd=REPO_ROOT)
-                if (REPO_ROOT / "infrastructure-modules" / module_path).exists():
-                    run(["git", "add", "--", str(REPO_ROOT / "infrastructure-modules" / module_path)], cwd=REPO_ROOT)
+                run(["git", "add", "--", str(REPO_ROOT / "workloads-live-repo" / env / region / module_path)], cwd=REPO_ROOT)
+                run(["git", "add", "--", str(REPO_ROOT / "workloads-live-repo" / "_envcommon" / f"{module_path}.hcl")], cwd=REPO_ROOT)
+                if (REPO_ROOT / "iac-modules-repo" / module_path).exists():
+                    run(["git", "add", "--", str(REPO_ROOT / "iac-modules-repo" / module_path)], cwd=REPO_ROOT)
                 run(["git", "commit", "-m", f"feat(iac-agent): {req.request}"], cwd=REPO_ROOT)
 
                 res = GenerationResult(

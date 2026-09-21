@@ -18,6 +18,12 @@ on:
         required: false
 
 
+env:
+  # Use modules from this checkout instead of the pinned release tags (module_versions in env.hcl).
+  # Needed until every module has a release tag at the iac-modules-repo path (PLAN 1.4), and later for
+  # PRs that change iac-modules-repo/** so module changes are tested before release.
+  IAC_MODULES_LOCAL: '1'
+
 permissions:
   id-token: write
   contents: read
@@ -46,7 +52,7 @@ jobs:
           aws_role_arn: ${{ inputs.aws_plan_role_arn }}
 
       - name: "Disaster Recovery (Smoke Test)"
-        run: ./infrastructure-live/scripts/smoke-test.sh
+        run: ./workloads-live-repo/scripts/smoke-test.sh
 
       - name: "Terragrunt Plan"
         run: |
@@ -106,7 +112,7 @@ jobs:
           path: plans
 
       - name: "OPA Policy Gate (Conftest)"
-        run: find plans -name "*.json" -print0 | xargs -0 conftest test --policy policies/terraform
+        run: find plans -name "*.json" -print0 | xargs -0 conftest test --policy policy-library-repo/terraform
 
       - name: "Checkov Security Audit"
         run: |

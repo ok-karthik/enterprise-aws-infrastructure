@@ -1,0 +1,5 @@
+# Becomes <org>/iac-modules — extract with: git subtree split -P iac-modules-repo -b iac-modules
+# Versioned Terraform modules (release-please, tags <module>-vX.Y.Z). Every change here can affect
+# every environment that pins the module, so reviews are required.
+
+*   @ok-karthik

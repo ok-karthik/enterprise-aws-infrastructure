@@ -30,16 +30,22 @@ A production-grade, multi-environment AWS platform built with **Terragrunt + Ter
 
 ## Architecture at a glance
 
-Strict separation of a generic **blueprint library** (`infrastructure-modules/`) from **live environment config** (`infrastructure-live/`), keeping configuration fully DRY. A single leaf module inherits everything from the layers above it.
+Strict separation of a generic **blueprint library** (`iac-modules-repo/`) from **live config** (`foundation-live-repo/` for the landing zone, `workloads-live-repo/` for platform stacks), keeping configuration fully DRY. A single leaf module inherits everything from the layers above it.
 
 ```text
-infrastructure-modules/     # Reusable Terraform (hardened VPC, EKS)
-infrastructure-live/        # Terragrunt config per env/region
+# A directory ending in -repo is a separate Git repository in a real company (docs/adr/0001).
+iac-modules-repo/           # Reusable, versioned Terraform (hardened VPC, EKS, organization)
+foundation-live-repo/       # Landing zone (management account)
 ├── root.hcl                #   generates provider.tf + backend.tf, injects default_tags
+├── _bootstrap/             #   Day-0 CloudFormation: S3 state bucket, OIDC provider, CI plan/apply roles
+├── _envcommon/governance/  #   blueprints for organization + bootstrap StackSets
+└── _global/                #   organization, bootstrap StackSets
+workloads-live-repo/        # Platform stacks in workload accounts
+├── root.hcl                #   same root, own copy
 ├── _envcommon/             #   shared module inputs + cross-module wiring
+├── scripts/                #   smoke test, module generator
 └── <env>/<region>/<cat>/<module>/terragrunt.hcl   # ~10-line leaf: includes + overrides
-infrastructure-bootstrap/   # Day-0 CloudFormation: S3 state bucket, OIDC provider, CI plan/apply roles
-policies/terraform/         # OPA/Rego governance rules (+ unit tests)
+policy-library-repo/terraform/         # OPA/Rego governance rules (+ unit tests)
 .agents/                    # Self-healing CI agent
 .github/                    # Workflows, composite actions, toolchain image
 ```
@@ -110,13 +116,13 @@ make test           # run the OPA policy unit tests
 
 Run `make help` for the full command surface. Plan a single environment with `make plan ENV=dev`.
 
-**Day-0 bootstrap** (first-time only, CloudFormation stack `platform-bootstrap`) provisions the S3 state bucket, the OIDC provider and the two CI roles (plan / apply) — see [infrastructure-bootstrap/README.md](infrastructure-bootstrap/README.md).
+**Day-0 bootstrap** (first-time only, CloudFormation stack `platform-bootstrap`) provisions the S3 state bucket, the OIDC provider and the two CI roles (plan / apply) — see [foundation-live-repo/_bootstrap/README.md](foundation-live-repo/_bootstrap/README.md).
 
 ---
 
 ## Security & governance highlights
 
-- **Policy gates on plan JSON** (not just HCL): mandatory tags (incl. `Owner` / `DataClassification`), no legacy instance families, no admin-policy attachments outside the CI apply / break-glass roles, no public S3, no internet ingress on sensitive ports, no `*`/`*` IAM policies, encryption at rest — see `policies/terraform/`, unit-tested via `conftest verify`.
+- **Policy gates on plan JSON** (not just HCL): mandatory tags (incl. `Owner` / `DataClassification`), no legacy instance families, no admin-policy attachments outside the CI apply / break-glass roles, no public S3, no internet ingress on sensitive ports, no `*`/`*` IAM policies, encryption at rest — see `policy-library-repo/terraform/`, unit-tested via `conftest verify`.
 - **Least-privilege CI**: a read-only plan role for PRs and drift detection, and a separate apply role only the `dev` / `prod` GitHub Environments can assume (permissions-boundary capped). Stacks refuse to run in any AWS account other than the one in `account.hcl`.
 - **Module hardening**: VPC ships a deny-all default NACL, a black-hole default SG, and Flow Logs → CloudWatch; EKS encrypts secrets with a dedicated KMS key and enables full control-plane logging.
 - **State backend**: S3 versioning (point-in-time rollback), native S3 lock files (`use_lockfile`), block-public-access, TLS 1.2+ only, SSE at rest. The bucket is created by the Day-0 CloudFormation stack, not by Terragrunt.

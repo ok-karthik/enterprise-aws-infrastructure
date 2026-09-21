@@ -13,14 +13,14 @@ repos:
     hooks:
       - id: cfn-lint
         name: ☁️ CloudFormation Lint (cfn-lint)
-        files: ^infrastructure-bootstrap/cloudformation/.*\.ya?ml$
+        files: ^foundation-live-repo/_bootstrap/cloudformation/.*\.ya?ml$
 
   - repo: local
     hooks:
       - id: terraform-fmt
         name: 🎨 Terraform & Terragrunt Format
         # Automatically fixes formatting before the smoke test runs
-        entry: bash -c 'terraform fmt -recursive infrastructure-modules infrastructure-live policies && terragrunt hcl fmt'
+        entry: bash -c 'terraform fmt -recursive iac-modules-repo foundation-live-repo workloads-live-repo policy-library-repo && terragrunt hcl fmt'
         language: system
         pass_filenames: false
         always_run: true
@@ -28,7 +28,7 @@ repos:
       - id: platform-smoke-test
         name: 🧪 Platform Smoke Test (Validate & TFLint)
         # Reuses your battle-tested script
-        entry: ./infrastructure-live/scripts/smoke-test.sh
+        entry: ./workloads-live-repo/scripts/smoke-test.sh
         language: system
         pass_filenames: false
         always_run: true

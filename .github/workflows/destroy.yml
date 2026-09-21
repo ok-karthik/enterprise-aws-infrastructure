@@ -26,6 +26,10 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   AWS_REGION: ${{ vars.AWS_REGION }}
+  # Use modules from this checkout instead of the pinned release tags (module_versions in env.hcl).
+  # Needed until every module has a release tag at the iac-modules-repo path (PLAN 1.4), and later for
+  # PRs that change iac-modules-repo/** so module changes are tested before release.
+  IAC_MODULES_LOCAL: '1'
 
 jobs:
   discover:
@@ -42,7 +46,7 @@ jobs:
         id: set-modules
         run: |
           # Find all directories with terragrunt.hcl in the selected environment
-          MODULES=$(find infrastructure-live/${{ github.event.inputs.environment }} -name "terragrunt.hcl" -not -path "*/.terragrunt-cache/*" | xargs -I {} dirname {} | jq -R . | jq -s -c .)
+          MODULES=$(find workloads-live-repo/${{ github.event.inputs.environment }} -name "terragrunt.hcl" -not -path "*/.terragrunt-cache/*" | xargs -I {} dirname {} | jq -R . | jq -s -c .)
           echo "modules=$MODULES" >> $GITHUB_OUTPUT
           echo "Found modules: $MODULES"
 
@@ -72,4 +76,4 @@ jobs:
         run: |
           # Terragrunt 1.x uses 'run --all' and '--non-interactive'
           terragrunt run --all destroy --non-interactive -auto-approve
-        working-directory: infrastructure-live/${{ github.event.inputs.environment }}
+        working-directory: workloads-live-repo/${{ github.event.inputs.environment }}

@@ -1,11 +1,11 @@
 {
-  "infrastructure-modules/data/postgres": "1.0.0",
-  "infrastructure-modules/storage/s3": "1.0.0",
-  "infrastructure-modules/identity/workload-iam": "1.0.0",
-  "infrastructure-modules/compute/eks": "1.0.0",
-  "infrastructure-modules/network/vpc": "1.0.0",
-  "infrastructure-modules/identity/human-access": "1.0.0",
-  "infrastructure-modules/identity/workload-identity": "1.0.0",
-  "infrastructure-modules/governance/organization": "1.0.0",
-  "infrastructure-modules/governance/bootstrap-stacksets": "1.0.0"
+  "iac-modules-repo/data/postgres": "1.0.0",
+  "iac-modules-repo/storage/s3": "1.0.0",
+  "iac-modules-repo/identity/workload-iam": "1.0.0",
+  "iac-modules-repo/compute/eks": "1.0.0",
+  "iac-modules-repo/network/vpc": "1.0.0",
+  "iac-modules-repo/identity/human-access": "1.0.0",
+  "iac-modules-repo/identity/workload-identity": "1.0.0",
+  "iac-modules-repo/governance/organization": "1.0.0",
+  "iac-modules-repo/governance/bootstrap-stacksets": "1.0.0"
 }
