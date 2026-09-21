@@ -5,85 +5,85 @@
       "release-type": "terraform-module",
       "package-name": "postgres",
       "component": "postgres",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/storage/s3": {
       "release-type": "terraform-module",
       "package-name": "s3",
       "component": "s3",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/identity/workload-iam": {
       "release-type": "terraform-module",
       "package-name": "workload-iam",
       "component": "workload-iam",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/compute/eks": {
       "release-type": "terraform-module",
       "package-name": "eks",
       "component": "eks",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/network/vpc": {
       "release-type": "terraform-module",
       "package-name": "vpc",
       "component": "vpc",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/identity/human-access": {
       "release-type": "terraform-module",
       "package-name": "human-access",
       "component": "human-access",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/identity/workload-identity": {
       "release-type": "terraform-module",
       "package-name": "workload-identity",
       "component": "workload-identity",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/governance/organization": {
       "release-type": "terraform-module",
       "package-name": "organization",
       "component": "organization",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/governance/bootstrap-stacksets": {
       "release-type": "terraform-module",
       "package-name": "bootstrap-stacksets",
       "component": "bootstrap-stacksets",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/identity/ack-cross-account": {
       "release-type": "terraform-module",
       "package-name": "ack-cross-account",
       "component": "ack-cross-account",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/governance/account-factory": {
       "release-type": "terraform-module",
       "package-name": "account-factory",
       "component": "account-factory",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/governance/account-baseline": {
       "release-type": "terraform-module",
       "package-name": "account-baseline",
       "component": "account-baseline",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/governance/discovery-publisher": {
       "release-type": "terraform-module",
       "package-name": "discovery-publisher",
       "component": "discovery-publisher",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     },
     "iac-modules-repo/governance/budgets": {
       "release-type": "terraform-module",
       "package-name": "budgets",
       "component": "budgets",
-      "tag-separator": "-v"
+      "tag-separator": "-"
     }
   }
 }
