@@ -72,6 +72,12 @@
       "package-name": "account-baseline",
       "component": "account-baseline",
       "tag-separator": "-v"
+    },
+    "iac-modules-repo/governance/discovery-publisher": {
+      "release-type": "terraform-module",
+      "package-name": "discovery-publisher",
+      "component": "discovery-publisher",
+      "tag-separator": "-v"
     }
   }
 }

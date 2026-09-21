@@ -64,3 +64,4 @@ docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/identity/ack-cross-account
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/governance/account-factory
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/governance/account-baseline
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/governance/discovery-publisher

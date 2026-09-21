@@ -59,6 +59,24 @@
   ],
   "packageRules": [
     {
+      "description": "discovery_publisher pin in dev: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["discovery_publisher"],
+      "matchFileNames": ["**/workloads-dev/env.hcl"],
+      "groupName": "iac-modules: discovery_publisher pin (dev)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "dev"]
+    },
+    {
+      "description": "discovery_publisher pin in prod: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["discovery_publisher"],
+      "matchFileNames": ["**/workloads-prod/env.hcl"],
+      "groupName": "iac-modules: discovery_publisher pin (prod)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "prod"]
+    },
+    {
       "description": "account_baseline pin in management: own PR, no automerge, so the promotion order is kept",
       "matchManagers": ["custom.regex"],
       "matchDepTypes": ["account_baseline"],
