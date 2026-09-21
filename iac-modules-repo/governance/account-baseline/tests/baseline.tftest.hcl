@@ -195,7 +195,7 @@ run "developer_cannot_write_resource_policies" {
   assert {
     condition = toset({ for st in jsondecode(aws_iam_policy.developer.policy).Statement : st.Sid => st }["DenyResourcePolicyWrites"].Action) == toset([
       "s3:PutBucketPolicy", "s3:DeleteBucketPolicy", "s3:PutBucketAcl", "s3:PutObjectAcl", "s3:PutBucketPublicAccessBlock",
-      "sqs:AddPermission", "sns:AddPermission", "lambda:AddPermission", "lambda:CreateFunctionUrlConfig", "ecr:SetRepositoryPolicy",
+      "sqs:AddPermission", "sns:AddPermission", "lambda:AddPermission", "ecr:SetRepositoryPolicy",
     ])
     error_message = "The Deny must cover exactly the resource-policy and permission-granting actions."
   }
@@ -203,6 +203,28 @@ run "developer_cannot_write_resource_policies" {
   assert {
     condition     = { for st in jsondecode(aws_iam_policy.developer.policy).Statement : st.Sid => st }["DenyResourcePolicyWrites"].Resource == "*"
     error_message = "Resource-policy writes are denied on every resource."
+  }
+}
+
+run "developer_cannot_create_public_lambda_function_urls" {
+  command = plan
+
+  assert {
+    condition     = toset({ for st in jsondecode(aws_iam_policy.developer.policy).Statement : st.Sid => st }["DenyPublicLambdaFunctionUrls"].Action) == toset(["lambda:CreateFunctionUrlConfig", "lambda:UpdateFunctionUrlConfig"])
+    error_message = "Both Create and Update must be covered, or an IAM-auth URL could be switched to public."
+  }
+
+  assert {
+    condition     = { for st in jsondecode(aws_iam_policy.developer.policy).Statement : st.Sid => st }["DenyPublicLambdaFunctionUrls"].Condition.StringEquals["lambda:FunctionUrlAuthType"] == "NONE"
+    error_message = "Only AuthType NONE (public) is denied; AWS_IAM URLs stay allowed."
+  }
+
+  assert {
+    condition = alltrue([
+      for st in jsondecode(aws_iam_policy.developer.policy).Statement :
+      st.Effect != "Deny" || contains(keys(st), "Condition") || !strcontains(jsonencode(st.Action), "FunctionUrlConfig")
+    ])
+    error_message = "No unconditional Deny of function URLs: that would block the IAM-authenticated ones too."
   }
 }
 
@@ -264,9 +286,9 @@ run "developer_policy_keeps_its_allows_and_only_adds_denies" {
 
   assert {
     condition = toset([for st in jsondecode(aws_iam_policy.developer.policy).Statement : st.Sid if st.Effect == "Deny"]) == toset([
-      "DenyResourcePolicyWrites", "DenyPlatformParameterWrites", "DenySsmAccessToOtherTeamsInstances", "DenySsmAccessWithoutTeamTag",
+      "DenyResourcePolicyWrites", "DenyPublicLambdaFunctionUrls", "DenyPlatformParameterWrites", "DenySsmAccessToOtherTeamsInstances", "DenySsmAccessWithoutTeamTag",
     ])
-    error_message = "The Developer policy has exactly these four Deny statements."
+    error_message = "The Developer policy has exactly these five Deny statements."
   }
 
   assert {

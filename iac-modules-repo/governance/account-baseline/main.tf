@@ -353,7 +353,6 @@ locals {
         Action = [
           "ecr:SetRepositoryPolicy",
           "lambda:AddPermission",
-          "lambda:CreateFunctionUrlConfig",
           "s3:DeleteBucketPolicy",
           "s3:PutBucketAcl",
           "s3:PutBucketPolicy",
@@ -363,6 +362,18 @@ locals {
           "sqs:AddPermission",
         ]
         Resource = "*"
+      },
+      {
+        # A Lambda function URL with AuthType NONE is a public endpoint. AWS_IAM URLs are allowed (callers must
+        # sign requests), so this is a condition on the auth type and not an outright deny of function URLs.
+        # UpdateFunctionUrlConfig is covered too, or a URL created as AWS_IAM could be switched to NONE.
+        # When an update does not change the auth type the key is absent and the call is allowed: an existing
+        # public URL is not fixed by this, it only cannot be created or switched to.
+        Sid       = "DenyPublicLambdaFunctionUrls"
+        Effect    = "Deny"
+        Action    = ["lambda:CreateFunctionUrlConfig", "lambda:UpdateFunctionUrlConfig"]
+        Resource  = "*"
+        Condition = { StringEquals = { "lambda:FunctionUrlAuthType" = "NONE" } }
       },
       {
         # /platform/* is the discovery contract (docs/DISCOVERY_CONTRACT.md): tenants read it, only the
