@@ -14,8 +14,12 @@ locals {
   account_alias = local.account_vars.locals.account_name
   cluster_name  = local.env_vars.locals.cluster_name
 
-  # 3. Get the Account ID dynamically
-  account_id = get_aws_account_id()
+  # 3. The account this stack is DECLARED to belong to (account.hcl).
+  # Do not use get_aws_account_id() here: it returns whatever account the caller is logged
+  # in to, so `allowed_account_ids` would compare the caller with itself and never fail.
+  account_id = local.account_vars.locals.aws_account_id
+  owner      = local.account_vars.locals.owner
+  data_class = local.account_vars.locals.data_classification
 }
 
 
@@ -26,15 +30,19 @@ generate "provider" {
   contents  = <<EOF
 provider "aws" {
   region = "${local.aws_region}"
+
+  # Fail closed: refuse to run against any account other than the one declared in account.hcl.
   allowed_account_ids = ["${local.account_id}"]
 
   default_tags {
     tags = {
-      Environment = "${title(local.env)}"
-      ManagedBy   = "Terragrunt"
-      Account     = "${local.account_alias}"
-      Project     = "enterprise-aws-platform"
-      Service     = "${path_relative_to_include()}"
+      Environment        = "${title(local.env)}"
+      ManagedBy          = "Terragrunt"
+      Account            = "${local.account_alias}"
+      Project            = "enterprise-aws-platform"
+      Service            = "${path_relative_to_include()}"
+      Owner              = "${local.owner}"
+      DataClassification = "${local.data_class}"
     }
   }
 }

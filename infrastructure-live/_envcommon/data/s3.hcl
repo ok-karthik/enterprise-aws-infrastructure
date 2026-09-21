@@ -5,12 +5,13 @@ terraform {
 }
 
 locals {
-  env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
-  env      = local.env_vars.locals.env
+  env_vars     = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+  account_vars = read_terragrunt_config(find_in_parent_folders("account.hcl"))
+  env          = local.env_vars.locals.env
 }
 
 inputs = {
-  bucket_name = "tg-learning-bucket-${local.env}-${get_aws_account_id()}" # Using account ID for uniqueness
+  bucket_name = "tg-learning-bucket-${local.env}-${local.account_vars.locals.aws_account_id}" # Using account ID for uniqueness
 
   tags = {
     Environment = title(local.env)
