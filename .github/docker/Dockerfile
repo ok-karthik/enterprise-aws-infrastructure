@@ -1,5 +1,12 @@
+# Checkov: this is a CLI toolchain image that GitHub Actions runs as a job container, not a long-running service.
+#checkov:skip=CKV_DOCKER_2: "No HEALTHCHECK: the container is a short-lived job container, not a service that an orchestrator restarts"
+#checkov:skip=CKV_DOCKER_8: "Runs as root on purpose: the GitHub runner writes the workspace as root (options: --user root), see the note above the USER instruction and .trivyignore DS-0002"
+
 # Global ARGs for multi-stage support
 ARG TRIVY_VERSION=0.70.0
+# Checkov version: ONE pin, used here and read by workloads-live-repo/scripts/run-checkov.sh, so a local run
+# and the CI run use the same rules. Renovate bumps it.
+ARG CHECKOV_VERSION=3.3.19 # renovate: datasource=pypi depName=checkov
 
 # 1. Define Trivy source stage (supports variables)
 FROM public.ecr.aws/aquasecurity/trivy:${TRIVY_VERSION} AS trivy_source
@@ -73,8 +80,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Checkov
-RUN pip3 install --no-cache-dir checkov --break-system-packages
+# Install Checkov (pinned, see CHECKOV_VERSION at the top)
+ARG CHECKOV_VERSION
+RUN pip3 install --no-cache-dir "checkov==${CHECKOV_VERSION}" --break-system-packages
 
 # Copy binaries from builder
 COPY --from=builder /usr/local/bin/ /usr/local/bin/

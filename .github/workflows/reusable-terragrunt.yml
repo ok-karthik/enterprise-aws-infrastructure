@@ -115,10 +115,31 @@ jobs:
       - name: "OPA Policy Gate (Conftest)"
         run: find plans -name "*.json" -print0 | xargs -0 conftest test --policy policy-library-repo/terraform
 
-      - name: "Checkov Security Audit"
+      # Every tfplan.json is scanned (like the conftest step above), not just the first one: a plan that is not
+      # scanned is a plan that cannot fail. Any finding in any plan fails the step, but all plans are scanned and
+      # all findings reported first. Settings come from .checkov.yaml only.
+      - name: "Checkov Security Audit (every plan)"
+        shell: bash
         run: |
-          PLAN_FILE=$(find plans -name "tfplan.json" | head -n 1)
-          checkov -f "$PLAN_FILE" --config-file .checkov.yaml --output cli --output sarif --output-file-path console,checkov-results-${{ inputs.account }}.sarif
+          status=0
+          count=0
+          mkdir -p checkov-plan-sarif
+          while IFS= read -r plan; do
+            count=$((count + 1))
+            echo "::group::Checkov: $plan"
+            # `directory:` in .checkov.yaml makes -f process a plan once per listed directory: each finding is
+            # printed (and written) several times. merge_sarif.py drops the duplicates.
+            checkov -f "$plan" --framework terraform_plan --config-file .checkov.yaml \
+              --output cli --output sarif --output-file-path "console,checkov-plan-sarif/$count" || status=1
+            echo "::endgroup::"
+          done < <(find plans -name "tfplan.json" | sort)
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No tfplan.json found to scan"
+            exit 1
+          fi
+          echo "Scanned $count plan(s)"
+          python3 workloads-live-repo/scripts/merge_sarif.py checkov-plan-sarif "checkov-results-${{ inputs.account }}.sarif"
+          exit $status
 
       - name: Upload Checkov SARIF results
         uses: github/codeql-action/upload-sarif@v4

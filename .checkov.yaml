@@ -1,22 +1,30 @@
-# Checkov configuration for Terragrunt-based repositories
+# Checkov configuration for Terragrunt-based repositories. THIS FILE IS THE ONLY PLACE Checkov settings live:
+# the pre-commit hook, `make checkov` and CI all run `checkov --config-file .checkov.yaml` and pass nothing
+# else that changes the result (only the output format). A finding that fails one fails all three.
 # See: https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
-
+#
+# What is scanned: the modules, both live repos (which include the CloudFormation bootstrap) and .github
+# (workflows, composite actions and the toolbox Dockerfile).
 directory:
   - iac-modules-repo
   - foundation-live-repo
   - workloads-live-repo
-  - foundation-live-repo/_bootstrap
+  - .github
+
+# Local caches from terraform/terragrunt runs are not our code.
+skip-path:
+  - .terragrunt-cache
+  - .terraform
+  - .external_modules
 
 # Output formats
 output:
   - cli
   - sarif
 
-# Soft-fail on known low-severity issues that are acceptable in dev environments
-soft-fail-on:
-  - LOW
-
-# Skip checks that are not applicable to this infrastructure or prototype
+# Repo-wide skips: only checks that do not apply to this platform at all, each with its reason. A finding that
+# is specific to one resource is skipped inline instead (#checkov:skip=<ID>: <reason> in the resource), so
+# the exception sits next to the code it excuses. Nothing is soft-fail: any finding fails the run.
 skip-check:
   - CKV_AWS_79  # IMDSv1 check (EKS default)
   - CKV_AWS_8   # Detailed monitoring
@@ -28,11 +36,12 @@ skip-check:
   - CKV_AWS_338 # CloudWatch 1-year retention (Defaults to infinite/0)
   - CKV2_AWS_12 # Default VPC Security Group restrictions (Standard noise in modules)
   - CKV_AWS_341 # Metadata hop limit (Standard in EKS node group modules)
-  - CKV_AWS_111 # IAM Write access without constraints (Required for EC2 Describe actions)
-  - CKV_AWS_356 # IAM Resource: * (Required for EC2 Describe actions)
   - CKV2_AWS_19 # EIP attachment (Checkov doesn't recognize NAT Gateways as valid attachments)
   - CKV_AWS_158 # EKS CloudWatch KMS Encryption (Checkov bug with 'known after apply' KMS keys)
   - CKV2_AWS_34 # SSM Parameter encryption (Discovery contract parameters are non-sensitive catalog metadata consumed by unprivileged tenant pipelines)
 
-# Enable deep scanning of external modules from Terraform Registry
+# Do not download and scan the upstream registry modules. Their code cannot carry our inline skips, and a
+# static scan cannot resolve their variables (it reports for example CKV_AWS_37 on the EKS module although
+# we pass all five log types). The plan-stage Checkov step (reusable-terragrunt.yml) scans the RESOLVED plan,
+# including the module resources, with the real values.
 download-external-modules: false
