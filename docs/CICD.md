@@ -5,7 +5,7 @@ All jobs run inside a purpose-built toolchain container (`ghcr.io/ok-karthik/inf
 ## Pipeline (`terragrunt.yml` + `reusable-terragrunt.yml`)
 
 1. **Static analysis** (parallel with planning): `terraform fmt -check`, `terraform validate`, TFLint, Checkov (HCL), Trivy. Results upload as SARIF to the GitHub Security tab.
-2. **Plan** per environment: `terragrunt run --all plan` produces `tfplan.bin`, converted to `tfplan.json` and uploaded as an artifact.
+2. **Plan** per account (a matrix generated from the account registry, see below): `terragrunt run --all plan` produces `tfplan.bin`, converted to `tfplan.json` and uploaded as an artifact.
 3. **Governance gates** consume the plan JSON:
    - **OPA/Conftest** against `policy-library-repo/terraform/` — mandatory tagging, no legacy instance families.
    - **Checkov** (plan-level, CIS benchmark) and **Trivy** (CRITICAL/HIGH) as blocking gates.
@@ -33,21 +33,21 @@ Jobs assume short-lived IAM roles via GitHub Actions OIDC through the `setup-pla
 | Role | Used by | Trusted OIDC subjects | Permissions |
 |---|---|---|---|
 | `github-actions-plan` | plan, governance and drift-detection jobs | `repo:<repo>:*` (any job of this repository, whatever the trigger; read-only, so this was widened from `pull_request` + `refs/heads/main` on purpose. Narrow it again if collaborators are added) | `ReadOnlyAccess`; on the state bucket: read state, write/delete `*.tflock` lock files only |
-| `github-actions-apply` | `apply-dev`, `apply-prod`, `destroy` | `repo:<repo>:environment:<GitHubEnvironment>`, exactly one per account (`management` in the management account) | `AdministratorAccess` capped by the `github-actions-apply-boundary` permissions boundary (denies Identity Center, CloudTrail changes, organization destruction, edits to the boundary, the `github-actions-*` roles, the OIDC provider, the state bucket's settings and the bootstrap stack; also `organizations:*` / `account:*` everywhere except management). Narrowed further in PLAN 3.4 |
+| `github-actions-apply` | the `apply` matrix job and `destroy` | `repo:<repo>:environment:<GitHubEnvironment>`, exactly one per account (`management` in the management account) | `AdministratorAccess` capped by the `github-actions-apply-boundary` permissions boundary (denies Identity Center, CloudTrail changes, organization destruction, edits to the boundary, the `github-actions-*` roles, the OIDC provider, the state bucket's settings and the bootstrap stack; also `organizations:*` / `account:*` everywhere except management). Narrowed further in PLAN 3.4 |
 
 Both roles, the OIDC provider and the state bucket come from the Day-0 CloudFormation stack `platform-bootstrap` (`foundation-live-repo/_bootstrap/`, see its README).
 
-Because the apply role trusts only one GitHub Environment, the manual-approval gate on that Environment cannot be bypassed from a branch or PR. **Today only the `management` account exists**, so create the `management` Environment (owner as required reviewer); its apply role trusts `environment:management` and nothing else.
+Because the apply role trusts only one GitHub Environment, the manual-approval gate on that Environment cannot be bypassed from a branch or PR. GitHub Environments: `management`, `core` (Security and Infrastructure accounts), `dev` and `prod` (with required reviewers). An account's apply role trusts only its own Environment; `dev` is shared by every NonProd account until one Environment per account is added (an optional later step: set the StackSet parameter per OU target).
 
-**Repository variables** (Settings → Secrets and variables → Actions → Variables). `foundation-live-repo/_bootstrap/bootstrap.sh` prints the exact `gh` commands (it does not run them):
+## Account matrix: one job per account
 
-| Variable | Value |
-|---|---|
-| `AWS_REGION` | primary region, e.g. `eu-central-1` |
-| `AWS_DEV_PLAN_ROLE_ARN` / `AWS_PROD_PLAN_ROLE_ARN` | ARN of `github-actions-plan`. Set both to the **management** plan role for now: plans are read-only, so they can stay there until `workloads-dev` exists |
-| `AWS_DEV_APPLY_ROLE_ARN` / `AWS_PROD_APPLY_ROLE_ARN` | **Leave unset until a workload account exists.** The management apply role trusts only `environment:management`, so the dev/prod apply jobs cannot deploy workloads into the management account. This is intended. CI for the org stack (`_global`) comes with PLAN 2.6, and per-account Environments with it (until then `environment:dev` can apply to *any* NonProd account) |
+Workflows do not have fixed `dev` / `prod` jobs. A `matrix` job runs `workloads-live-repo/scripts/generate_account_matrix.py`, which reads the account registry (`foundation-live-repo/_config/accounts.hcl`) and emits one entry per account that has `ci = true`, a live folder (`workloads-live-repo/<account>` or `foundation-live-repo/<account>`) and a **real account id** (a `000000000xxx` placeholder is skipped with a notice, never a red build). Plan, drift detection and apply all run over that matrix.
 
-The old `AWS_DEV_ROLE_ARN` / `AWS_PROD_ROLE_ARN` variables are no longer read and can be deleted.
+- **Role ARNs are built from the account id**: `arn:aws:iam::<account-id>:role/github-actions-plan` and `.../github-actions-apply`. There is no shared role, no role chaining, and no per-environment role variable. Each account has its own OIDC provider and roles from the Day-0 bootstrap (CloudFormation for management, StackSets for members), so the blast radius stays one account.
+- **`stack`** (plan, governance, cost) runs for every account in parallel. **`apply`** runs on `main` only after every account's plan and governance passed, **one account at a time in the order management, core, dev, staging, prod**, and stops at the first failure. Each job runs in the account's GitHub Environment, so the approval on `prod` still gates prod.
+- **`destroy.yml`** takes an `account` input, resolves it through the same script (so it only works for an account in the matrix) and refuses `management`.
+- **Repository variable:** only `AWS_REGION`. `foundation-live-repo/_bootstrap/bootstrap.sh` prints the `gh` commands. The old `AWS_<ENV>_PLAN_ROLE_ARN` / `AWS_<ENV>_APPLY_ROLE_ARN` variables are no longer read and can be deleted.
+- **Branch protection:** the required status checks are now named per account (for example `workloads-dev / 📝 Plan: workloads-dev`); update them in Settings → Branches (see `GOVERNANCE.md`). Until an account has a real id no plan job exists for it, so only static analysis runs.
 
 **Account guard:** `root.hcl` takes the account ID from `account.hcl` (not from the caller's credentials) and sets it as `allowed_account_ids`, so running a stack with credentials for the wrong account fails at provider init.
 
@@ -65,7 +65,7 @@ Both are Rego v1 (`import rego.v1`, `package main`) and are unit-tested with `co
 
 ## Nightly drift detection (`drift-detection.yml`)
 
-A matrix job over dev/prod compares live AWS against state each night and self-manages **one GitHub Issue per environment**: creates on new drift, comments while it persists, and auto-closes when resolved. Each env uses its own read-only plan role (`AWS_<ENV>_PLAN_ROLE_ARN`).
+A matrix job over the same account matrix compares live AWS against state each night and self-manages **one GitHub Issue per account**: creates on new drift, comments while it persists, and auto-closes when resolved. Each account's own read-only `github-actions-plan` role is used.
 
 ## Self-healing CI (`pipeline_healer.yml` + `.agents/`)
 

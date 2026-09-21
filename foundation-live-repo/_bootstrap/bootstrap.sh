@@ -211,17 +211,26 @@ NEXT STEPS: wire GitHub to the roles (nothing below has been run for you)
 
    gh api -X PUT repos/${GITHUB_REPO}/environments/${GITHUB_ENVIRONMENT}
 
-2. Repository variables. Plans are read-only, so dev and prod plans can point at this role
-   until the workload accounts exist:
+   The other Environments (dev, prod, core) are created when their accounts exist; the bootstrap
+   StackSets give each account a github-actions-apply role that trusts only its own Environment:
 
-   gh variable set AWS_REGION             --repo ${GITHUB_REPO} --body "${REGION}"
-   gh variable set AWS_DEV_PLAN_ROLE_ARN  --repo ${GITHUB_REPO} --body "${PLAN_ROLE_ARN}"
-   gh variable set AWS_PROD_PLAN_ROLE_ARN --repo ${GITHUB_REPO} --body "${PLAN_ROLE_ARN}"
+   gh api -X PUT repos/${GITHUB_REPO}/environments/dev
+   gh api -X PUT repos/${GITHUB_REPO}/environments/prod     # add yourself as required reviewer
+   gh api -X PUT repos/${GITHUB_REPO}/environments/core
 
-3. Leave AWS_DEV_APPLY_ROLE_ARN and AWS_PROD_APPLY_ROLE_ARN UNSET. The apply role here trusts
-   only environment:${GITHUB_ENVIRONMENT}, so the dev/prod apply jobs cannot deploy workloads into
-   the management account. That is intended (CI for the org stack comes with PLAN 2.6).
+2. One repository variable. There are no per-environment role variables any more: every CI job
+   builds its role ARN from the account id in foundation-live-repo/_config/accounts.hcl
+   (arn:aws:iam::<account-id>:role/github-actions-plan and .../github-actions-apply):
 
-4. Open a pull request. The plan job assumes github-actions-plan and must succeed.
+   gh variable set AWS_REGION --repo ${GITHUB_REPO} --body "${REGION}"
+
+   The old AWS_DEV_PLAN_ROLE_ARN, AWS_PROD_PLAN_ROLE_ARN, AWS_DEV_APPLY_ROLE_ARN and
+   AWS_PROD_APPLY_ROLE_ARN variables are no longer read and can be deleted.
+
+3. Set 'ci = true' for the management account in the registry once its stacks should be planned
+   in CI (after the organization stack is imported and the placeholders are replaced). An account
+   only runs once it has a live folder and a real account id.
+
+4. Open a pull request. The plan jobs assume github-actions-plan in each account and must succeed.
 ------------------------------------------------------------
 EOF

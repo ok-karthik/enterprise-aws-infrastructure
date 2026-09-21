@@ -37,12 +37,7 @@ To ensure the integrity of the `main` branch, the following **GitHub UI settings
 3.  **Require status checks to pass before merging**: Checked.
     - **Status checks**:
         - `🔍 Static Analysis (TFLint/Checkov)`
-        - `Dev / 📝 Plan: dev`
-        - `Prod / 📝 Plan: prod`
-        - `Dev / ⚖️ Security & Governance (OPA/Checkov): dev`
-        - `Prod / ⚖️ Security & Governance (OPA/Checkov): prod`
-        - `Dev / 💰 Cost Analysis (Infracost): dev`
-        - `Prod / 💰 Cost Analysis (Infracost): prod`
+        - For each account that runs in CI (the matrix in `docs/CICD.md`), for example `workloads-dev`: `workloads-dev / 📝 Plan: workloads-dev`, `workloads-dev / ⚖️ Security & Governance (OPA/Checkov): workloads-dev` and `workloads-dev / 💰 Cost Analysis (Infracost): workloads-dev`. Add the same three for `workloads-prod` and every other account once it has a real id.
 4.  **Require conversation resolution before merging**: Checked (ensures all reviewer comments are addressed).
 5.  **Restrict deletions**: Checked.
 

@@ -322,10 +322,10 @@ Outputs:
     Description: Terraform state bucket for this account and region
     Value: !Ref StateBucket
   PlanRoleArn:
-    Description: Set as AWS_<ENV>_PLAN_ROLE_ARN
+    Description: Role CI assumes to plan in this account (CI builds the ARN from the account id, no variable needed)
     Value: !GetAtt PlanRole.Arn
   ApplyRoleArn:
-    Description: Set as AWS_<ENV>_APPLY_ROLE_ARN
+    Description: Role CI assumes to apply in this account (only from this account's GitHub Environment)
     Value: !GetAtt ApplyRole.Arn
   OidcProviderArn:
     Description: GitHub OIDC provider in this account

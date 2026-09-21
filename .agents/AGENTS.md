@@ -142,10 +142,10 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 
 ## 6. CI/CD Pipeline
 
-- `terragrunt.yml` — main orchestrator. Static analysis + `dev`/`prod` reusable stacks run in parallel; on push to `main`, `apply-dev` runs then `apply-prod` (gated by a protected GitHub `prod` Environment requiring manual approval).
-- `reusable-terragrunt.yml` — per-environment plan → governance (OPA/Checkov/Trivy) → cost analysis. Plans are generated as `tfplan.bin`, converted to `tfplan.json`, uploaded as artifacts, and consumed by the gate jobs.
-- Auth is **zero-key OIDC** with two roles: plan/governance/drift jobs assume the read-only `vars.AWS_<ENV>_PLAN_ROLE_ARN` (trusted from PRs and `main`); apply/destroy jobs assume `vars.AWS_<ENV>_APPLY_ROLE_ARN` (trusted only from the `dev` / `prod` GitHub Environments) via `setup-platform`. No static AWS credentials exist.
-- `drift-detection.yml` — nightly matrix over dev/prod; manages one GitHub Issue per env (create/comment/auto-close) and prompts for ChatOps reconciliation.
+- `terragrunt.yml` — main orchestrator. Static analysis + one reusable stack per account run in parallel (the account matrix is generated from `foundation-live-repo/_config/accounts.hcl` by `workloads-live-repo/scripts/generate_account_matrix.py`; an account runs only with `ci = true`, a live folder and a real account id). On push to `main`, an `apply` matrix job runs one account at a time (management, core, dev, staging, prod), each in the account's GitHub Environment (prod requires manual approval).
+- `reusable-terragrunt.yml` — per-account plan → governance (OPA/Checkov/Trivy) → cost analysis. Plans are generated as `tfplan.bin`, converted to `tfplan.json`, uploaded as artifacts, and consumed by the gate jobs.
+- Auth is **zero-key OIDC** with two roles per account, straight into the target account (no shared role, no role chaining, no per-environment role variables): plan/governance/drift jobs assume the read-only `arn:aws:iam::<account-id>:role/github-actions-plan` (trusted from PRs and `main`); apply/destroy jobs assume `.../github-actions-apply` (trusted only from that account's GitHub Environment: `management`, `core`, `dev`, `prod`), via `setup-platform`. The account id comes from the registry. No static AWS credentials exist.
+- `drift-detection.yml` — nightly matrix over the account matrix; manages one GitHub Issue per account (create/comment/auto-close) and prompts for ChatOps reconciliation.
 - `chatops_generator.yml` — listens for `/generate` and `/reconcile` issue/PR comments to trigger automated module authoring and PR creation.
 - `pipeline_healer.yml` — triggers on a failed "Terragrunt CI/CD" run and executes `.agents/scripts/healer_runner.py`.
 
