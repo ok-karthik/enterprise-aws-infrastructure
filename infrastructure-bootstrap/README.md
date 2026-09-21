@@ -26,7 +26,7 @@ You can deploy the bootstrap using any of the following three methods. If you ar
 
 No local AWS CLI profiles or access keys needed.
 
-1. **Enable StackSets in Organizations**: In the AWS Console, go to **AWS Organizations** → **Settings** → under *Trusted access for AWS services*, find **AWS CloudFormation StackSets** and ensure it is **Enabled** (click *Enable trusted access* if needed).
+1. **Enable StackSets in Organizations (One-time, for Phase 2)**: In the AWS Console, go to **AWS Organizations** → **Services** (left sidebar menu) → click **AWS CloudFormation StackSets** → click **Enable trusted access**. *(Note: Your Day-0 `platform-bootstrap` stack is a standard CloudFormation stack, so it will deploy even if this is enabled later, but enabling it now prepares your org for member account StackSets).*
 2. Go to **AWS CloudFormation** in region `eu-central-1` (Frankfurt).
 3. Click **Create stack** → **With new resources (standard)**.
 4. Under *Template source*, choose **Upload a template file** and select [`cloudformation/account-bootstrap.yaml`](cloudformation/account-bootstrap.yaml).
