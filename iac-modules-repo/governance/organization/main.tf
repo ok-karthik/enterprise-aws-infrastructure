@@ -33,6 +33,41 @@ resource "aws_organizations_organization" "this" {
 }
 
 # ------------------------------------------------------------------------------
+# 1b. Centralized root access management (PLAN 3.5)
+# ------------------------------------------------------------------------------
+# Removes the need for root credentials in member accounts: they can be deleted, and a privileged
+# root task is done from the management account with sts:AssumeRoot (docs/ROOT_ACCESS.md). Needs
+# trusted access for iam.amazonaws.com (in the default aws_service_access_principals).
+resource "aws_iam_organizations_features" "this" {
+  count = var.enable_centralized_root_access ? 1 : 0
+
+  enabled_features = ["RootCredentialsManagement", "RootSessions"]
+
+  lifecycle {
+    precondition {
+      condition     = contains(var.aws_service_access_principals, "iam.amazonaws.com")
+      error_message = "Centralized root access needs trusted access for iam.amazonaws.com in aws_service_access_principals."
+    }
+  }
+
+  depends_on = [aws_organizations_organization.this]
+}
+
+# ------------------------------------------------------------------------------
+# 1c. Delegated administrators (PLAN 3.6 and 4.x): a service is administered from another account
+# ------------------------------------------------------------------------------
+# The service must have trusted access (aws_service_access_principals). The management account cannot
+# be a delegated administrator of itself.
+resource "aws_organizations_delegated_administrator" "this" {
+  for_each = var.delegated_administrators
+
+  account_id        = each.value
+  service_principal = each.key
+
+  depends_on = [aws_organizations_organization.this]
+}
+
+# ------------------------------------------------------------------------------
 # 2. Organizational units (two levels: top-level OUs, and OUs under a top-level OU)
 # ------------------------------------------------------------------------------
 resource "aws_organizations_organizational_unit" "top" {

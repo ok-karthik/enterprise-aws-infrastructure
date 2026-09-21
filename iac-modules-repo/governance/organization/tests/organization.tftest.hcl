@@ -145,3 +145,69 @@ run "scp_policy_type_is_required" {
 
   expect_failures = [var.enabled_policy_types]
 }
+
+run "centralized_root_access_is_on_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(aws_iam_organizations_features.this) == 1 && toset(aws_iam_organizations_features.this[0].enabled_features) == toset(["RootCredentialsManagement", "RootSessions"])
+    error_message = "Both root access features must be enabled."
+  }
+}
+
+run "centralized_root_access_can_be_switched_off" {
+  command = plan
+
+  variables {
+    enable_centralized_root_access = false
+  }
+
+  assert {
+    condition     = length(aws_iam_organizations_features.this) == 0
+    error_message = "enable_centralized_root_access = false creates nothing."
+  }
+}
+
+run "root_access_needs_iam_trusted_access" {
+  command = plan
+
+  variables {
+    aws_service_access_principals = ["member.org.stacksets.cloudformation.amazonaws.com"]
+  }
+
+  expect_failures = [aws_iam_organizations_features.this]
+}
+
+run "delegated_administrator_is_registered" {
+  command = plan
+
+  variables {
+    delegated_administrators = { "access-analyzer.amazonaws.com" = "222222222222" }
+  }
+
+  assert {
+    condition     = aws_organizations_delegated_administrator.this["access-analyzer.amazonaws.com"].account_id == "222222222222"
+    error_message = "The account must be registered as delegated administrator of the service."
+  }
+}
+
+run "delegated_administrator_placeholder_is_rejected" {
+  command = plan
+
+  variables {
+    delegated_administrators = { "access-analyzer.amazonaws.com" = "000000000002" }
+  }
+
+  expect_failures = [var.delegated_administrators]
+}
+
+run "delegated_service_needs_trusted_access" {
+  command = plan
+
+  variables {
+    delegated_administrators      = { "guardduty.amazonaws.com" = "222222222222" }
+    aws_service_access_principals = ["iam.amazonaws.com"]
+  }
+
+  expect_failures = [var.delegated_administrators]
+}
