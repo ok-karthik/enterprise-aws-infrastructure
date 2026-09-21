@@ -42,8 +42,13 @@ plan: ## Plan an environment stack: make plan ENV=dev
 	cd infrastructure-live/$(ENV) && terragrunt run --all plan --non-interactive
 
 .PHONY: test
-test: ## Run OPA policy unit tests
+test: ## Run OPA policy unit tests and module unit tests (no AWS credentials needed)
 	conftest verify --policy policies/terraform
+	@for d in infrastructure-modules/*/*/tests; do \
+		[ -d "$$d" ] || continue; \
+		m=$$(dirname "$$d"); echo "-> $$m"; \
+		(cd "$$m" && terraform init -backend=false -input=false >/dev/null && terraform test) || exit 1; \
+	done
 
 .PHONY: docs
 docs: ## Regenerate per-module terraform-docs READMEs

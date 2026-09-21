@@ -3,7 +3,9 @@ package main
 # Rego V1: The modern standard
 import rego.v1
 
-mandatory_tags := ["Service", "Environment", "Project"]
+# Every taggable resource must carry these (checked in tags_all, which includes the provider
+# default_tags that root.hcl injects from account.hcl).
+mandatory_tags := ["Service", "Environment", "Project", "Owner", "DataClassification"]
 
 deny contains msg if {
     # 1. Find every resource change in the plan
