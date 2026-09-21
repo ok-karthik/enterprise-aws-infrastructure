@@ -1,6 +1,10 @@
 locals {
-  aws_account_id = "954171757349"
-  account_name   = "projname" # Your alias
+  # Must match this account's entry in foundation-live-repo/_config/accounts.hcl
+  # (workloads-live-repo/scripts/check-account-registry.sh enforces it).
+  aws_account_id = "000000000005" # TODO(owner): real account ID (registry placeholder). Until then no stack can run here
+  account_name   = "workloads-dev"
+  ou             = "NonProd"
+  env            = "dev" # dev | staging | prod | global
 
   # Required by the Owner / DataClassification tag policy (root.hcl default_tags).
   owner               = "platform-team" # TODO(owner): real owning team

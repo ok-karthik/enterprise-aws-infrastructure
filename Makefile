@@ -38,8 +38,8 @@ security: ## Trivy security scan of the repo
 	trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --tf-exclude-downloaded-modules
 
 .PHONY: plan
-plan: ## Plan an environment stack: make plan ENV=dev
-	cd workloads-live-repo/$(ENV) && terragrunt run --all plan --non-interactive
+plan: ## Plan one workload account: make plan ENV=dev (folder workloads-live-repo/workloads-<ENV>)
+	cd workloads-live-repo/workloads-$(ENV) && terragrunt run --all plan --non-interactive
 
 .PHONY: test
 test: ## Run OPA policy unit tests and module unit tests (no AWS credentials needed)

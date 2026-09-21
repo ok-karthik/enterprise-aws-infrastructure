@@ -1,5 +1,5 @@
 # Common configuration for the member-account bootstrap StackSets (PLAN 2.0b).
-# Applied from the management account only (foundation-live-repo/_global/...), by the owner.
+# Applied from the management account only (foundation-live-repo/management/_global/...), by the owner.
 
 terraform {
   source = local.module_source

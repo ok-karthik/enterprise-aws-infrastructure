@@ -3,11 +3,12 @@
 
 locals {
   # 1. Load the variables from your file structure
-  env = split("/", path_relative_to_include())[0]
-
   region_vars  = read_terragrunt_config(find_in_parent_folders("region.hcl"))
   account_vars = read_terragrunt_config(find_in_parent_folders("account.hcl"))
   env_vars     = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+
+  # The environment is a property of the account (one account = one env), not of the folder name.
+  env = local.account_vars.locals.env
 
   # 2. Extract them into simple local variables
   aws_region    = local.region_vars.locals.aws_region

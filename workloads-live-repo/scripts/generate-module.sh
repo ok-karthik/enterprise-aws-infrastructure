@@ -14,7 +14,8 @@ if [ -z "$MODULE_PATH" ]; then
     exit 1
 fi
 
-TARGET_DIR="workloads-live-repo/$ENV/$REGION/$MODULE_PATH"
+# Account-first layout: one folder per account, named workloads-<env> (dev | staging | prod).
+TARGET_DIR="workloads-live-repo/workloads-$ENV/$REGION/$MODULE_PATH"
 
 if [ -d "$TARGET_DIR" ]; then
     echo "⚠️ Warning: Module already exists at $TARGET_DIR"

@@ -1,29 +1,64 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Fails if any account.hcl in either live repo uses an account ID that is not in the registry
-# (foundation-live-repo/_config/accounts.hcl). No AWS access needed. In a real company the workloads
-# repo would read the registry from a pinned foundation release instead of the sibling folder.
+# Checks every account.hcl in both live repos against the account registry
+# (foundation-live-repo/_config/accounts.hcl). No AWS access needed. Fails if:
+#   - the folder name is not the account_name,
+#   - the account is not in the registry, or its ID / OU / env differ from the registry,
+#   - env.hcl in the same folder has a different env than account.hcl.
+# In a real company the workloads repo would read the registry from a pinned foundation release.
 
 cd "$(git rev-parse --show-toplevel)"
 
 REGISTRY="foundation-live-repo/_config/accounts.hcl"
 [[ -f "$REGISTRY" ]] || { echo "❌ Registry not found: $REGISTRY" >&2; exit 1; }
 
-registry_ids=$(sed -n 's/^[[:space:]]*id[[:space:]]*=[[:space:]]*"\([0-9]\{12\}\)".*/\1/p' "$REGISTRY")
-[[ -n "$registry_ids" ]] || { echo "❌ No account IDs found in $REGISTRY" >&2; exit 1; }
+# One line per registry account: "<name> <id> <ou> <env>"
+registry=$(awk '
+  /^[[:space:]]{4}[A-Za-z0-9_-]+ = \{/ { name=$1; id=""; ou=""; env="" }
+  name != "" && /^[[:space:]]+id[[:space:]]*=/  { split($0, a, "\""); id=a[2] }
+  name != "" && /^[[:space:]]+ou[[:space:]]*=/  { split($0, a, "\""); ou=a[2] }
+  name != "" && /^[[:space:]]+env[[:space:]]*=/ { split($0, a, "\""); env=a[2] }
+  name != "" && /^[[:space:]]{4}\}/ { print name, id, ou, env; name="" }
+' "$REGISTRY")
+[[ -n "$registry" ]] || { echo "❌ No accounts found in $REGISTRY" >&2; exit 1; }
+
+# hcl_value <file> <key>: the first quoted value of `key = "value"`.
+hcl_value() {
+  sed -n "s/^[[:space:]]*$2[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p" "$1" | head -n 1
+}
 
 status=0
+fail() { echo "❌ $1" >&2; status=1; }
+
 while IFS= read -r file; do
-  id=$(sed -n 's/^[[:space:]]*aws_account_id[[:space:]]*=[[:space:]]*"\([0-9]*\)".*/\1/p' "$file" | head -n 1)
-  if [[ -z "$id" ]]; then
-    echo "❌ $file has no aws_account_id" >&2
-    status=1
-  elif ! grep -qx "$id" <<<"$registry_ids"; then
-    echo "❌ $file uses account $id, which is not in $REGISTRY" >&2
-    status=1
+  dir=$(dirname "$file")
+  name=$(hcl_value "$file" account_name)
+  id=$(hcl_value "$file" aws_account_id)
+  ou=$(hcl_value "$file" ou)
+  env=$(hcl_value "$file" env)
+
+  if [[ -z "$name" || -z "$id" || -z "$ou" || -z "$env" ]]; then
+    fail "$file must set aws_account_id, account_name, ou and env"
+    continue
+  fi
+  [[ "$(basename "$dir")" == "$name" ]] || fail "$file: folder '$(basename "$dir")' is not the account_name '$name'"
+
+  entry=$(grep -E "^${name} " <<<"$registry" || true)
+  if [[ -z "$entry" ]]; then
+    fail "$file: account '$name' is not in $REGISTRY"
+    continue
+  fi
+  read -r _ reg_id reg_ou reg_env <<<"$entry"
+  [[ "$id" == "$reg_id" ]] || fail "$file: aws_account_id $id differs from the registry ($reg_id)"
+  [[ "$ou" == "$reg_ou" ]] || fail "$file: ou '$ou' differs from the registry ('$reg_ou')"
+  [[ "$env" == "$reg_env" ]] || fail "$file: env '$env' differs from the registry ('$reg_env')"
+
+  if [[ -f "$dir/env.hcl" ]]; then
+    env_hcl=$(hcl_value "$dir/env.hcl" env)
+    [[ "$env_hcl" == "$env" ]] || fail "$dir/env.hcl: env '$env_hcl' differs from account.hcl ('$env')"
   fi
 done < <(find foundation-live-repo workloads-live-repo -name account.hcl -not -path "*/.terragrunt-cache/*")
 
-[[ $status -eq 0 ]] && echo "✅ Every account.hcl uses an account listed in the registry."
+[[ $status -eq 0 ]] && echo "✅ Every account.hcl matches the registry."
 exit $status
