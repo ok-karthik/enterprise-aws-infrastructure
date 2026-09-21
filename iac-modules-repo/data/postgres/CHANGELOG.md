@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/postgres-vv1.0.0...postgres-vv2.0.0) (2026-09-21)
+## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/postgres-v1.0.0...postgres-v2.0.0) (2026-09-21)
 
 
 ### ⚠ BREAKING CHANGES

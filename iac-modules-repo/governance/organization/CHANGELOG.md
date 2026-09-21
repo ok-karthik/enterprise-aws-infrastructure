@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/organization-vv1.0.0...organization-vv2.0.0) (2026-09-21)
+## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/organization-v1.0.0...organization-v2.0.0) (2026-09-21)
 
 
 ### ⚠ BREAKING CHANGES

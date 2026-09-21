@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/human-access-vv1.0.0...human-access-vv2.0.0) (2026-09-21)
+## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/human-access-v1.0.0...human-access-v2.0.0) (2026-09-21)
 
 
 ### ⚠ BREAKING CHANGES
