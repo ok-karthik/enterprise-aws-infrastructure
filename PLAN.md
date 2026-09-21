@@ -719,7 +719,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
 - [~] **3.6 Access Analyzer.** An org-level analyzer for external access **and** unused
   access, delegated to security-tooling. Findings go to Security Hub.
 
-- [ ] **3.7 Tighten the Developer policy (PR #62 Checkov findings).** `aws_iam_policy.developer`
+- [x] **3.7 Tighten the Developer policy (PR #62 Checkov findings).** `aws_iam_policy.developer`
   in `governance/account-baseline` grants `s3:*`, `ssm:*`, `lambda:*` and others on `*`. Keep the
   broad service access (NonProd/Sandbox only, per 3.2), but add explicit Deny statements for:
   - resource-policy writes (`s3:PutBucketPolicy`/`DeleteBucketPolicy`/`PutBucketAcl`/`PutObjectAcl`/
@@ -732,6 +732,27 @@ has been applied there yet, so there is no state or resource to migrate. Until
   reason. Add `terraform test` cases for each Deny. The same checks also fire on
   `aws_iam_policy.workload_boundary`. That's expected, because a boundary has to allow `*`.
   Skip them there with that reason.
+  *Done 2026-09-21 (see log).* Checkov's IAM checks read only Allow statements, so the Denies
+  are real hardening but don't clear findings. The skips are what make the check green.
+  **Follow-ups (open):**
+  - [x] Deny `lambda:CreateFunctionUrlConfig` and `lambda:UpdateFunctionUrlConfig` only when
+    `lambda:FunctionUrlAuthType = NONE`, instead of denying function URLs outright. That allows
+    IAM-authenticated URLs and blocks public ones, and closes the `Update` gap.
+  - [ ] `sqs:SetQueueAttributes` / `sns:SetTopicAttributes` can still write a queue or topic
+    policy, and IAM has no condition key for "which attribute". This is **accepted here and
+    closed by the RCP data perimeter in 4.6**: a policy granting an outside account does
+    nothing when the RCP denies principals outside the org.
+
+- [x] **3.8 Let the management apply role manage Identity Center.** The apply boundary in
+  `foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml` (Sid
+  `DenyIdentityCenter`) always denies `sso:*`, `sso-directory:*` and `identitystore:*`. So CI
+  **cannot apply** the management `identity/identity-center` leaf (3.1): the first apply fails
+  with AccessDenied. The tests can't see this, because they never call AWS. Add
+  `AllowIdentityCenterAdmin` (`"true"`/`"false"`, default `"false"`) and make that deny
+  conditional, like `AllowOrganizationsAdmin`. `bootstrap.sh` passes `true` for management.
+  The StackSets never do. Update the template tests, the bootstrap README and the "Always on"
+  comment. **Owner:** re-run `bootstrap.sh` (it shows a change set) before the first
+  Identity Center apply.
 
 ---
 
@@ -776,7 +797,9 @@ has been applied there yet, so there is no state or resource to migrate. Until
     Suspended: deny all.
   - **RCPs (data perimeter):** deny S3/KMS/SQS/Secrets Manager/STS access from principals
     outside the org (`aws:PrincipalOrgID`, with exceptions for AWS service principals), and
-    enforce `aws:SecureTransport`.
+    enforce `aws:SecureTransport`. This also closes the 3.7 gap (queue or topic policies set
+    through `SetQueueAttributes` / `SetTopicAttributes`). Check which services RCPs cover at
+    the time. For any that aren't covered (possibly SNS), add an SCP or a Config rule instead.
   - **Declarative policies (EC2):** VPC Block Public Access (ingress), block public AMI and
     EBS snapshot sharing, IMDSv2 defaults.
   - **Tag policies:** allowed values for `Environment`, and `Owner`, `CostCenter`,
@@ -947,27 +970,55 @@ has been applied there yet, so there is no state or resource to migrate. Until
   `python3 .agents/scripts/iac_agent_eval.py` and `python3 -m unittest discover -s .agents/tests`
   must pass.
 
-- [ ] **8.9 One scanner per job (do before 8.10).** Target: **tflint** (lint), **Checkov**
-  (general security, HCL + plan JSON), **conftest/Rego** (org-specific rules only),
-  **Trivy** (the toolbox Docker image only). tfsec is not used (deprecated, folded into Trivy).
-  1. Checkov becomes blocking: remove `soft_fail` from the static-analysis step. Clear or skip
-     (with a reason) every existing finding first. Today that's 33 in `iac-modules-repo`:
-     account-baseline 15 (3.7), postgres 10, s3 5, eks 2, vpc 1.
-  2. Add a Checkov step on each plan (`checkov -f tfplan.json --framework terraform_plan`) in
-     `reusable-terragrunt.yml`, blocking on failures, with SARIF uploaded to code scanning.
-  3. Only then remove `trivy config` from the plan job, `.pre-commit-config.yaml` and the
-     `make security` target. Delete `.trivyignore` entries that only served `trivy config`.
-  4. Add `trivy image --severity HIGH,CRITICAL --exit-code 1` for the toolbox image in
-     `publish-toolchain.yml` before the push (today the image isn't scanned at all).
-  5. Update `GOVERNANCE.md`, `docs/CICD.md` and `.agents/AGENTS.md` (gate list).
-  *Done when:* each class of finding is reported by exactly one tool, and every gate blocks.
+- [ ] **8.9 One scanner per job, and every gate blocks (do before 8.10).**
+  **Why:** today two tools do the same job, and the strict one is the wrong one. Checkov and
+  Trivy both check Terraform for security problems. The static Checkov step is
+  `soft_fail: true`, so its job goes green even with findings. The PR is still red because
+  GitHub code scanning fails the separate "Checkov" check on new alerts (that's what happened
+  in PR #62). Locally, nothing runs Checkov at all (no pre-commit hook, no `make` target), so
+  **local passes and CI fails**. Trivy on Terraform blocks, but it duplicates Checkov. Nothing
+  scans the toolbox image, which is the one thing Trivy is really needed for.
+  **Target**, one job per tool, and a failure in any of them stops the PR:
+
+  | Tool | Its one job | Runs locally | Runs in CI |
+  |---|---|---|---|
+  | tflint | Is the Terraform written correctly (provider rules, unused vars)? | pre-commit + `make lint` | static analysis |
+  | Checkov | Is it secure (general AWS best practice)? | pre-commit + `make checkov` | static (HCL) + plan (JSON) |
+  | conftest / Rego | Does it follow *this org's* rules (8.10)? | `make test` / `make policy` | plan stage |
+  | Trivy | Is the toolbox Docker image free of known CVEs? | `make image-scan` | `publish-toolchain.yml` |
+
+  1. **Same result locally and in CI.** Add a `checkov` pre-commit hook and a `make checkov`
+     target. Both run `checkov --config-file .checkov.yaml` with the same flags as CI, and exit
+     non-zero on any finding. `.checkov.yaml` is the only place Checkov settings live. The CI
+     step passes nothing that changes the result, except output format.
+  2. **Clear the backlog, then block.** Clear or skip, with a reason, every existing finding.
+     Today that's 18 in `iac-modules-repo` after 3.7: postgres 10, s3 5, eks 2, vpc 1. Then
+     remove `soft_fail: true` from the static-analysis step, so the job and the code-scanning
+     check agree.
+  3. **Move the repo-wide IAM skips inline.** `.checkov.yaml` `skip-check` turns off
+     `CKV_AWS_111` (IAM write without constraints) and `CKV_AWS_356` (IAM `Resource: *`) for the
+     whole repo. That hides exactly the class of finding that PR #62 was about. Replace them
+     with inline `#checkov:skip` on the specific resources that need them (the EC2
+     `Describe*` statements). Every remaining repo-wide skip keeps a comment with its reason.
+  4. The plan-stage Checkov step in `reusable-terragrunt.yml` already runs on `tfplan.json` and
+     already blocks. Keep it. Point it at **every** `tfplan.json`, not just the first
+     (`head -n 1` today), like the conftest step does.
+  5. **Only after 1–4:** remove `trivy config` from the static-analysis action, the plan job,
+     `.pre-commit-config.yaml` and `make security`. Delete `.trivyignore` entries that only
+     served `trivy config`.
+  6. Add `trivy image --severity HIGH,CRITICAL --exit-code 1` for the toolbox image in
+     `publish-toolchain.yml`, **before** the push, plus `make image-scan` locally.
+  7. Update `GOVERNANCE.md`, `docs/CICD.md` and `.agents/AGENTS.md` (the gate list and the
+     table above).
+  *Done when:* a finding that fails CI also fails `pre-commit run --all-files` locally; each
+  class of finding is reported by exactly one tool; and no gate is soft-fail.
 
 - [ ] **8.10 Split the policy rules between Checkov and Rego, with one catalog.**
   - **The rule:** if Checkov has a built-in check for it, use Checkov. Write Rego only for rules
     about *this* organization (tag keys, role names, account/OU rules, allowed modules).
     A PR that adds a Rego rule has to say why Checkov can't do it.
   - **Remove** the Rego rules that duplicate Checkov built-ins, but only after 8.9 step 1
-    (Checkov blocking). Candidates: `deny_public_s3`, `require_encryption`,
+    (Checkov blocking, locally and in CI). Candidates: `deny_public_s3`, `require_encryption`,
     `deny_open_ingress` and `deny_iam_wildcards`. Before deleting each one, map every case in
     its `_test.rego` to a Checkov ID. Keep the Rego rule if any case has no match.
   - **Keep** in Rego: `require_tags`, `deny_admin_attachments`, `deny_member_org_admin`,
@@ -1337,3 +1388,31 @@ Everything goes under `docs/`.
     is not denied. Denying them outright would break normal queue/topic configuration and there is no condition key for "which attribute", so the data perimeter (4.6) is the real backstop. Say if you want them denied anyway.
   - **Checked (offline):** `terraform fmt`, `validate`, `terraform test` (14), `checkov -d` on the module (20 passed, 0 failed, 16 skipped) and a run with the repo's `.checkov.yaml` (0 findings in `account-baseline`), `conftest verify` (64).
     Not run: the GitHub check itself, any apply, any AWS access. **Included in this commit:** the pending `PLAN.md` edits from the other session (new task 2.9, the discovery contract as a versioned API), as you asked.
+- **2026-09-21 (plan change, review of Phases 0–3)** — Offline check of Phases 0–3 (credentials blanked): `terraform fmt`,
+  `terragrunt hcl fmt` (both live repos), `conftest verify` (64), `terraform test` for all 11 modules that have tests (79 pass;
+  the Phase 3 entry says 13 modules, but 11 have a `tests/` folder), `terraform validate` on every module (`workload-identity`
+  failed once on a provider-download timeout and passed on rerun), `tflint --recursive`, bootstrap template `cfn-lint` +
+  `checkov -f` (24 pass, 0 fail) + pytest (9), `shellcheck`, `bash -n`, the account registry check, matrix tests (10) and
+  `.agents` tests (11). **Found:** the apply boundary always denies `sso:*`, so CI can't apply Identity Center (new task 3.8).
+  Also ticked 3.7 (done by the other session, commit `a3208b6`) with its two follow-ups. Rewrote 8.9: local/CI parity for
+  Checkov, move the repo-wide `CKV_AWS_111` / `CKV_AWS_356` skips inline, plan-stage Checkov on every plan file, the
+  tool-per-job table. Noted in 4.6 that RCPs close the SQS/SNS policy gap from 3.7.
+- **2026-09-21 (3.8 and the first 3.7 follow-up, branch `feat/p3-boundary-followups`, from `main`)** — Offline only: no AWS credentials, nothing applied.
+  - **3.8** The apply boundary's `DenyIdentityCenter` (`sso:*`, `sso-directory:*`, `identitystore:*`) is now conditional on a new template parameter `AllowIdentityCenterAdmin` (`"true"`/`"false"`,
+    default `"false"`, condition `DenyIdentityCenter`), the same pattern as `AllowOrganizationsAdmin`. `bootstrap.sh` passes `true` for management (checked against the stub `aws`: the change set has
+    `AllowIdentityCenterAdmin=true`). The StackSets never do: `governance/bootstrap-stacksets` hardcodes `"false"` (new test), and `deny_member_org_admin.rego` now also fails a plan where a bootstrap
+    StackSet sets it to anything else (2 new Rego tests, 66 total). The template test (13, was 9) now models both switches and all four combinations: member = both denies, management = neither, and the two
+    switches are independent (allowing Identity Center does not allow Organizations, and the other way round). The organization-destruction deny stays on where Organizations are managed. Updated the "Always on"
+    comment, the bootstrap README (parameters, the boundary row, the hand-run command) and `docs/CICD.md` / `docs/IDENTITY.md`. `cfn-lint` clean; `checkov -f` unchanged (24 passed, 0 failed, same reasoned skip);
+    the boundary is still well under the 6,144-character limit in all four combinations. **Owner step:** re-run `bootstrap.sh` (it shows a change set: the new parameter and a `Modify` on `ApplyBoundary`)
+    **before** the first Identity Center apply from CI. The StackSets pick the change up on the next `terragrunt apply` of `bootstrap-stacksets` (a new parameter value on each StackSet).
+  - **3.7 follow-up 1** `DenyResourcePolicyWrites` no longer contains `lambda:CreateFunctionUrlConfig`. A new `DenyPublicLambdaFunctionUrls` denies `lambda:CreateFunctionUrlConfig` **and**
+    `lambda:UpdateFunctionUrlConfig` when `lambda:FunctionUrlAuthType = NONE`, so IAM-authenticated (`AWS_IAM`) URLs are allowed and public ones are not, and an `AWS_IAM` URL cannot be switched to `NONE`.
+    `lambda:AddPermission` stays denied (it is how a public URL is made invokable). Three new/changed `terraform test` runs (15 in the module): the exact actions, the condition, and that no Deny of
+    function URLs is unconditional. **Limit:** an `Update` that does not touch the auth type has no `FunctionUrlAuthType` key, so it is allowed: an already-public URL is not fixed by this, it just cannot be
+    created or switched to. `checkov -d` on the module: still 20 passed, 0 failed, 16 skipped. **Second 3.7 follow-up** (queue/topic policies via `SetQueueAttributes` / `SetTopicAttributes`) is unchanged: accepted here
+    and closed by the RCP data perimeter in 4.6.
+  - **Included in this commit:** the other session's pending `PLAN.md` edits (tasks 3.7 follow-ups, 3.8, and any other plan text in the working tree): they were only in the working tree, so the tasks did
+    not exist on `main` until this commit.
+  - **Checked (offline):** `terraform fmt` / `validate` / `test` for `account-baseline` (15) and `bootstrap-stacksets` (9); template tests (13); `conftest verify` (66); `cfn-lint`; `checkov -f` and `checkov -d`; `shellcheck`
+    and a stub-`aws` run of `bootstrap.sh`. **Not checked:** the change set against AWS (`validate-template`, a real change set), the policy in the IAM simulator, or any apply.
