@@ -15,7 +15,8 @@ locals {
 
   # --- MODULE VERSIONS: bump dev first, verify, then open a second PR for prod ---
   module_versions = {
-    vpc = "vpc-v1.0.0"
-    eks = "eks-v1.0.0"
+    vpc              = "vpc-v1.0.0"
+    eks              = "eks-v1.0.0"
+    account_baseline = "account-baseline-v1.0.0"
   }
 }
