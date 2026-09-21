@@ -20,6 +20,9 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 3. **One phase (or one numbered task group) per branch and PR.** Branch names look like
    `feat/p2-account-factory`. Use Conventional Commits with the module name as the scope
    (`feat(vpc): ...`), because release-please builds per-module versions from them.
+   **Always branch from an up-to-date `main`. Don't stack a branch on an unmerged one.** In
+   Phase 3, four stacked branches plus uncommitted PLAN.md edits made plan text go missing.
+   If a task needs an unmerged change, stop and ask for it to be merged first.
 4. **Implementing agents never run `apply`.** No `terraform apply`, `terragrunt apply` or
    `destroy`, and never bypass the prod approval gate. Checking your work means `fmt`,
    `validate` (with `-backend=false` where there are no credentials), `tflint`, `conftest`,
@@ -47,6 +50,10 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - Modules stay pure: no `provider` or `backend` blocks, and nothing environment-specific.
 - Security settings live in the modules (fail closed), not only in CI checks.
 - Diff-only, single-module-scoped generation stays the default for the IaC agent.
+- **Terraform in this repo never calls the Kubernetes API**: no `kubernetes` / `helm` /
+  `kubectl` provider and no `kubernetes_*` resources. What a cluster needs goes out through
+  the SSM discovery contract, and `internal-developer-platform` builds the in-cluster objects
+  from it (External Secrets, Argo CD). The contract belongs to the IDP repo (its PLAN 18.4).
 
 ---
 
@@ -682,6 +689,56 @@ has been applied there yet, so there is no state or resource to migrate. Until
   - Add one short example per tool (Terraform `data "aws_ssm_parameter"`, CDK
     `StringParameter.valueForStringParameter`, Pulumi `aws.ssm.getParameter`) in the doc.
 
+- [ ] **2.10 Karpenter and cluster contract for the IDP** (requested by `internal-developer-platform`,
+  which installs Karpenter and builds the Argo CD cluster Secret from these values).
+  **Don't write them from `compute/eks`.** Its own `aws_ssm_parameter` resources are turned off
+  in live (`publish_ssm_parameters = false` in `_envcommon/compute/eks.hcl`).
+  `governance/discovery-publisher` is the only writer of contract names (2.7). So:
+  - `network/vpc`: add `"karpenter.sh/discovery" = var.cluster_name` to `private_subnet_tags`,
+    only when `cluster_name != ""` (same condition as the `kubernetes.io/cluster/...` tag).
+    Private subnets only. Add a test for both cases. (The node security group already gets this
+    tag in `compute/eks`.)
+  - `governance/discovery-publisher`: add `eks/cluster_endpoint`, `eks/cluster_ca_data`,
+    `eks/karpenter_node_role` (the role **name**, not the ARN) and `eks/karpenter_queue_name`
+    to the allowed-keys list and the error message.
+  - `workloads-live-repo/_envcommon/governance/discovery-publisher.hcl`: map the new keys from
+    the EKS outputs that already exist (`cluster_endpoint`, `cluster_certificate_authority_data`,
+    `karpenter_node_iam_role_name`, `karpenter_queue_name`), and extend `mock_outputs`. The two
+    Karpenter outputs are `null` when `enable_karpenter = false`, and the publisher refuses empty
+    values. So add those two keys only when they're non-null (`merge` + conditional), not as `""`.
+  - Check the upstream `terraform-aws-modules/eks//modules/karpenter` source (the version pinned in
+    `compute/eks`) for what `node_iam_role_name` returns. It may be a generated prefix name. The
+    output must be the **actual** role name, because the IDP passes it verbatim to
+    `EC2NodeClass.spec.role`. Quote the source line in the Execution log.
+  - Remove the dead `aws_ssm_parameter` resources and the `publish_ssm_parameters` variable from
+    `compute/eks` (and from `network/vpc` if it has them). Two writers of one name would fail on
+    apply. This is a **breaking** module change (`feat(eks)!:`). Also fix the stale
+    "Phase 18.1" comment.
+  - Update `docs/DISCOVERY_CONTRACT.md`: each parameter, its owner module and what breaks if it's
+    missing. Add `docs/design/argocd-cluster-secret.md`: the SSM parameters are the contract; the IDP
+    builds the Argo CD cluster Secret in-cluster with External Secrets (name = EKS cluster name,
+    `server`, `config`; labels `environment` / `region` / `tier` / `karpenter=enabled`;
+    annotations `platform.io/karpenter-node-role` and `platform.io/karpenter-queue`). Say
+    plainly that **how the hub authenticates to a spoke cluster is not verified yet**, and
+    recommend one approach without building it.
+  - Checks: `make fmt-check lint test`, Checkov with the repo config, and
+    `IAC_MODULES_LOCAL=1 terragrunt hcl validate --inputs` on the workloads leaves.
+    (`make validate` needs AWS credentials, so skip it and say so.)
+
+- [ ] **2.11 Prove it in AWS: the first real plan in CI** (owner + model). Since the move to
+  multi-account, everything has been checked offline only, and the CI plan jobs are **skipped**
+  because every account is `ci = false` or has a placeholder ID. An interviewer who opens the Actions
+  tab sees no real run. Steps:
+  1. **Owner:** replace the placeholder IDs and emails in `_config/accounts.hcl` for the accounts that
+     exist (management, log-archive, security-tooling, workloads-dev). Import what was created by
+     hand (LEARNING_PLAN L01/L02).
+  2. **Owner:** set `ci = true` for management and workloads-dev, then open a PR. The plan jobs
+     must run and pass for both.
+  3. **Model:** fix whatever those plans uncover, in the same PR (placeholder emails that
+     break-glass refuses, missing dependencies, mock outputs that don't match reality).
+  4. Save the evidence in `docs/evidence/`: a link to the green run, plus the plan summary lines.
+  *Done when:* `main` has a green plan for management and workloads-dev, and the README links to it.
+
 ---
 
 ## Phase 3 — Identity and least privilege
@@ -753,6 +810,14 @@ has been applied there yet, so there is no state or resource to migrate. Until
   The StackSets never do. Update the template tests, the bootstrap README and the "Always on"
   comment. **Owner:** re-run `bootstrap.sh` (it shows a change set) before the first
   Identity Center apply.
+
+- [ ] **3.9 Break-glass alerts may not fire (check first, then fix).** Sign-in events and
+  global IAM/STS events are often recorded in `us-east-1`, but `security/break-glass-alerts` rules
+  exist only in `eu-central-1`, and EventBridge rules only see events in their own region. The
+  3.3 log already says so. **Owner:** run the break-glass drill (LEARNING_PLAN L12) and note
+  which region each event (`ConsoleLogin`, `AssumeRoleWithSAML`, Identity Center
+  `Federate` / `GetRoleCredentials`) is recorded in. **Model, if confirmed:** add a `us-east-1`
+  leaf (or cross-region rules forwarding to the home-region bus), plus tests.
 
 ---
 
@@ -1065,7 +1130,9 @@ tools. This phase turns the work into things an interviewer or hiring manager ca
 Everything goes under `docs/`.
 
 - [ ] **10.1 One ADR per phase** in `docs/adr/`, half a page each, always in the same three
-  parts: *Context · Decision · What I chose against and what it cost.* Required ADRs:
+  parts: *Context · Decision · What I chose against and what it cost.* **Status: only 0001
+  exists.** The owner writes 2–5 using the story cards from the hands-on labs (L01–L05), because the
+  point is being able to defend each choice out loud. Required ADRs:
   1. Repository topology and the `-repo` convention (1.8)
   2. Terraform-native Organizations vs Control Tower/AFT
   3. State bucket per account vs one central state account, and Day-0 in CloudFormation
@@ -1089,6 +1156,16 @@ Everything goes under `docs/`.
 - [ ] **10.4 README rewrite for a 90-second read**: what it is, the diagram, what's actually
   applied vs plan-only (be honest, using the 🟢/🟡/🔴 table), the security controls with
   links to `COMPLIANCE.md`, and how it connects to `internal-developer-platform`.
+  **Fix these claims now, because a reviewer can check them:** (a) "deployed to a real AWS
+  account ... torn down" describes the **old single account**. Say that, and state what's
+  applied in the new org (link the 2.11 evidence). (b) Check that the gate badges and table
+  match the gates after 8.9 (Checkov is blocking now; `trivy config` is still there until 8.9
+  step 5). Lead with the multi-account foundation. Put the IaC agent / self-healing CI in its own
+  section **below** it, so the landing zone is the first thing a reader sees.
+- [ ] **10.8 Move the Execution log out of PLAN.md** into `docs/EXECUTION_LOG.md`. The log is
+  most of PLAN.md's ~1,400 lines, and every implementing model reads the whole file on every task.
+  Update rule 8 in "How to use this plan" and the `.agents` prompts that point at it. Keep a
+  one-line link at the bottom of PLAN.md.
 - [ ] **10.5 Failure drills → runbooks + postmortems** (incident/on-call is in 46% of ads).
   Run at least three drills in the sandbox and write each one up in
   `docs/runbooks/` with a short blameless postmortem. Examples: break the OIDC trust (CI can't
@@ -1437,3 +1514,10 @@ Everything goes under `docs/`.
   - **Checked (offline):** Checkov 0 findings; `actionlint`; 7 unit tests for `merge_sarif.py`; `terraform fmt` / `validate` / `test` for postgres and s3. **Not checked:** a real CI run (the action and workflow changes),
     a real plan, the image build and scan (Docker is not running here), the pre-commit hook on a full commit. **Owner steps:** merge, then the toolbox image is rebuilt by `publish-toolchain.yml` on `main`; until then CI
     uses the old image without the pinned Checkov.
+- **2026-09-21 (plan change, repo review)** — Added from a holistic review: 2.10 (Karpenter/cluster contract
+  for the IDP, rewritten so `discovery-publisher` stays the only writer, because the IDP's draft put the
+  parameters in `compute/eks`, where publishing is off in live), 2.11 (first real plan in CI, since nothing has
+  been planned against AWS since the multi-account move), 3.9 (break-glass rules may miss `us-east-1`
+  events), 10.8 (move this log out), a standing guardrail (no Kubernetes API from Terraform), rule 3 (no
+  stacked branches), and notes on 10.1 (only ADR 0001 exists) and 10.4 (README claims that are out of date).
+  Plan text only.
