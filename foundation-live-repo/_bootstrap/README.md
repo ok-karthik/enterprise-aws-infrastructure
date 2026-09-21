@@ -12,7 +12,7 @@ Template: [`cloudformation/account-bootstrap.yaml`](cloudformation/account-boots
 |---|---|---|
 | `StateBucket` | `tg-state-<account-id>-<region>` | Versioned, SSE-S3, all Block Public Access on, `BucketOwnerEnforced`, old versions expire after 90 days. `Retain` on delete. TLS 1.2+ only (bucket policy). KMS and access logging come with PLAN 2.2 |
 | `GitHubOidcProvider` | IAM OIDC provider for `token.actions.githubusercontent.com` | No thumbprint needed |
-| `ApplyBoundary` | `github-actions-apply-boundary` | Caps the apply role. Denies Identity Center, CloudTrail changes, organization destruction, **switching off GuardDuty / Config / Security Hub / Macie / Inspector / Access Analyzer**, edits to the CI roles, the OIDC provider and the boundary, **edits to `platform-*` / `terraform-*` roles and `OrganizationAccountAccessRole`**, **deleting `platform-workload-boundary` or removing any role's boundary**, changes to the state bucket's settings and to this stack. Denies `organizations:*` / `account:*` too, except where `AllowOrganizationsAdmin=true` (management). About 3,900 of the 6,144 characters AWS allows in a managed policy |
+| `ApplyBoundary` | `github-actions-apply-boundary` | Caps the apply role. Denies CloudTrail changes, organization destruction, **switching off GuardDuty / Config / Security Hub / Macie / Inspector / Access Analyzer**, edits to the CI roles, the OIDC provider and the boundary, **edits to `platform-*` / `terraform-*` roles and `OrganizationAccountAccessRole`**, **deleting `platform-workload-boundary` or removing any role's boundary**, changes to the state bucket's settings and to this stack. Denies `organizations:*` / `account:*` too, except where `AllowOrganizationsAdmin=true`, and `sso:*` / `sso-directory:*` / `identitystore:*`, except where `AllowIdentityCenterAdmin=true`: both only in management, where CI applies the organization and identity-center stacks. The StackSets never set either. About 3,900 of the 6,144 characters AWS allows in a managed policy |
 | `PlanRole` | `github-actions-plan` | `ReadOnlyAccess`; on the state bucket: read state, write/delete `*.tflock` only. Trusts any job of this repo (`repo:<repo>:*`, widened by hand from `pull_request` + `main`; read-only, but it can read every state file, so narrow it if you add collaborators) |
 | `ApplyRole` | `github-actions-apply` | `AdministratorAccess` **with** the boundary. Trusts exactly one GitHub Environment (`management` here) |
 
@@ -35,6 +35,7 @@ No local AWS CLI profiles or access keys needed.
    - **GitHubRepo**: `ok-karthik/enterprise-aws-infrastructure`
    - **GitHubEnvironment**: `management`
    - **AllowOrganizationsAdmin**: `true`
+   - **AllowIdentityCenterAdmin**: `true`
 6. Configure stack options:
    - Add Tags:
      - `Project` = `enterprise-aws-platform`
@@ -110,7 +111,7 @@ aws cloudformation validate-template \
 aws cloudformation deploy \
   --stack-name platform-bootstrap \
   --template-file foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml \
-  --parameter-overrides GitHubEnvironment=management AllowOrganizationsAdmin=true \
+  --parameter-overrides GitHubEnvironment=management AllowOrganizationsAdmin=true AllowIdentityCenterAdmin=true \
   --capabilities CAPABILITY_NAMED_IAM \
   --tags Project=enterprise-aws-platform ManagedBy=CloudFormation Owner=platform-team DataClassification=internal \
   --no-execute-changeset
@@ -158,6 +159,8 @@ The boundary is part of the template, so a change reaches accounts in two ways:
 
 - **Management account:** run `bootstrap.sh`. The change set shows `Modify` on `ApplyBoundary` (the stack policy only blocks replacing or deleting it).
 - **Member accounts:** apply `foundation-live-repo/management/_global/governance/bootstrap-stacksets`. Its `template_body` changed, so each StackSet is updated across its accounts, 25 % at a time, stopping at the first failure.
+
+**Identity Center from CI needs a re-run of `bootstrap.sh`.** The boundary used to deny `sso:*` everywhere, so CI could not apply the management `identity/identity-center` stack (AccessDenied). After this change the management stack must be updated once (the change set shows `AllowIdentityCenterAdmin` and a `Modify` on `ApplyBoundary`) **before the first Identity Center apply**. Member accounts are unchanged: the StackSets pass `AllowIdentityCenterAdmin=false`.
 
 **Do not name a role created by a stack `platform-*` or `terraform-*`**: the boundary denies the apply role from editing them, so the stack could never update its own role. Those names are reserved for the platform's own roles.
 

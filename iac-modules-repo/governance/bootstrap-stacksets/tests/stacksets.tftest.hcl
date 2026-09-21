@@ -25,6 +25,15 @@ run "member_accounts_can_never_manage_organizations" {
   }
 }
 
+run "member_accounts_can_never_manage_identity_center" {
+  command = plan
+
+  assert {
+    condition     = alltrue([for _, s in aws_cloudformation_stack_set.this : s.parameters["AllowIdentityCenterAdmin"] == "false"])
+    error_message = "Member StackSets must always pass AllowIdentityCenterAdmin = \"false\"."
+  }
+}
+
 run "each_stack_set_trusts_its_own_environment" {
   command = plan
 
