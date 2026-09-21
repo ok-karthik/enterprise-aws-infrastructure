@@ -23,7 +23,7 @@ git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//iac-module
 ```
 
 - **Release:** merging a `feat(<module>): ...` / `fix(<module>): ...` commit makes release-please open a release PR that tags `<module>-vX.Y.Z`.
-- **Promote:** Renovate opens one PR per module and environment (`iac-modules: vpc pin (dev)`, then `... (prod)`), never automerged. Bump the pin in `workloads-live-repo/dev/env.hcl`, merge, check it; only then merge the prod PR. Dev and prod are separate PRs so the order is kept.
+- **Promote:** Renovate opens one PR per module and environment (`iac-modules: vpc pin (dev)`, then `... (prod)`), never automerged. Bump the pin in `workloads-live-repo/workloads-dev/env.hcl`, merge, check it; only then merge the prod PR. Dev and prod are separate PRs so the order is kept.
 - **Test a module change before releasing it:** set `IAC_MODULES_LOCAL=1` to use the module from your checkout instead of the pinned tag. The workflows set it (and `workloads-live-repo/scripts/smoke-test.sh` defaults to it) **until every module has a release tag at the new `iac-modules-repo` path**: tags created before the rename (`vpc-v1.0.0`, ...) point at the old `infrastructure-modules` path. Release each module again (for example a `feat(<module>): relocate to iac-modules-repo` commit per module), then remove the variable from the workflows so the pins are used.
 
 ## Authentication — zero-key OIDC

@@ -5,7 +5,7 @@ set -euo pipefail
 #
 # Deploys the CloudFormation stack `platform-bootstrap`: the Terraform state bucket, the GitHub
 # OIDC provider and the two CI roles. Steps (PLAN 2.0a-2):
-#   1. Preflight: are these credentials for the account in foundation-live-repo/_global/account.hcl?
+#   1. Preflight: are these credentials for the account in foundation-live-repo/management/account.hcl?
 #   2. Make sure the AWS Organization exists (all features) and StackSets trusted access is on.
 #   3. Deploy through a reviewed change set (you are shown it and asked before it runs).
 #   4. Turn on termination protection, set the stack policy, print the outputs.
@@ -19,8 +19,8 @@ set -euo pipefail
 STACK_NAME="platform-bootstrap"
 TEMPLATE="foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml"
 STACK_POLICY="foundation-live-repo/_bootstrap/cloudformation/stack-policy.json"
-ACCOUNT_HCL="foundation-live-repo/_global/account.hcl"
-REGION_HCL="foundation-live-repo/_global/region.hcl"
+ACCOUNT_HCL="foundation-live-repo/management/account.hcl"
+REGION_HCL="foundation-live-repo/management/_global/region.hcl"
 GITHUB_ENVIRONMENT="management"
 GITHUB_REPO="${GITHUB_REPOSITORY:-ok-karthik/enterprise-aws-infrastructure}"
 

@@ -37,7 +37,7 @@ git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//iac-module
 | `iac-modules-repo/identity/workload-iam` | `iam` | `workload-iam-v1.0.0` | Documented interface stub for workload pod identity / IRSA role vending |
 
 ### 2. Platform Foundation Modules (Internal to this Repository)
-Applied and maintained directly by this platform via Terragrunt environments (`workloads-live-repo/{dev,prod}/...` and `foundation-live-repo/_global/`):
+Applied and maintained directly by this platform via Terragrunt environments (`workloads-live-repo/{dev,prod}/...` and `foundation-live-repo/management/_global/`):
 
 | Module Path | Scope | Release Tag | Purpose |
 |---|---|---|---|
@@ -85,11 +85,11 @@ trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --tf-exclude-d
 conftest test --policy policy-library-repo/terraform <plan.json>   # policy runs against plan JSON, not HCL
 
 # Plan/apply a single environment stack (uses run --all across the dependency graph)
-cd workloads-live-repo/dev && terragrunt run --all plan --non-interactive
-cd workloads-live-repo/dev && terragrunt run --all apply --non-interactive -auto-approve
+cd workloads-live-repo/workloads-dev && terragrunt run --all plan --non-interactive
+cd workloads-live-repo/workloads-dev && terragrunt run --all apply --non-interactive -auto-approve
 
 # Plan/apply one module only
-cd workloads-live-repo/dev/eu-central-1/compute/eks && terragrunt plan
+cd workloads-live-repo/workloads-dev/eu-central-1/compute/eks && terragrunt plan
 
 # Scaffold a new module manually
 ./workloads-live-repo/scripts/generate-module.sh <category/module-name> [env] [region]
@@ -111,13 +111,13 @@ The core pattern is **strict separation of "blueprint" from "live config"**, kep
 3. **`workloads-live-repo/_envcommon/<category>/<module>.hcl`** — the shared blueprint per module type. Sets `terraform.source` (pointing into `iac-modules-repo/` or registry `tfr://`), declares `dependency` blocks (with `mock_outputs` for plan-time), and default `inputs`. Cross-module wiring (EKS → VPC subnets) lives here.
 
 4. **Data files loaded via `find_in_parent_folders`:**
-   - `<env>/account.hcl` — `aws_account_id`, `account_name`
-   - `<env>/env.hcl` — `env`, `cluster_name`, cost-scaling knobs (`min_size`, `desired_size`, `enable_nat_gateway`) and `module_versions` (the release tag of each `iac-modules-repo` module this environment uses; `_envcommon` builds `terraform.source` from it, or from the checkout when `IAC_MODULES_LOCAL` is set — see `docs/CICD.md`)
-   - `<env>/<region>/region.hcl` — `aws_region`
+   - `<account>/account.hcl` — `aws_account_id`, `account_name` (= folder name), `ou`, `env` (`dev|staging|prod|global`), `owner`, `data_classification`; must match the account's entry in `foundation-live-repo/_config/accounts.hcl`
+   - `<account>/env.hcl` — `env` (same as account.hcl), `cluster_name`, cost-scaling knobs (`min_size`, `desired_size`, `enable_nat_gateway`) and `module_versions` (the release tag of each `iac-modules-repo` module this environment uses; `_envcommon` builds `terraform.source` from it, or from the checkout when `IAC_MODULES_LOCAL` is set — see `docs/CICD.md`)
+   - `<account>/<region|_global>/region.hcl` — `aws_region` (must be in `_config/regions.hcl`)
 
-5. **`workloads-live-repo/<env>/<region>/<category>/<module>/terragrunt.hcl`** — the leaf. Includes `root` + the matching `_envcommon` file (`expose = true`) and only overrides env-specific values (e.g. dev EKS shrinks `min_size`/`max_size`/`desired_size`).
+5. **`workloads-live-repo/<account>/<region>/<category>/<module>/terragrunt.hcl`** (`<account>` = `workloads-dev`, `workloads-prod`, ...; the management account is `foundation-live-repo/management/_global/...`) — the leaf. Includes `root` + the matching `_envcommon` file (`expose = true`) and only overrides env-specific values (e.g. dev EKS shrinks `min_size`/`max_size`/`desired_size`).
 
-`path_relative_to_include()` drives naming everywhere (state key, `Service` tag, env detection), so **directory layout is load-bearing** — the `<env>/<region>/<category>/<module>` shape is a contract, not a convention. `dev`/`prod`/`staging` are the only allowed env names and regions must be `eu-*`/`us-*` (enforced by `smoke-test.sh`).
+`path_relative_to_include()` drives naming everywhere (state key, `Service` tag, env detection), so **directory layout is load-bearing** — the `<account>/<region|_global>/<category>/<module>` shape is a contract, not a convention. `env` comes from `account.hcl` (`dev`/`staging`/`prod`/`global`), not from the folder name, and regions must be in `_config/regions.hcl` (enforced by `smoke-test.sh`). There is no `assume_role`: CI uses OIDC directly into the target account.
 
 ---
 

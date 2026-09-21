@@ -398,7 +398,7 @@ the management account**, so none of the guardrails actually protect those workl
 has been applied there yet, so there is no state or resource to migrate. Until
 `workloads-dev` exists (2.1), don't apply the `dev` / `prod` live stacks into it.
 
-- [~] **2.0 Day-0 bootstrap with CloudFormation (replaces the Terragrunt bootstrap).** *(2.0a deployed by the owner and merged (PR #49). 2.0b code done 2026-09-21 on branch `feat/p2-bootstrap-stacksets`; still open: the owner replaces the `ou-0000-00000000` placeholders in the live leaf and applies it.)*
+- [x] **2.0 Day-0 bootstrap with CloudFormation (replaces the Terragrunt bootstrap).** *(2.0a deployed by the owner and merged (PR #49). 2.0b code done 2026-09-21 on branch `feat/p2-bootstrap-stacksets`; still open: the owner replaces the `ou-0000-00000000` placeholders in the live leaf and applies it.)*
   **May be done before Phase 1**: it only rewrites `infrastructure-bootstrap/`, and 1.2 moves
   that folder as-is. **Never run the Terragrunt `bootstrap.sh` in `954171757349`.**
   Why: `--backend-bootstrap` creates the state bucket outside any state, so nobody can plan or

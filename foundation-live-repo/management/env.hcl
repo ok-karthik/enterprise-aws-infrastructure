@@ -1,5 +1,5 @@
 locals {
-  env          = "_global"
+  env          = "global"
   cluster_name = ""
 
   # --- MODULE VERSIONS ---

@@ -5,7 +5,7 @@ Rolls the Day-0 bootstrap template (`foundation-live-repo/_bootstrap/cloudformat
 - **One StackSet per GitHub Environment.** The environment sets the apply role's trust subject, and auto-deployment can only use the StackSet's own parameters, so a single StackSet cannot serve dev, prod and core. Typical: `bootstrap-nonprod` (NonProd OU, `dev`), `bootstrap-prod` (Prod OU, `prod`), `bootstrap-core` (Security + Infrastructure OUs, `core`). Sandbox and Suspended are not targeted.
 - **Names must start with `bootstrap-`.** The apply role's permissions boundary protects stacks named `StackSet-bootstrap-*`.
 - **`AllowOrganizationsAdmin` is fixed to `"false"`** for member accounts, so the boundary denies `organizations:*` and `account:*` there. `policy-library-repo/terraform/deny_member_org_admin.rego` fails any plan that changes this.
-- **The template body is an input**, so the module has no file paths. The live leaf (`foundation-live-repo/_global/governance/bootstrap-stacksets`) passes `file(...)`.
+- **The template body is an input**, so the module has no file paths. The live leaf (`foundation-live-repo/management/_global/governance/bootstrap-stacksets`) passes `file(...)`.
 - **Prerequisites** (done by `foundation-live-repo/_bootstrap/bootstrap.sh`): AWS Organizations with all features, and StackSets trusted access enabled. Applied from the management account, by the owner.
 - **Do not move an account between OUs targeted by different StackSets.** Its stack would be deleted and re-created, and the create fails on the retained state bucket name. Accounts must not move between Prod and NonProd.
 

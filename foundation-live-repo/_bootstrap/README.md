@@ -16,7 +16,7 @@ Template: [`cloudformation/account-bootstrap.yaml`](cloudformation/account-boots
 | `PlanRole` | `github-actions-plan` | `ReadOnlyAccess`; on the state bucket: read state, write/delete `*.tflock` only. Trusts any job of this repo (`repo:<repo>:*`, widened by hand from `pull_request` + `main`; read-only, but it can read every state file, so narrow it if you add collaborators) |
 | `ApplyRole` | `github-actions-apply` | `AdministratorAccess` **with** the boundary. Trusts exactly one GitHub Environment (`management` here) |
 
-Tags come from the stack, not the template: `Project`, `ManagedBy=CloudFormation`, `Owner`, `DataClassification` (read from `foundation-live-repo/_global/account.hcl`). There are no `Export`s: an export locks the exported resource against changes.
+Tags come from the stack, not the template: `Project`, `ManagedBy=CloudFormation`, `Owner`, `DataClassification` (read from `foundation-live-repo/management/account.hcl`). There are no `Export`s: an export locks the exported resource against changes.
 
 ## Deploy it (owner only)
 
@@ -69,7 +69,7 @@ export AWS_DEFAULT_REGION="eu-central-1"
 ```
 
 The script:
-1. **Preflight.** Reads the expected account from `foundation-live-repo/_global/account.hcl` (`954171757349`) and aborts if your credentials belong to a different account (safeguards against running in the wrong browser/profile session).
+1. **Preflight.** Reads the expected account from `foundation-live-repo/management/account.hcl` (`954171757349`) and aborts if your credentials belong to a different account (safeguards against running in the wrong browser/profile session).
 2. Verifies the AWS Organization exists and enables StackSets trusted access (`aws cloudformation activate-organizations-access`).
 3. Creates a **change set**, renders an ASCII preview of resources to create, and prompts for confirmation (`--yes` skips).
 4. Deploys the stack, turns on termination protection, applies [`cloudformation/stack-policy.json`](cloudformation/stack-policy.json), and prints the GitHub role ARNs.

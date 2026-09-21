@@ -40,6 +40,12 @@ sys.path.insert(0, str(BASE_DIR / "scripts"))
 PROMPT_PATH = BASE_DIR / "prompts" / "iac_agent.md"
 AUDITOR_PROMPT_PATH = BASE_DIR / "prompts" / "auditor.md"
 GENERATE_MODULE_SCRIPT = REPO_ROOT / "workloads-live-repo" / "scripts" / "generate-module.sh"
+
+
+def live_env_dir(env: str) -> Path:
+    """Account folder for an environment in the account-first layout: workloads-live-repo/workloads-<env>."""
+    return REPO_ROOT / "workloads-live-repo" / f"workloads-{env}"
+
 CATALOG_PATH = BASE_DIR / "catalog" / "golden-paths.yaml"
 CATALOG_TEMPLATES_DIR = BASE_DIR / "catalog" / "templates"
 METRICS_PATH = BASE_DIR / "metrics" / "runs.jsonl"
@@ -237,7 +243,7 @@ def scaffold_from_template(entry: dict, module_path: str, env: str, region: str,
     print(res.stdout.strip())
     if res.returncode != 0:
         print(res.stderr.strip())
-    leaf_file = REPO_ROOT / "workloads-live-repo" / env / region / module_path / "terragrunt.hcl"
+    leaf_file = live_env_dir(env) / region / module_path / "terragrunt.hcl"
 
     envcommon_path = REPO_ROOT / "workloads-live-repo" / "_envcommon" / f"{module_path}.hcl"
     envcommon_path.parent.mkdir(parents=True, exist_ok=True)
@@ -267,7 +273,7 @@ def scaffold_skeleton(module_path: str, env: str, region: str, dependencies: Opt
     if res.returncode != 0:
         print(res.stderr.strip())
 
-    leaf_dir = REPO_ROOT / "workloads-live-repo" / env / region / module_path
+    leaf_dir = live_env_dir(env) / region / module_path
     leaf_file = leaf_dir / "terragrunt.hcl"
     if leaf_file.exists():
         created.append(leaf_file)
@@ -602,7 +608,7 @@ def validation_ladder(
     Validation ladder with syntax, static lint, offline validation, OPA/Checkov/Trivy,
     and Infracost monthly budget enforcement.
     """
-    leaf_dir = REPO_ROOT / "workloads-live-repo" / env / region / module_path
+    leaf_dir = live_env_dir(env) / region / module_path
     module_dir = REPO_ROOT / "iac-modules-repo" / module_path
 
     fmt_step = (
@@ -776,7 +782,7 @@ class IaCPlatformAgent:
         region = classification["region"]
         has_template = bool(catalog_entry and catalog_entry.get("template"))
 
-        leaf_file = REPO_ROOT / "workloads-live-repo" / env / region / module_path / "terragrunt.hcl"
+        leaf_file = live_env_dir(env) / region / module_path / "terragrunt.hcl"
         envcommon_path = REPO_ROOT / "workloads-live-repo" / "_envcommon" / f"{module_path}.hcl"
 
         if req.dry_run:
@@ -832,7 +838,7 @@ class IaCPlatformAgent:
             )
             if passed:
                 # Commit locally
-                run(["git", "add", "--", str(REPO_ROOT / "workloads-live-repo" / env / region / module_path)], cwd=REPO_ROOT)
+                run(["git", "add", "--", str(live_env_dir(env) / region / module_path)], cwd=REPO_ROOT)
                 run(["git", "add", "--", str(REPO_ROOT / "workloads-live-repo" / "_envcommon" / f"{module_path}.hcl")], cwd=REPO_ROOT)
                 if (REPO_ROOT / "iac-modules-repo" / module_path).exists():
                     run(["git", "add", "--", str(REPO_ROOT / "iac-modules-repo" / module_path)], cwd=REPO_ROOT)

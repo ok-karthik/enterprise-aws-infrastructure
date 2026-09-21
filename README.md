@@ -44,7 +44,8 @@ workloads-live-repo/        # Platform stacks in workload accounts
 ├── root.hcl                #   same root, own copy
 ├── _envcommon/             #   shared module inputs + cross-module wiring
 ├── scripts/                #   smoke test, module generator
-└── <env>/<region>/<cat>/<module>/terragrunt.hcl   # ~10-line leaf: includes + overrides
+└── <account>/<region|_global>/<cat>/<module>/terragrunt.hcl   # ~10-line leaf: includes + overrides
+    #   one folder per AWS account (workloads-dev, workloads-prod, ...); foundation-live-repo/management is the management account
 policy-library-repo/terraform/         # OPA/Rego governance rules (+ unit tests)
 .agents/                    # Self-healing CI agent
 .github/                    # Workflows, composite actions, toolchain image
@@ -114,7 +115,7 @@ make validate       # full local validation suite (compliance, fmt, init/validat
 make test           # run the OPA policy unit tests
 ```
 
-Run `make help` for the full command surface. Plan a single environment with `make plan ENV=dev`.
+Run `make help` for the full command surface. Plan a single account with `make plan ENV=dev` (folder `workloads-live-repo/workloads-dev`).
 
 **Day-0 bootstrap** (first-time only, CloudFormation stack `platform-bootstrap`) provisions the S3 state bucket, the OIDC provider and the two CI roles (plan / apply) — see [foundation-live-repo/_bootstrap/README.md](foundation-live-repo/_bootstrap/README.md).
 
