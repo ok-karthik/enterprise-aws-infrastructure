@@ -4,8 +4,8 @@ import rego.v1
 
 # Member-account bootstrap StackSets (identified by the GitHubEnvironment parameter of
 # foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml):
-#   1. must never pass AllowOrganizationsAdmin other than "false", or the apply role in every
-#      member account could manage AWS Organizations;
+#   1. must never pass AllowOrganizationsAdmin or AllowIdentityCenterAdmin other than "false", or the
+#      apply role in every member account could manage AWS Organizations / IAM Identity Center;
 #   2. must be named bootstrap-*, because the apply role's permissions boundary only protects
 #      stacks named StackSet-bootstrap-*.
 
@@ -26,4 +26,10 @@ deny contains msg if {
 	some r in bootstrap_stack_sets
 	not startswith(object.get(r.change.after, "name", ""), "bootstrap-")
 	msg := sprintf("Governance Violation: StackSet '%v' must be named bootstrap-*, otherwise the apply role's boundary does not protect its stacks (StackSet-bootstrap-*).", [r.address])
+}
+
+deny contains msg if {
+	some r in bootstrap_stack_sets
+	object.get(r.change.after.parameters, "AllowIdentityCenterAdmin", "false") != "false"
+	msg := sprintf("Governance Violation: StackSet '%v' sets AllowIdentityCenterAdmin to something other than \"false\". Member accounts must never be able to manage IAM Identity Center.", [r.address])
 }

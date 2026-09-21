@@ -21,6 +21,15 @@ test_member_org_admin_true_denied if {
 	contains(m, "AllowOrganizationsAdmin")
 }
 
+test_member_identity_center_admin_true_denied if {
+	some m in deny with input as stackset_input("bootstrap-nonprod", {"GitHubEnvironment": "dev", "AllowIdentityCenterAdmin": "true"})
+	contains(m, "AllowIdentityCenterAdmin")
+}
+
+test_member_identity_center_admin_false_allowed if {
+	count(deny) == 0 with input as stackset_input("bootstrap-nonprod", {"GitHubEnvironment": "dev", "AllowIdentityCenterAdmin": "false"})
+}
+
 test_member_stackset_wrong_name_denied if {
 	some m in deny with input as stackset_input("platform-member-bootstrap", {"GitHubEnvironment": "dev", "AllowOrganizationsAdmin": "false"})
 	contains(m, "bootstrap-*")

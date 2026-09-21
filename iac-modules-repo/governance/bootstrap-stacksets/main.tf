@@ -22,6 +22,9 @@ resource "aws_cloudformation_stack_set" "this" {
     # Fixed, never a variable: member accounts must never be allowed to manage Organizations.
     # The permissions boundary then denies organizations:* and account:* there.
     AllowOrganizationsAdmin = "false"
+    # Same for IAM Identity Center: only the management account's bootstrap stack allows the apply role to
+    # manage it (bootstrap.sh). The boundary then denies sso:*, sso-directory:* and identitystore:* here.
+    AllowIdentityCenterAdmin = "false"
   }
 
   auto_deployment {
