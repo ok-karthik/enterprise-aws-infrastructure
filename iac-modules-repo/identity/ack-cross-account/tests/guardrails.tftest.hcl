@@ -9,43 +9,10 @@ mock_provider "aws" {
 }
 
 variables {
-  root_id                     = "r-abcd"
   hub_ack_controller_role_arn = "arn:aws:iam::444455556666:role/ack-controller"
   hub_account_id              = "444455556666"
 }
 
-run "region_scp_uses_allowed_regions" {
-  command = plan
-
-  variables {
-    allowed_regions = ["eu-central-1", "eu-west-1"]
-  }
-
-  assert {
-    condition     = jsondecode(aws_organizations_policy.deny_unapproved_regions[0].content).Statement[0].Condition.StringNotEquals["aws:RequestedRegion"] == ["eu-central-1", "eu-west-1"]
-    error_message = "SCP must deny every region outside var.allowed_regions."
-  }
-
-  assert {
-    condition = alltrue([
-      for a in ["budgets:*", "ce:*", "globalaccelerator:*", "health:*", "trustedadvisor:*", "waf:*", "shield:*", "account:*", "billing:*", "pricing:*", "route53domains:*", "iam:*", "organizations:*", "route53:*", "cloudfront:*", "support:*", "sts:*"] :
-      contains(jsondecode(aws_organizations_policy.deny_unapproved_regions[0].content).Statement[0].NotAction, a)
-    ])
-    error_message = "Global services must stay exempt from the region SCP."
-  }
-}
-
-run "empty_region_list_is_rejected" {
-  command = plan
-
-  variables {
-    allowed_regions = []
-  }
-
-  expect_failures = [var.allowed_regions]
-}
-
-# apply (against the mock provider) because the boundary ARN is only known after apply
 run "ack_spoke_has_no_admin_managed_policies" {
   command = apply
 
@@ -65,7 +32,6 @@ run "ack_spoke_has_no_admin_managed_policies" {
   }
 }
 
-# apply (against the mock provider) because the boundary ARN is only known after apply
 run "ack_role_creation_requires_boundary" {
   command = apply
 

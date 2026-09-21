@@ -54,6 +54,12 @@
       "package-name": "bootstrap-stacksets",
       "component": "bootstrap-stacksets",
       "tag-separator": "-v"
+    },
+    "iac-modules-repo/identity/ack-cross-account": {
+      "release-type": "terraform-module",
+      "package-name": "ack-cross-account",
+      "component": "ack-cross-account",
+      "tag-separator": "-v"
     }
   }
 }

@@ -1,20 +1,26 @@
 # governance/organization
 
-AWS Organizations governance stack managing Organizational Units (Production, NonProduction), Service Control Policies (SCPs), and ACK (AWS Controllers for Kubernetes) cross-account IAM trust between Hub and Spoke accounts.
+The AWS Organization foundation, applied from the **management account** by the owner: the organization itself (trusted service access and policy types), the OU tree, and the baseline SCP guardrails.
+
+- **OUs** come from `var.organizational_units` (two levels). Default: Security, Infrastructure, Workloads (with Prod and NonProd), Sandbox, Policy-Staging, Suspended. Output `organizational_unit_ids` is a map of OU name to ID, used by `account-factory` and the bootstrap StackSets.
+- **Guardrails** (SCPs): deny leaving the organization, deny stopping/deleting CloudTrail, deny requests outside `allowed_regions` (global services exempt). They attach to `guardrail_target_ous`, which **defaults to `Policy-Staging` only**: test a policy on throw-away accounts before widening it. SCPs never apply to the management account.
+- **Authoritative lists.** `aws_service_access_principals` and `enabled_policy_types` are managed exactly: anything enabled by hand and not in the list is *disabled* on apply. The default list keeps StackSets access (needed by the bootstrap StackSets) and Identity Center. Read the plan.
+- **The organization already exists** (`bootstrap.sh` creates it). Import it, and any OU you made by hand, before the first apply; the live leaf lists the exact commands.
+- ACK cross-account trust used to live here and is now the separate `identity/ack-cross-account` module (it is applied per account, not in management).
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
 | ---- | ------- |
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.0 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 6.0 |
 
 ## Providers
 
 | Name | Version |
 | ---- | ------- |
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.65.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.66.0 |
 
 ## Modules
 
@@ -24,45 +30,33 @@ No modules.
 
 | Name | Type |
 | ---- | ---- |
-| [aws_iam_policy.ack_tenant_boundary](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
-| [aws_iam_role.ack_spoke](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
-| [aws_iam_role_policy.ack_spoke_scoped](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
-| [aws_iam_role_policy.hub_ack_assume_spoke](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
-| [aws_organizations_organizational_unit.non_production](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_organizational_unit) | resource |
-| [aws_organizations_organizational_unit.production](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_organizational_unit) | resource |
+| [aws_organizations_organization.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_organization) | resource |
+| [aws_organizations_organizational_unit.child](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_organizational_unit) | resource |
+| [aws_organizations_organizational_unit.top](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_organizational_unit) | resource |
 | [aws_organizations_policy.deny_disable_cloudtrail](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_policy) | resource |
 | [aws_organizations_policy.deny_leave_org](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_policy) | resource |
 | [aws_organizations_policy.deny_unapproved_regions](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_policy) | resource |
-| [aws_organizations_policy_attachment.non_production_guardrails](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_policy_attachment) | resource |
-| [aws_organizations_policy_attachment.production_guardrails](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_policy_attachment) | resource |
-| [aws_ssm_parameter.ack_cross_account_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_parameter) | resource |
-| [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
+| [aws_organizations_policy_attachment.guardrails](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_policy_attachment) | resource |
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
-| <a name="input_ack_role_path"></a> [ack\_role\_path](#input\_ack\_role\_path) | IAM path under which ACK may create roles, without leading slash and with trailing slash (e.g. "ack/"). Scopes iam:CreateRole / PassRole to arn:aws:iam::<account>:role/<path>*. | `string` | `"ack/"` | no |
-| <a name="input_ack_s3_bucket_prefix"></a> [ack\_s3\_bucket\_prefix](#input\_ack\_s3\_bucket\_prefix) | Name prefix of the S3 buckets the ACK spoke role may manage (and that ACK-created roles may access). Buckets outside this prefix are out of reach. | `string` | `"platform-ack-"` | no |
 | <a name="input_additional_region_exempt_actions"></a> [additional\_region\_exempt\_actions](#input\_additional\_region\_exempt\_actions) | Extra IAM actions to exempt from the region SCP (added to the built-in global-service list), e.g. ["ec2:DescribeRegions"]. | `list(string)` | `[]` | no |
 | <a name="input_allowed_regions"></a> [allowed\_regions](#input\_allowed\_regions) | Regions workloads may use. The region SCP denies every request to a region not in this list (global services are exempt). | `list(string)` | <pre>[<br/>  "eu-central-1"<br/>]</pre> | no |
-| <a name="input_env"></a> [env](#input\_env) | Target environment for discovery contract (e.g. \_global, dev, prod) | `string` | `"_global"` | no |
-| <a name="input_external_id"></a> [external\_id](#input\_external\_id) | Shared secret proving the assume-role call is deliberate, preventing confused deputy | `string` | `"platform-ack-shared-secret"` | no |
-| <a name="input_hub_account_id"></a> [hub\_account\_id](#input\_hub\_account\_id) | Account ID running the ACK controllers (EKS hub) | `string` | `""` | no |
-| <a name="input_hub_ack_controller_role_arn"></a> [hub\_ack\_controller\_role\_arn](#input\_hub\_ack\_controller\_role\_arn) | The IAM role ARN the ACK controller pods assume via Pod Identity in the hub | `string` | `""` | no |
-| <a name="input_publish_ssm_parameters"></a> [publish\_ssm\_parameters](#input\_publish\_ssm\_parameters) | Whether to publish discovery contract parameters to SSM Parameter Store | `bool` | `false` | no |
-| <a name="input_region"></a> [region](#input\_region) | AWS region for discovery contract (e.g. eu-central-1) | `string` | `"eu-central-1"` | no |
-| <a name="input_root_id"></a> [root\_id](#input\_root\_id) | AWS Organizations root ID (e.g. r-xxxx). Leave empty if not configuring OUs/SCPs directly. | `string` | `""` | no |
-| <a name="input_spoke_account_id"></a> [spoke\_account\_id](#input\_spoke\_account\_id) | Account ID that owns the actual AWS resources ACK provisions for one team/environment | `string` | `""` | no |
+| <a name="input_aws_service_access_principals"></a> [aws\_service\_access\_principals](#input\_aws\_service\_access\_principals) | AWS services that may integrate with the organization (trusted access). AUTHORITATIVE: any principal<br/>enabled by hand and missing here is disabled on apply, so check the plan. The default keeps the StackSets<br/>access that bootstrap.sh enables and adds what PLAN phases 2 to 6 need. | `list(string)` | <pre>[<br/>  "member.org.stacksets.cloudformation.amazonaws.com",<br/>  "sso.amazonaws.com",<br/>  "account.amazonaws.com",<br/>  "iam.amazonaws.com",<br/>  "access-analyzer.amazonaws.com",<br/>  "cloudtrail.amazonaws.com",<br/>  "config.amazonaws.com",<br/>  "guardduty.amazonaws.com",<br/>  "securityhub.amazonaws.com",<br/>  "inspector2.amazonaws.com",<br/>  "macie.amazonaws.com",<br/>  "backup.amazonaws.com",<br/>  "tagpolicies.tag.amazonaws.com",<br/>  "ram.amazonaws.com",<br/>  "ipam.amazonaws.com",<br/>  "fms.amazonaws.com"<br/>]</pre> | no |
+| <a name="input_enabled_policy_types"></a> [enabled\_policy\_types](#input\_enabled\_policy\_types) | Policy types enabled on the organization root. Must include SERVICE\_CONTROL\_POLICY. | `list(string)` | <pre>[<br/>  "SERVICE_CONTROL_POLICY",<br/>  "RESOURCE_CONTROL_POLICY",<br/>  "TAG_POLICY",<br/>  "BACKUP_POLICY",<br/>  "DECLARATIVE_POLICY_EC2"<br/>]</pre> | no |
+| <a name="input_guardrail_target_ous"></a> [guardrail\_target\_ous](#input\_guardrail\_target\_ous) | OUs the baseline SCP guardrails are attached to. Starts with Policy-Staging only, so a new SCP is tested on<br/>throw-away accounts before it can lock real ones out (PLAN 4.6). Widen it deliberately, for example<br/>["Policy-Staging", "Sandbox", "NonProd"], then the rest. | `list(string)` | <pre>[<br/>  "Policy-Staging"<br/>]</pre> | no |
+| <a name="input_organizational_units"></a> [organizational\_units](#input\_organizational\_units) | The OU tree, two levels deep. Key = OU name. `parent` is null for a top-level OU (directly under the<br/>root) or the name of a top-level OU. Default is the target layout of PLAN.md: Security and<br/>Infrastructure, Workloads with Prod and NonProd, Sandbox, Policy-Staging (test SCPs here first) and<br/>Suspended (accounts waiting to be closed). | <pre>map(object({<br/>    parent = optional(string)<br/>  }))</pre> | <pre>{<br/>  "Infrastructure": {},<br/>  "NonProd": {<br/>    "parent": "Workloads"<br/>  },<br/>  "Policy-Staging": {},<br/>  "Prod": {<br/>    "parent": "Workloads"<br/>  },<br/>  "Sandbox": {},<br/>  "Security": {},<br/>  "Suspended": {},<br/>  "Workloads": {}<br/>}</pre> | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | A map of tags to add to all resources | `map(string)` | `{}` | no |
 
 ## Outputs
 
 | Name | Description |
 | ---- | ----------- |
-| <a name="output_ack_cross_account_ssm_parameter"></a> [ack\_cross\_account\_ssm\_parameter](#output\_ack\_cross\_account\_ssm\_parameter) | SSM parameter path for ACK cross-account role ARN |
-| <a name="output_ack_tenant_boundary_arn"></a> [ack\_tenant\_boundary\_arn](#output\_ack\_tenant\_boundary\_arn) | ARN of the permissions boundary every ACK-created role must carry |
-| <a name="output_non_production_ou_id"></a> [non\_production\_ou\_id](#output\_non\_production\_ou\_id) | The ID of the NonProduction Organizational Unit |
-| <a name="output_production_ou_id"></a> [production\_ou\_id](#output\_production\_ou\_id) | The ID of the Production Organizational Unit |
-| <a name="output_spoke_role_arn"></a> [spoke\_role\_arn](#output\_spoke\_role\_arn) | Spoke role ARN assumed by ACK controllers across accounts |
+| <a name="output_guardrail_policy_ids"></a> [guardrail\_policy\_ids](#output\_guardrail\_policy\_ids) | Map of guardrail name to SCP ID |
+| <a name="output_management_account_id"></a> [management\_account\_id](#output\_management\_account\_id) | Account ID of the management account |
+| <a name="output_organization_id"></a> [organization\_id](#output\_organization\_id) | ID of the AWS Organization (o-...) |
+| <a name="output_organizational_unit_ids"></a> [organizational\_unit\_ids](#output\_organizational\_unit\_ids) | Map of OU name to OU ID (ou-...) |
+| <a name="output_root_id"></a> [root\_id](#output\_root\_id) | ID of the organization root (r-...) |
 <!-- END_TF_DOCS -->
