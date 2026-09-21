@@ -673,7 +673,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
 
 ## Phase 3 — Identity and least privilege
 
-- [ ] **3.1 Identity Center with an external IdP.** New module
+- [x] **3.1 Identity Center with an external IdP.** New module
   `identity/identity-center` (applied in management, or in a delegated admin account if you
   choose to delegate). It creates groups (or reads SCIM-synced groups via
   `data "aws_identitystore_group"`), a permission-set catalog, and **account assignments
@@ -681,29 +681,29 @@ has been applied there yet, so there is no state or resource to migrate. Until
   The IdP itself (Okta / Entra ID / Google) is set up by hand. Document the SCIM steps in
   `docs/IDENTITY.md`.
 
-- [ ] **3.2 Permission-set catalog** (in `identity/human-access`, or merged into 3.1):
+- [x] **3.2 Permission-set catalog** (in `identity/human-access`, or merged into 3.1):
   `ReadOnly`, `Developer` (a customer-managed policy + the `platform-workload-boundary`, only
   in NonProd/Sandbox; read-only in Prod), `PlatformEngineer` (from 0.6), `SecurityAudit`
   (`SecurityAudit` + `ViewOnlyAccess`), `Billing`, `BreakGlassAdmin`. Sessions: 1h for
   admin-level sets, 8h otherwise. Use ABAC session tags (`team`, `cost_center`) from the IdP
   where they make sense.
 
-- [ ] **3.3 Just-in-time elevated access.** Document and scaffold AWS TEAM (Temporary
+- [x] **3.3 Just-in-time elevated access.** Document and scaffold AWS TEAM (Temporary
   Elevated Access Management), or a SaaS equivalent, for `BreakGlassAdmin` and
   prod-`PlatformEngineer`. Requests need approval, are time-limited and are logged to
   log-archive. At minimum, deliver `docs/BREAK_GLASS.md` with the runbook and an
   EventBridge rule plus SNS alert for any `BreakGlassAdmin` sign-in.
 
-- [ ] **3.4 Narrow the apply role.** Replace `AdministratorAccess` on `github-actions-apply` (2.0 template) with
+- [~] **3.4 Narrow the apply role.** Replace `AdministratorAccess` on `github-actions-apply` (2.0 template) with
   the managed policies for the services actually used, plus a boundary that denies:
   organizations, account, sso, cloudtrail stop/delete, changes to guardduty, config and
   securityhub, and edits to `platform-*` roles and the boundary itself.
 
-- [ ] **3.5 Centralized root access management.** Enable the org feature that removes root
+- [x] **3.5 Centralized root access management.** Enable the org feature that removes root
   credentials from member accounts (`aws_iam_organizations_features` with
   `RootCredentialsManagement` and `RootSessions`). Document how to do a privileged root task.
 
-- [ ] **3.6 Access Analyzer.** An org-level analyzer for external access **and** unused
+- [~] **3.6 Access Analyzer.** An org-level analyzer for external access **and** unused
   access, delegated to security-tooling. Findings go to Security Hub.
 
 ---
@@ -1220,3 +1220,39 @@ Everything goes under `docs/`.
     (and it catches a deliberate typo); `tflint`; `trivy config`; YAML/JSON parse. **Not checked:** a real plan or apply, `terragrunt init`/`validate` per account (needs credentials, so the smoke test's graph step and
     the workflows were never run on GitHub), the boundary and SCP JSON against AWS, Renovate's PR grouping, and the imports the owner must run.
   - **Still open in Phase 2:** the owner steps above (real ids and emails, imports, `ci = true` for management, branch protection). **1.7** (IDP repo) is complete; the **2.0b "Done when"** remains open for owner deployment.
+- **2026-09-21 (Phase 3: 3.1-3.6, branches `feat/p3-identity-center`, `feat/p3-break-glass`, `feat/p3-apply-boundary`, `feat/p3-root-access-analyzer`, each stacked on the previous)** —
+  Implemented offline. Nothing applied, no AWS credentials used, no resource created. 3.4 and 3.6 are `[~]` for the reasons below.
+  - **3.1 / 3.2** New module `identity/identity-center` (16 tests) owns the whole catalog, groups and assignments. Catalog: `ReadOnly`, `Developer`, `PlatformEngineer`, `SecurityAudit`, `Billing`,
+    `BreakGlassAdmin`. Assignments are `OU -> group -> permission set`, expanded with the registry (real account ids only). Groups are read from SCIM (or created with `manage_groups`). ABAC:
+    `team` and `cost_center` session tags. Guardrails refuse a bad assignment at plan time: `BreakGlassAdmin` never static, `PlatformEngineer` / `BreakGlassAdmin` not static in Prod, `Developer` only in
+    NonProd / Sandbox / Policy-Staging, unknown sets/groups, placeholder ids. `Developer` = customer-managed policy `platform-developer` + boundary `platform-workload-boundary`, attached by name; **`platform-developer`
+    is new in `governance/account-baseline`** (ABAC on EC2 by the team tag; published as `iam/developer_policy_arn`, added to the discovery contract). `identity/human-access` lost its permission sets
+    (**breaking**, nothing used them) and keeps only EKS access entries. `docs/IDENTITY.md` covers the manual IdP and SCIM steps. **Decisions to confirm:** (1) I read "1h for admin-level sets" as `BreakGlassAdmin`
+    **and** `PlatformEngineer` (it can change IAM); the rest get 8h. (2) The catalog was **merged into identity-center** (the plan allowed either place) so `PlatformEngineer` and `BreakGlassAdmin` are not defined twice.
+    (3) The ABAC attribute paths (`${path:enterprise.department}`, `${path:enterprise.costCenter}`) are my guess for a SCIM enterprise extension: **check them against your IdP** (`TODO(owner)`); the IdP group names in the
+    leaf are placeholders too.
+  - **3.3** New module `security/break-glass-alerts` (7 tests): EventBridge rules for `AssumeRoleWithSAML`, console sign-in and (management only) the Identity Center portal calls, an SNS topic **encrypted with its own
+    rotating KMS key** (the org's own `require_encryption` rule demands it), one email subscription per address. Leaves in management, workloads-dev and workloads-prod; the address is the account's registry email and the module
+    refuses `@example.com`, so **these leaves fail at plan time until you replace the placeholder emails**, and each address must confirm the SNS subscription. `docs/BREAK_GLASS.md` has the JIT design (AWS TEAM or a SaaS
+    equivalent: request, approve by someone else, time-limit, log to log-archive), a setup checklist, the runbook, what to do on an unexpected alert, when the tool or the IdP is down, and a drill.
+    **Not delivered:** the JIT tool itself (it is a product you deploy; I could not check the current AWS TEAM install guide offline). **Not verified:** the CloudTrail event field names in the rules (especially the portal rule, whose
+    fields differ between `Federate` and `GetRoleCredentials`): confirm them in the drill. The rules only see events in their own region.
+  - **3.4 (half done)** The apply-role **boundary** now also denies switching off GuardDuty / Config / Security Hub / Macie / Inspector / Access Analyzer, editing `platform-*` / `terraform-*` roles and
+    `OrganizationAccountAccessRole`, deleting `platform-workload-boundary` and removing any role's boundary (organizations, account, SSO, CloudTrail and the CI-identity protections were already there). Checked by an offline test
+    that parses the template (structure, both `AllowOrganizationsAdmin` variants, 3,865 of the 6,144 allowed characters, CI roles), plus `cfn-lint` and `checkov -f` (24 passed, 0 failed, same reasoned skip). **Not done:** the role is
+    **still `AdministratorAccess`**. Replacing it with "the managed policies for the services actually used" needs real applies to know which services, and a wrong list would break CI apply silently, so I left it: generate the policy from
+    CloudTrail with Access Analyzer policy generation after the first real applies. **Two consequences:** the apply role can no longer update `platform-*` roles (a stack must not name its roles that way), and the change reaches management
+    through `bootstrap.sh` and members through an update of the bootstrap StackSets (both are owner steps, documented in the bootstrap README). I deliberately did **not** deny editing `platform-workload-boundary` versions: the baseline stack
+    updates it with `CreatePolicyVersion`, so only deleting it is denied.
+  - **3.5** `governance/organization` now has `aws_iam_organizations_features` (`RootCredentialsManagement`, `RootSessions`; default on; refuses to plan without trusted access for `iam.amazonaws.com`) and
+    `aws_organizations_delegated_administrator` (real ids only, only for services with trusted access). 15 organization tests (6 new). `docs/ROOT_ACCESS.md` explains removing member root credentials and doing a privileged task with
+    `sts:AssumeRoot`. **The task-policy names and the CLI call are from memory (I could not check the AWS docs): confirm them.** The code does not delete existing root credentials: that is the one-off procedure in the doc.
+  - **3.6 (`[~]`)** New module `security/access-analyzer` (3 tests): an organization analyzer for external access and one for unused access (default 90 days), in the `security-tooling` account, which the org leaf registers as
+    delegated administrator **only once its registry id is real**. New folder `foundation-live-repo/security-tooling` (placeholder id, `ci = false`, matches the registry). **Not done / not verified:** "findings go to Security
+    Hub" is not something this code configures: it happens on its own once Security Hub is enabled with the same delegated administrator, which is PLAN 4.4. Unused-access analysis is billed per role analyzed.
+  - **Checked (offline):** `terraform fmt` and `terragrunt hcl fmt --check`; `conftest verify` (64); `terraform test` for all 13 modules with tests (two needed a rerun after a transient provider-download timeout, both passed);
+    `terragrunt hcl validate --inputs` on all 20 leaves; the account-matrix generator (10) and bootstrap-template (9) tests; the IaC agent tests; the registry check and the offline smoke-test steps; `shellcheck`; `cfn-lint`; `actionlint`;
+    `tflint`; `trivy config`; YAML/JSON parse. **Not checked:** a real plan or apply of anything, `terragrunt init` per account, the IAM policies against the policy simulator, Identity Center behaviour (attribute paths, customer-managed policy by name),
+    and the workflows on GitHub.
+  - **New tag rule followed:** the three new modules (`identity-center`, `break-glass-alerts`, `access-analyzer`) are registered with `"tag-separator": "-"` at `1.0.0` in
+    `release-please-config.json` and `.release-please-manifest.json`. The changed modules (`account-baseline`, `organization`, `human-access`) keep their entries; release-please will propose their next versions from the commits (`human-access` is a breaking change).
