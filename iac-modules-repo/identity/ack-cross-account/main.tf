@@ -222,6 +222,7 @@ resource "aws_iam_role_policy" "hub_ack_assume_spoke" {
 # DISCOVERY CONTRACT: SSM Parameter Store Service Catalog
 # ------------------------------------------------------------------------------
 resource "aws_ssm_parameter" "ack_cross_account_role" {
+  #checkov:skip=CKV2_AWS_34: "Platform discovery catalog parameter contains non-sensitive metadata for cross-account discovery"
   count       = var.publish_ssm_parameters && var.hub_ack_controller_role_arn != "" ? 1 : 0
   name        = "/platform/${var.env}/${var.region}/ack/cross_account_role_arn"
   description = "Platform Discovery Contract: ACK Cross-Account Role ARN"

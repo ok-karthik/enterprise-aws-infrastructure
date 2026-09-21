@@ -85,6 +85,7 @@ module "vpc" {
 
 # --- DISCOVERY CONTRACT (Phase 18.1): SSM Parameter Store Service Catalog ---
 resource "aws_ssm_parameter" "vpc_id" {
+  #checkov:skip=CKV2_AWS_34: "Platform discovery catalog parameter contains non-sensitive metadata"
   count       = var.publish_ssm_parameters && var.env != "" && var.region != "" ? 1 : 0
   name        = "/platform/${var.env}/${var.region}/vpc/id"
   description = "Platform Discovery Contract: VPC ID for ${var.env} in ${var.region}"
@@ -101,6 +102,7 @@ resource "aws_ssm_parameter" "vpc_id" {
 }
 
 resource "aws_ssm_parameter" "database_subnets" {
+  #checkov:skip=CKV2_AWS_34: "Platform discovery catalog parameter contains non-sensitive metadata"
   count       = var.publish_ssm_parameters && var.env != "" && var.region != "" && length(module.vpc.database_subnets) > 0 ? 1 : 0
   name        = "/platform/${var.env}/${var.region}/vpc/database_subnets"
   description = "Platform Discovery Contract: Database Subnet IDs for ${var.env} in ${var.region}"
