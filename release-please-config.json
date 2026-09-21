@@ -60,6 +60,12 @@
       "package-name": "ack-cross-account",
       "component": "ack-cross-account",
       "tag-separator": "-v"
+    },
+    "iac-modules-repo/governance/account-factory": {
+      "release-type": "terraform-module",
+      "package-name": "account-factory",
+      "component": "account-factory",
+      "tag-separator": "-v"
     }
   }
 }
