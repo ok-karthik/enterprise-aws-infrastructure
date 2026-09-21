@@ -4,11 +4,20 @@ All jobs run inside a purpose-built toolchain container (`ghcr.io/ok-karthik/inf
 
 ## Pipeline (`terragrunt.yml` + `reusable-terragrunt.yml`)
 
-1. **Static analysis** (parallel with planning): `terraform fmt -check`, `terraform validate`, TFLint, Checkov (HCL), Trivy. Results upload as SARIF to the GitHub Security tab.
+1. **Static analysis** (parallel with planning): `terraform fmt -check`, `terraform validate`, TFLint, Checkov (HCL and workflows, blocking; run by `workloads-live-repo/scripts/run-checkov.sh`, the same wrapper as `make checkov` and pre-commit), Trivy (`trivy config`, until PLAN 8.9 step 5 removes it). Results upload as SARIF to the GitHub Security tab.
 2. **Plan** per account (a matrix generated from the account registry, see below): `terragrunt run --all plan` produces `tfplan.bin`, converted to `tfplan.json` and uploaded as an artifact.
 3. **Governance gates** consume the plan JSON:
    - **OPA/Conftest** against `policy-library-repo/terraform/` — mandatory tagging, no legacy instance families.
-   - **Checkov** (plan-level, CIS benchmark) and **Trivy** (CRITICAL/HIGH) as blocking gates.
+   - **Checkov** on **every** `tfplan.json` (one run per plan, SARIF merged into one file per account) and **Trivy** (CRITICAL/HIGH) as blocking gates. A run with no plan file fails instead of passing.
+
+| Tool | Its one job | Locally | In CI |
+|---|---|---|---|
+| tflint | Terraform written correctly | `make lint` | static analysis |
+| Checkov | Secure, general AWS best practice | pre-commit hook, `make checkov` | static (HCL) and plan (JSON) |
+| conftest / Rego | This organization's own rules | `make test` | plan stage |
+| Trivy | Toolbox image has no known fixable CVEs | `make image-scan` | `publish-toolchain.yml`, before the push |
+
+   (`trivy config` on Terraform also still runs, until PLAN 8.9 step 5.)
 4. **Cost** — Infracost posts a per-module breakdown as a PR comment (`tf-summarize` adds a change summary).
 5. **Apply** — on push to `main`, `apply-dev` runs, then `apply-prod`, which is gated by a protected GitHub **Environment** requiring manual approval.
 
