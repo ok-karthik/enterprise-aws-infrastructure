@@ -34,10 +34,11 @@ inputs = {
   enable_nat_gateway = local.env_vars.locals.enable_nat_gateway
   single_nat_gateway = local.env_vars.locals.single_nat_gateway
 
-  # Discovery contract
+  # Discovery contract: published by the governance/discovery-publisher stack (one owner per name),
+  # so the module must not publish the same parameters itself.
   env                    = local.env
   region                 = local.aws_region
-  publish_ssm_parameters = true
+  publish_ssm_parameters = false
 
   tags = {
     Environment = title(local.env)

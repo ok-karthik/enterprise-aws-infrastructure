@@ -16,8 +16,9 @@ locals {
   # --- MODULE VERSIONS: promote dev -> prod by bumping these pins, dev first ---
   # Release tags of iac-modules-repo/, one per module (<module>-vX.Y.Z). Renovate opens the PRs.
   module_versions = {
-    vpc              = "vpc-v1.0.0"
-    eks              = "eks-v1.0.0"
-    account_baseline = "account-baseline-v1.0.0"
+    vpc                 = "vpc-v1.0.0"
+    eks                 = "eks-v1.0.0"
+    account_baseline    = "account-baseline-v1.0.0"
+    discovery_publisher = "discovery-publisher-v1.0.0"
   }
 }
