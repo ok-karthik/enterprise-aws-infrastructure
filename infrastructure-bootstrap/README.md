@@ -20,19 +20,73 @@ Tags come from the stack, not the template: `Project`, `ManagedBy=CloudFormation
 
 ## Deploy it (owner only)
 
-Use an SSO profile for the management account. **Never the default profile.**
+You can deploy the bootstrap using any of the following three methods. If you are already logged into the AWS Console in your browser and want a **100% keyless, zero-setup** deployment, **Option 1** is recommended.
+
+### Option 1: AWS Web Console (100% Keyless — Recommended for zero-setup)
+
+No local AWS CLI profiles or access keys needed.
+
+1. **Enable StackSets in Organizations**: In the AWS Console, go to **AWS Organizations** → **Settings** → under *Trusted access for AWS services*, find **AWS CloudFormation StackSets** and ensure it is **Enabled** (click *Enable trusted access* if needed).
+2. Go to **AWS CloudFormation** in region `eu-central-1` (Frankfurt).
+3. Click **Create stack** → **With new resources (standard)**.
+4. Under *Template source*, choose **Upload a template file** and select [`cloudformation/account-bootstrap.yaml`](cloudformation/account-bootstrap.yaml).
+5. Specify stack details:
+   - **Stack name**: `platform-bootstrap`
+   - **GitHubRepo**: `ok-karthik/enterprise-aws-infrastructure`
+   - **GitHubEnvironment**: `management`
+   - **AllowOrganizationsAdmin**: `true`
+6. Configure stack options:
+   - Add Tags:
+     - `Project` = `enterprise-aws-platform`
+     - `ManagedBy` = `CloudFormation`
+     - `Owner` = `platform-team`
+     - `DataClassification` = `internal`
+   - Enable **Stack failure options**: *Roll back all stack resources*.
+7. Review & Capabilities:
+   - Scroll to the bottom and check:
+     `[✔] I acknowledge that AWS CloudFormation might create IAM resources with custom names.`
+   - Click **Submit**.
+8. After creation reaches `CREATE_COMPLETE`:
+   - Click **Stack actions** → **Edit termination protection** → **Enable**.
+
+---
+
+### Option 2: Guided Script via CLI / SSO (`bootstrap.sh`)
+
+If you have AWS CLI configured locally with an SSO profile or exported session credentials:
 
 ```bash
+# If using AWS IAM Identity Center (SSO):
 aws sso login --profile <management-admin-profile>
 AWS_PROFILE=<management-admin-profile> ./infrastructure-bootstrap/bootstrap.sh
+
+# Or if using exported temporary session credentials:
+export AWS_ACCESS_KEY_ID="ASIA..."
+export AWS_SECRET_ACCESS_KEY="..."
+export AWS_SESSION_TOKEN="..."
+export AWS_DEFAULT_REGION="eu-central-1"
+./infrastructure-bootstrap/bootstrap.sh
 ```
 
 The script:
+1. **Preflight.** Reads the expected account from `infrastructure-live/_global/account.hcl` (`954171757349`) and aborts if your credentials belong to a different account (safeguards against running in the wrong browser/profile session).
+2. Verifies the AWS Organization exists and enables StackSets trusted access (`aws cloudformation activate-organizations-access`).
+3. Creates a **change set**, renders an ASCII preview of resources to create, and prompts for confirmation (`--yes` skips).
+4. Deploys the stack, turns on termination protection, applies [`cloudformation/stack-policy.json`](cloudformation/stack-policy.json), and prints the GitHub role ARNs.
 
-1. **Preflight.** It reads the expected account from `infrastructure-live/_global/account.hcl` and refuses to continue unless your credentials belong to it (no credentials or the wrong account: exit 1, nothing changed).
-2. Makes sure the AWS Organization exists (all features; asks before creating one) and that StackSets trusted access is enabled.
-3. Creates a **change set**, shows it, and asks before executing it. `--yes` skips the prompts. "No changes" counts as success.
-4. Enables termination protection, sets the stack policy, prints the outputs and the GitHub wiring.
+---
+
+### Option 3: AWS CloudShell (Zero-Setup CLI)
+
+If you prefer the CLI but don't want to configure local terminal profiles:
+1. Open **CloudShell** directly in your AWS Management Account web console (the `[>_]` terminal icon in the top navigation bar).
+2. Clone or download the repository files:
+   ```bash
+   git clone https://github.com/ok-karthik/enterprise-aws-infrastructure.git
+   cd enterprise-aws-infrastructure
+   ./infrastructure-bootstrap/bootstrap.sh
+   ```
+*(CloudShell runs with pre-authenticated session credentials for the active console user, requiring zero static keys).*
 
 It never touches GitHub. Do the printed steps yourself.
 
