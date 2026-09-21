@@ -1,24 +1,24 @@
-output "production_ou_id" {
-  description = "The ID of the Production Organizational Unit"
-  value       = try(aws_organizations_organizational_unit.production[0].id, null)
+output "organization_id" {
+  description = "ID of the AWS Organization (o-...)"
+  value       = aws_organizations_organization.this.id
 }
 
-output "non_production_ou_id" {
-  description = "The ID of the NonProduction Organizational Unit"
-  value       = try(aws_organizations_organizational_unit.non_production[0].id, null)
+output "root_id" {
+  description = "ID of the organization root (r-...)"
+  value       = aws_organizations_organization.this.roots[0].id
 }
 
-output "spoke_role_arn" {
-  description = "Spoke role ARN assumed by ACK controllers across accounts"
-  value       = try(aws_iam_role.ack_spoke[0].arn, null)
+output "management_account_id" {
+  description = "Account ID of the management account"
+  value       = aws_organizations_organization.this.master_account_id
 }
 
-output "ack_cross_account_ssm_parameter" {
-  description = "SSM parameter path for ACK cross-account role ARN"
-  value       = try(aws_ssm_parameter.ack_cross_account_role[0].name, null)
+output "organizational_unit_ids" {
+  description = "Map of OU name to OU ID (ou-...)"
+  value       = local.organizational_unit_ids
 }
 
-output "ack_tenant_boundary_arn" {
-  description = "ARN of the permissions boundary every ACK-created role must carry"
-  value       = try(aws_iam_policy.ack_tenant_boundary[0].arn, null)
+output "guardrail_policy_ids" {
+  description = "Map of guardrail name to SCP ID"
+  value       = local.guardrail_policy_ids
 }

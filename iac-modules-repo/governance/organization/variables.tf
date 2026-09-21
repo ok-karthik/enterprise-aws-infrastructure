@@ -1,32 +1,90 @@
-variable "root_id" {
-  description = "AWS Organizations root ID (e.g. r-xxxx). Leave empty if not configuring OUs/SCPs directly."
-  type        = string
-  default     = ""
+variable "organizational_units" {
+  description = <<-EOT
+    The OU tree, two levels deep. Key = OU name. `parent` is null for a top-level OU (directly under the
+    root) or the name of a top-level OU. Default is the target layout of PLAN.md: Security and
+    Infrastructure, Workloads with Prod and NonProd, Sandbox, Policy-Staging (test SCPs here first) and
+    Suspended (accounts waiting to be closed).
+  EOT
+  type = map(object({
+    parent = optional(string)
+  }))
+  default = {
+    "Security"       = {}
+    "Infrastructure" = {}
+    "Workloads"      = {}
+    "Prod"           = { parent = "Workloads" }
+    "NonProd"        = { parent = "Workloads" }
+    "Sandbox"        = {}
+    "Policy-Staging" = {}
+    "Suspended"      = {}
+  }
+
+  validation {
+    condition = alltrue([
+      for name, ou in var.organizational_units :
+      ou.parent == null || (contains(keys(var.organizational_units), ou.parent == null ? "" : ou.parent) && try(var.organizational_units[ou.parent].parent, "x") == null)
+    ])
+    error_message = "Every parent must be the name of a TOP-LEVEL OU in this map (AWS allows deeper trees, this module supports two levels)."
+  }
+
+  validation {
+    condition     = alltrue([for name, _ in var.organizational_units : can(regex("^[A-Za-z0-9][A-Za-z0-9 _-]{0,127}$", name))])
+    error_message = "OU names must be 1-128 characters: letters, digits, space, hyphen or underscore."
+  }
 }
 
-variable "hub_account_id" {
-  description = "Account ID running the ACK controllers (EKS hub)"
-  type        = string
-  default     = ""
+variable "aws_service_access_principals" {
+  description = <<-EOT
+    AWS services that may integrate with the organization (trusted access). AUTHORITATIVE: any principal
+    enabled by hand and missing here is disabled on apply, so check the plan. The default keeps the StackSets
+    access that bootstrap.sh enables and adds what PLAN phases 2 to 6 need.
+  EOT
+  type        = list(string)
+  default = [
+    "member.org.stacksets.cloudformation.amazonaws.com", # bootstrap StackSets (PLAN 2.0b)
+    "sso.amazonaws.com",                                 # IAM Identity Center (3.1)
+    "account.amazonaws.com",                             # account management
+    "iam.amazonaws.com",                                 # centralized root access (3.5)
+    "access-analyzer.amazonaws.com",                     # 3.6
+    "cloudtrail.amazonaws.com",                          # org trail (4.2)
+    "config.amazonaws.com",                              # 4.3
+    "guardduty.amazonaws.com",                           # 4.4
+    "securityhub.amazonaws.com",                         # 4.4
+    "inspector2.amazonaws.com",                          # 4.4
+    "macie.amazonaws.com",                               # 4.4
+    "backup.amazonaws.com",                              # 4.6
+    "tagpolicies.tag.amazonaws.com",                     # 4.6
+    "ram.amazonaws.com",                                 # network sharing (5.x)
+    "ipam.amazonaws.com",                                # 5.1
+    "fms.amazonaws.com",                                 # 6.1
+  ]
 }
 
-variable "spoke_account_id" {
-  description = "Account ID that owns the actual AWS resources ACK provisions for one team/environment"
-  type        = string
-  default     = ""
+variable "enabled_policy_types" {
+  description = "Policy types enabled on the organization root. Must include SERVICE_CONTROL_POLICY."
+  type        = list(string)
+  default = [
+    "SERVICE_CONTROL_POLICY",
+    "RESOURCE_CONTROL_POLICY",
+    "TAG_POLICY",
+    "BACKUP_POLICY",
+    "DECLARATIVE_POLICY_EC2",
+  ]
+
+  validation {
+    condition     = contains(var.enabled_policy_types, "SERVICE_CONTROL_POLICY")
+    error_message = "enabled_policy_types must include SERVICE_CONTROL_POLICY: the guardrails are SCPs."
+  }
 }
 
-variable "hub_ack_controller_role_arn" {
-  description = "The IAM role ARN the ACK controller pods assume via Pod Identity in the hub"
-  type        = string
-  default     = ""
-}
-
-variable "external_id" {
-  description = "Shared secret proving the assume-role call is deliberate, preventing confused deputy"
-  type        = string
-  default     = "platform-ack-shared-secret"
-  sensitive   = true
+variable "guardrail_target_ous" {
+  description = <<-EOT
+    OUs the baseline SCP guardrails are attached to. Starts with Policy-Staging only, so a new SCP is tested on
+    throw-away accounts before it can lock real ones out (PLAN 4.6). Widen it deliberately, for example
+    ["Policy-Staging", "Sandbox", "NonProd"], then the rest.
+  EOT
+  type        = list(string)
+  default     = ["Policy-Staging"]
 }
 
 variable "allowed_regions" {
@@ -44,46 +102,6 @@ variable "additional_region_exempt_actions" {
   description = "Extra IAM actions to exempt from the region SCP (added to the built-in global-service list), e.g. [\"ec2:DescribeRegions\"]."
   type        = list(string)
   default     = []
-}
-
-variable "ack_s3_bucket_prefix" {
-  description = "Name prefix of the S3 buckets the ACK spoke role may manage (and that ACK-created roles may access). Buckets outside this prefix are out of reach."
-  type        = string
-  default     = "platform-ack-"
-
-  validation {
-    condition     = can(regex("^[a-z0-9][a-z0-9.-]{1,40}$", var.ack_s3_bucket_prefix))
-    error_message = "ack_s3_bucket_prefix must be 2-41 chars of lowercase letters, digits, dots or hyphens, and must not be empty (an empty prefix would grant access to every bucket)."
-  }
-}
-
-variable "ack_role_path" {
-  description = "IAM path under which ACK may create roles, without leading slash and with trailing slash (e.g. \"ack/\"). Scopes iam:CreateRole / PassRole to arn:aws:iam::<account>:role/<path>*."
-  type        = string
-  default     = "ack/"
-
-  validation {
-    condition     = can(regex("^[A-Za-z0-9+=,.@_-]+(/[A-Za-z0-9+=,.@_-]+)*/$", var.ack_role_path))
-    error_message = "ack_role_path must look like \"ack/\": no leading slash, a trailing slash, and not empty."
-  }
-}
-
-variable "env" {
-  description = "Target environment for discovery contract (e.g. _global, dev, prod)"
-  type        = string
-  default     = "_global"
-}
-
-variable "region" {
-  description = "AWS region for discovery contract (e.g. eu-central-1)"
-  type        = string
-  default     = "eu-central-1"
-}
-
-variable "publish_ssm_parameters" {
-  description = "Whether to publish discovery contract parameters to SSM Parameter Store"
-  type        = bool
-  default     = false
 }
 
 variable "tags" {
