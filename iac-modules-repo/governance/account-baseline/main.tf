@@ -212,6 +212,17 @@ locals {
 }
 
 resource "aws_iam_policy" "workload_boundary" {
+  # A permissions boundary must Allow everything and then Deny specific actions: it grants nothing, it only ever
+  # narrows the role it is attached to. Checkov flags the broad Allow (and reads no Deny), so these are expected.
+  #checkov:skip=CKV_AWS_62: "Permissions boundary: Allow */* followed by explicit Denies. It caps roles, it does not grant access"
+  #checkov:skip=CKV_AWS_63: "Permissions boundary: Action * is the base Allow that the Deny statements then narrow"
+  #checkov:skip=CKV2_AWS_40: "Permissions boundary: a boundary cannot restrict IAM by allowing less, it denies specific IAM actions (DenyBoundaryRemoval, DenyEditingThisBoundary, DenyHumanIdentitiesAndKeys, DenyEditingPlatformRoles)"
+  #checkov:skip=CKV_AWS_286: "Permissions boundary: privilege escalation is what the Deny statements remove (no new role without this boundary, no user or key creation, no editing of platform roles)"
+  #checkov:skip=CKV_AWS_287: "Permissions boundary: credential creation is denied (DenyHumanIdentitiesAndKeys)"
+  #checkov:skip=CKV_AWS_288: "Permissions boundary: it grants nothing; the effective permissions are the intersection with the role's own policies"
+  #checkov:skip=CKV_AWS_289: "Permissions boundary: permissions management is narrowed by the Deny statements, not granted"
+  #checkov:skip=CKV_AWS_290: "Permissions boundary: it grants nothing; write access comes from the role's own policy and is capped here"
+  #checkov:skip=CKV_AWS_355: "Permissions boundary: Resource * on the base Allow is intended, the Denies name the resources they protect"
   name        = local.boundary_name
   description = "Permissions boundary for every role created by Terraform, ACK or tenants in this account"
   policy      = jsonencode(local.workload_boundary_policy)
@@ -232,6 +243,12 @@ resource "aws_iam_policy" "workload_boundary" {
 # instances must be launched with the caller's own `team` tag.
 locals {
   developer_policy_name = "platform-developer"
+
+  # Instance resources of ssm:SendCommand and ssm:StartSession: EC2 instances and hybrid managed instances.
+  ssm_instance_arns = [
+    "arn:${local.partition}:ec2:*:${local.account_id}:instance/*",
+    "arn:${local.partition}:ssm:*:${local.account_id}:managed-instance/*",
+  ]
 
   developer_policy = {
     Version = "2012-10-17"
@@ -323,11 +340,78 @@ locals {
         Resource  = "arn:${local.partition}:ec2:*:${local.account_id}:*/*"
         Condition = { StringEquals = { "ec2:CreateAction" = ["RunInstances", "CreateVolume"] } }
       },
+
+      # --- Explicit denies. The service-wide allows above (s3:*, sqs:*, ssm:*, ...) are what lets a developer
+      # build and debug a workload; these carve out the ways to widen access to it or to change the platform.
+
+      {
+        # Resource policies are how data is exposed outside the account. A developer builds a workload; who
+        # else may reach its bucket, queue, topic, function or repository is a platform decision. (The data
+        # perimeter SCP/RCPs of PLAN 4.6 are the backstop.)
+        Sid    = "DenyResourcePolicyWrites"
+        Effect = "Deny"
+        Action = [
+          "ecr:SetRepositoryPolicy",
+          "lambda:AddPermission",
+          "lambda:CreateFunctionUrlConfig",
+          "s3:DeleteBucketPolicy",
+          "s3:PutBucketAcl",
+          "s3:PutBucketPolicy",
+          "s3:PutBucketPublicAccessBlock",
+          "s3:PutObjectAcl",
+          "sns:AddPermission",
+          "sqs:AddPermission",
+        ]
+        Resource = "*"
+      },
+      {
+        # /platform/* is the discovery contract (docs/DISCOVERY_CONTRACT.md): tenants read it, only the
+        # platform writes it. Reading stays allowed (ssm:* above).
+        Sid    = "DenyPlatformParameterWrites"
+        Effect = "Deny"
+        Action = [
+          "ssm:AddTagsToResource",
+          "ssm:DeleteParameter",
+          "ssm:DeleteParameters",
+          "ssm:LabelParameterVersion",
+          "ssm:PutParameter",
+        ]
+        Resource = "arn:${local.partition}:ssm:*:${local.account_id}:parameter/platform/*"
+      },
+      {
+        # Running commands on, or opening a shell to, an instance is limited to the developer's own team
+        # (ABAC on the team tag). Instances only: SSM documents are a different resource type and stay allowed.
+        # An instance without a team tag is denied too (the tag is absent, so it cannot match).
+        Sid      = "DenySsmAccessToOtherTeamsInstances"
+        Effect   = "Deny"
+        Action   = ["ssm:SendCommand", "ssm:StartSession"]
+        Resource = local.ssm_instance_arns
+        Condition = {
+          StringNotEquals = { "aws:ResourceTag/team" = "$${aws:PrincipalTag/team}" }
+        }
+      },
+      {
+        # A principal with no team tag has nothing to compare, so it may not use SSM on instances at all.
+        Sid       = "DenySsmAccessWithoutTeamTag"
+        Effect    = "Deny"
+        Action    = ["ssm:SendCommand", "ssm:StartSession"]
+        Resource  = local.ssm_instance_arns
+        Condition = { Null = { "aws:PrincipalTag/team" = "true" } }
+      },
     ]
   }
 }
 
 resource "aws_iam_policy" "developer" {
+  # Checkov's IAM checks read only the Allow statements and do not subtract the explicit Denies, so these stay
+  # reported even though the policy carves out resource-policy writes, /platform/* parameter writes and
+  # cross-team SSM access (statements DenyResourcePolicyWrites, DenyPlatformParameterWrites, DenySsm*).
+  #checkov:skip=CKV_AWS_286: "iam:PassRole is limited to role/platform/* and only to compute services; the Developer set also carries platform-workload-boundary, which denies creating roles without it, editing platform roles and touching Organizations. Assigned only in NonProd/Sandbox (PLAN 3.2, enforced by identity-center)"
+  #checkov:skip=CKV_AWS_287: "Reading secrets and parameters is the job in a NonProd/Sandbox account, which holds no production credentials; /platform/* parameters are non-sensitive discovery metadata. Access keys and login profiles are denied by platform-workload-boundary"
+  #checkov:skip=CKV_AWS_288: "Developers work with workload data (S3, DynamoDB, RDS, ...) in NonProd/Sandbox accounts, so broad service actions are the point of the set. Exposure outside the organization is blocked by the explicit resource-policy Deny in this policy and by the SCP/RCP data perimeter (PLAN 4.6)"
+  #checkov:skip=CKV_AWS_289: "The resource-policy and permission-granting actions (s3:PutBucketPolicy, sqs/sns/lambda AddPermission, ecr:SetRepositoryPolicy, ...) are explicitly denied by DenyResourcePolicyWrites in this same policy; Checkov does not evaluate Deny statements. The data perimeter (PLAN 4.6) is the backstop"
+  #checkov:skip=CKV_AWS_290: "Writing to workload services is required to build and run a workload. The set is NonProd/Sandbox-only (PLAN 3.2), capped by platform-workload-boundary, and EC2 start/stop/terminate/launch and SSM access are scoped to the developer's own team by the team tag (ABAC)"
+  #checkov:skip=CKV_AWS_355: "Developers create the resources, so their names and ARNs do not exist when the policy is written and cannot be listed. Scope comes from the account (NonProd/Sandbox only), the boundary, the region SCP and ABAC on the team tag, not from resource ARNs"
   name        = local.developer_policy_name
   description = "Customer-managed policy of the Developer permission set: workload services, ABAC on EC2 by the team tag"
   policy      = jsonencode(local.developer_policy)
