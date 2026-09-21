@@ -46,7 +46,8 @@ Applied and maintained directly by this platform via Terragrunt environments (`w
 | `iac-modules-repo/identity/human-access` | Account | `human-access-v1.0.0` | IAM Identity Center permission sets + EKS Access Entries & View policies |
 | `iac-modules-repo/identity/workload-identity` | Cluster | `workload-identity-v1.0.0` | EKS Pod Identity associations + IRSA federated OIDC fallback |
 | `iac-modules-repo/governance/bootstrap-stacksets` | Global | `bootstrap-stacksets-v1.0.0` | Service-managed CloudFormation StackSets (one per GitHub Environment) that roll the Day-0 bootstrap template out to every member account in the targeted OUs. Applied by the owner from the management account |
-| `iac-modules-repo/governance/organization` | Global | `organization-v1.0.0` | AWS Organizations OUs, SCP guardrails, and ACK cross-account hub/spoke trust |
+| `iac-modules-repo/governance/organization` | Global | `organization-v1.0.0` | The AWS Organization (trusted service access, policy types), the OU tree (Security, Infrastructure, Workloads{Prod,NonProd}, Sandbox, Policy-Staging, Suspended) and baseline SCP guardrails attached to `guardrail_target_ous` (Policy-Staging by default). Applied by the owner from the management account |
+| `iac-modules-repo/identity/ack-cross-account` | Account | `ack-cross-account-v1.0.0` | ACK hub/spoke trust for one account: spoke role, scoped inline policy, `ack-tenant-boundary`, discovery parameter |
 
 ### 3. The Discovery Contract (SSM Parameter Store Service Catalog)
 Per **PLAN.md Phase 18.1**, tenant Terraform modules never hardcode AWS IDs (VPC IDs, subnets, OIDC ARNs, cluster names). On every foundation stack apply, standard parameters are published to AWS SSM Parameter Store:

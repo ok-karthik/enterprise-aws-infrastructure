@@ -12,19 +12,17 @@ locals {
   module_version = local.env_vars.locals.module_versions.organization
   module_source  = local.modules_local ? "${get_repo_root()}/iac-modules-repo/governance/organization" : "git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//iac-modules-repo/governance/organization?ref=${local.module_version}"
 
-  env_vars    = read_terragrunt_config(find_in_parent_folders("env.hcl"))
-  env         = local.env_vars.locals.env
-  region_vars = read_terragrunt_config(find_in_parent_folders("region.hcl"))
-  aws_region  = local.region_vars.locals.aws_region
+  env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+  env      = local.env_vars.locals.env
 }
 
 inputs = {
-  env                    = local.env
-  region                 = local.aws_region
-  publish_ssm_parameters = true
-
   # Region allow-list for the region SCP. Add a region here before workloads can use it.
   allowed_regions = ["eu-central-1"]
+
+  # The baseline SCPs attach to these OUs only. Start on Policy-Staging, test there, then widen
+  # deliberately (for example ["Policy-Staging", "Sandbox", "NonProd"]). PLAN 4.6.
+  guardrail_target_ous = ["Policy-Staging"]
 
   tags = {
     Environment = title(local.env)
