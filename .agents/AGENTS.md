@@ -110,7 +110,7 @@ The core pattern is **strict separation of "blueprint" from "live config"**, kep
 
 4. **Data files loaded via `find_in_parent_folders`:**
    - `<env>/account.hcl` — `aws_account_id`, `account_name`
-   - `<env>/env.hcl` — `env`, `cluster_name`, and cost-scaling knobs (`min_size`, `desired_size`, `enable_nat_gateway`)
+   - `<env>/env.hcl` — `env`, `cluster_name`, cost-scaling knobs (`min_size`, `desired_size`, `enable_nat_gateway`) and `module_versions` (the release tag of each `iac-modules-repo` module this environment uses; `_envcommon` builds `terraform.source` from it, or from the checkout when `IAC_MODULES_LOCAL` is set — see `docs/CICD.md`)
    - `<env>/<region>/region.hcl` — `aws_region`
 
 5. **`workloads-live-repo/<env>/<region>/<category>/<module>/terragrunt.hcl`** — the leaf. Includes `root` + the matching `_envcommon` file (`expose = true`) and only overrides env-specific values (e.g. dev EKS shrinks `min_size`/`max_size`/`desired_size`).

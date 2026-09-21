@@ -26,6 +26,10 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   AWS_REGION: ${{ vars.AWS_REGION }}
+  # Use modules from this checkout instead of the pinned release tags (module_versions in env.hcl).
+  # Needed until every module has a release tag at the iac-modules-repo path (PLAN 1.4), and later for
+  # PRs that change iac-modules-repo/** so module changes are tested before release.
+  IAC_MODULES_LOCAL: '1'
 
 jobs:
   discover:
