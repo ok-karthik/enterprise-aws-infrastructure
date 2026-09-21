@@ -616,7 +616,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   - Update the `smoke-test.sh` checks: env comes from `account.hcl` and must be in
     `dev|staging|prod|global`, and the region must be in `regions.hcl`.
 
-- [ ] **2.3 `governance/organization` module v2.** Replace the two hardcoded OUs with a
+- [x] **2.3 `governance/organization` module v2.** Replace the two hardcoded OUs with a
   `var.organizational_units` map (nested: Workloads → Prod/NonProd) that creates Security,
   Infrastructure, Workloads{Prod,NonProd}, Sandbox, Policy-Staging and Suspended. Output a
   map of OU name → id. Enable the needed org service access principals and
@@ -1153,3 +1153,16 @@ Everything goes under `docs/`.
     `terragrunt hcl fmt --check`, `conftest verify` (63), `terraform test` for all modules (`make test`), `cfn-lint`, `shellcheck`, `tflint`, `trivy config`,
     `.agents` tests and eval, workflow YAML parse, `git grep` for stale old paths (only a deliberate explanation in `docs/CICD.md` remains).
     **Not checked:** a real plan or `terragrunt init` (needs credentials, so `smoke-test.sh` was only run up to its init step), the workflows on GitHub, Renovate itself.
+- **2026-09-21 (2.3, branch `feat/p2-org-v2`, stacked on `feat/p1-repo-topology`)** — Organization module v2 and the ACK split. Nothing applied, no AWS
+  credentials used.
+  - **`governance/organization` v2:** manages the organization itself (`feature_set = ALL`, `aws_service_access_principals`, `enabled_policy_types` = SCP, RCP,
+    tag, backup, declarative EC2), the OU tree from `var.organizational_units` (two levels; default Security, Infrastructure, Workloads{Prod,NonProd}, Sandbox,
+    Policy-Staging, Suspended), and the three baseline SCPs. Outputs `organization_id`, `root_id`, `management_account_id`, `organizational_unit_ids` (name → id),
+    `guardrail_policy_ids`. Breaking: the old `Production` / `NonProduction` OUs, `root_id` input and ACK inputs/outputs are gone (nothing was deployed: `root_id` was `""`).
+  - **ACK moved** to the new module `identity/ack-cross-account` (per-account), code and its 3 tests unchanged; release-please entry added at `1.0.0`.
+  - **Decisions to confirm:** (1) the SCP guardrails attach to `Policy-Staging` **only** by default (`guardrail_target_ous`), so a policy is tested before it can lock real
+    accounts out; widen it deliberately. (2) `aws_service_access_principals` and `enabled_policy_types` are **authoritative**: apply disables anything enabled by hand and not
+    in the list. The default keeps StackSets access (needed by 2.0b) and includes Identity Center and the services PLAN phases 3 to 6 use. Read the plan before applying.
+  - **Before the owner applies:** the organization and any hand-made OUs must be **imported** (`terragrunt import ...`); the live leaf lists the exact commands.
+  - **Checked (offline):** `terraform validate`, `terraform test` (9 for the organization module, 3 for `ack-cross-account`), `terragrunt hcl validate --inputs` on the leaf,
+    `tflint`, `trivy config`, `terraform fmt`, `terragrunt hcl fmt --check`. **Not checked:** a real plan (needs the import and AWS access), the SCP JSON against AWS.
