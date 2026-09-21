@@ -370,7 +370,7 @@ find them with `git grep`.
   `working_directory` values. Update the fmt command in `.agents/AGENTS.md` §3 to cover
   `iac-modules-repo foundation-live-repo workloads-live-repo policy-library-repo`.
 
-- [ ] **1.7 IDP repo follow-up** (in `../internal-developer-platform`, separate PR):
+- [x] **1.7 IDP repo follow-up** (in `../internal-developer-platform`, separate PR):
   - `1-platform-catalog/catalog.yaml` `capabilities_source_base` → `//iac-modules-repo`
   - `1-platform-catalog/per-tenant/infra/platform/team-iam.tf.tmpl` source path + new tag
   - `.agents/AGENTS.md` line ~218, `PLAN.md` examples
@@ -994,7 +994,7 @@ Everything goes under `docs/`.
 
 ## Changes needed in `internal-developer-platform` (separate PRs in that repo)
 
-- [ ] **IDP-1** Module source paths and pins (task 1.7).
+- [x] **IDP-1** Module source paths and pins (task 1.7).
 - [ ] **IDP-2** `1-platform-catalog/per-tenant/infra/platform/providers.tf.tmpl`: the provider
   assumes a role into the **tenant's own account** (from `tenant.yaml` → account per env), not
   a shared account. The IDP scaffolder asks for or looks up the tenant account.
@@ -1219,4 +1219,4 @@ Everything goes under `docs/`.
     the generator's and the agent's unit tests; the registry check and the offline smoke-test steps (with negative cases); `shellcheck` on every script; `cfn-lint`; `actionlint` on the 8 workflows
     (and it catches a deliberate typo); `tflint`; `trivy config`; YAML/JSON parse. **Not checked:** a real plan or apply, `terragrunt init`/`validate` per account (needs credentials, so the smoke test's graph step and
     the workflows were never run on GitHub), the boundary and SCP JSON against AWS, Renovate's PR grouping, and the imports the owner must run.
-  - **Still open in Phase 2:** the owner steps above (real ids and emails, imports, `ci = true` for management, branch protection). **1.7** (IDP repo) and the **2.0b "Done when"** are also still open.
+  - **Still open in Phase 2:** the owner steps above (real ids and emails, imports, `ci = true` for management, branch protection). **1.7** (IDP repo) is complete; the **2.0b "Done when"** remains open for owner deployment.
