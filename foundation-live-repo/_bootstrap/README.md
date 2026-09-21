@@ -12,7 +12,7 @@ Template: [`cloudformation/account-bootstrap.yaml`](cloudformation/account-boots
 |---|---|---|
 | `StateBucket` | `tg-state-<account-id>-<region>` | Versioned, SSE-S3, all Block Public Access on, `BucketOwnerEnforced`, old versions expire after 90 days. `Retain` on delete. TLS 1.2+ only (bucket policy). KMS and access logging come with PLAN 2.2 |
 | `GitHubOidcProvider` | IAM OIDC provider for `token.actions.githubusercontent.com` | No thumbprint needed |
-| `ApplyBoundary` | `github-actions-apply-boundary` | Caps the apply role. Denies Identity Center, CloudTrail changes, organization destruction, edits to the CI roles/OIDC provider/boundary, changes to the state bucket's settings and to this stack. Denies `organizations:*` / `account:*` too, except where `AllowOrganizationsAdmin=true` (management) |
+| `ApplyBoundary` | `github-actions-apply-boundary` | Caps the apply role. Denies Identity Center, CloudTrail changes, organization destruction, **switching off GuardDuty / Config / Security Hub / Macie / Inspector / Access Analyzer**, edits to the CI roles, the OIDC provider and the boundary, **edits to `platform-*` / `terraform-*` roles and `OrganizationAccountAccessRole`**, **deleting `platform-workload-boundary` or removing any role's boundary**, changes to the state bucket's settings and to this stack. Denies `organizations:*` / `account:*` too, except where `AllowOrganizationsAdmin=true` (management). About 3,900 of the 6,144 characters AWS allows in a managed policy |
 | `PlanRole` | `github-actions-plan` | `ReadOnlyAccess`; on the state bucket: read state, write/delete `*.tflock` only. Trusts any job of this repo (`repo:<repo>:*`, widened by hand from `pull_request` + `main`; read-only, but it can read every state file, so narrow it if you add collaborators) |
 | `ApplyRole` | `github-actions-apply` | `AdministratorAccess` **with** the boundary. Trusts exactly one GitHub Environment (`management` here) |
 
@@ -151,6 +151,15 @@ gh variable set AWS_REGION --body "eu-central-1"
 > The old `AWS_DEV_PLAN_ROLE_ARN`, `AWS_PROD_PLAN_ROLE_ARN`, `AWS_DEV_APPLY_ROLE_ARN` and `AWS_PROD_APPLY_ROLE_ARN` variables are no longer read and can be deleted. The pipeline runs an account only once the registry says `ci = true`, the account has a live folder and it has a real (non-placeholder) id. For `management`, set `ci = true` after the organization stack is imported and the placeholders are replaced.
 
 Details of the pipeline architecture are in [`docs/CICD.md`](../docs/CICD.md).
+
+## Rolling a boundary change out
+
+The boundary is part of the template, so a change reaches accounts in two ways:
+
+- **Management account:** run `bootstrap.sh`. The change set shows `Modify` on `ApplyBoundary` (the stack policy only blocks replacing or deleting it).
+- **Member accounts:** apply `foundation-live-repo/management/_global/governance/bootstrap-stacksets`. Its `template_body` changed, so each StackSet is updated across its accounts, 25 % at a time, stopping at the first failure.
+
+**Do not name a role created by a stack `platform-*` or `terraform-*`**: the boundary denies the apply role from editing them, so the stack could never update its own role. Those names are reserved for the platform's own roles.
 
 ## Changing the template later
 

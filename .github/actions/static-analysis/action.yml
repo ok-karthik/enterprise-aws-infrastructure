@@ -40,6 +40,10 @@ runs:
         pip3 install --quiet --no-cache-dir --break-system-packages cfn-lint
         cfn-lint foundation-live-repo/_bootstrap/cloudformation/*.yaml
 
+    - name: Bootstrap template tests (apply boundary and CI roles)
+      shell: bash
+      run: python3 -m unittest discover -s foundation-live-repo/_bootstrap/tests
+
     - name: Script unit tests (account matrix generator)
       shell: bash
       run: python3 -m unittest discover -s workloads-live-repo/scripts/tests
