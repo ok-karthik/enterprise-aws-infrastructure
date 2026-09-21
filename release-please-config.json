@@ -102,6 +102,12 @@
       "package-name": "access-analyzer",
       "component": "access-analyzer",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/security/log-archive": {
+      "release-type": "terraform-module",
+      "package-name": "log-archive",
+      "component": "log-archive",
+      "tag-separator": "-"
     }
   }
 }

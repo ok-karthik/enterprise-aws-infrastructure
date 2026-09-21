@@ -80,3 +80,4 @@ docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/identity/identity-center
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/break-glass-alerts
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/access-analyzer
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/log-archive
