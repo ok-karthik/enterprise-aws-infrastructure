@@ -73,7 +73,7 @@ the offers.
 |---|---|---|
 | 1 | Phase 0 (all) | Small, and every item is a "here's a real bug I found and fixed" story |
 | 2 | Phase 1 (**time-box: one day**, one PR) | The repo layout is the first thing a reviewer sees |
-| 3 | 2.1–2.6 + 2.8 with **real accounts** | Makes it actually multi-account. Creating accounts is free |
+| 3 | 2.0–2.6 + 2.8 with **real accounts** | Makes it actually multi-account. Creating accounts is free |
 | 4 | 3.1, 3.2, 3.6 | Identity Center + permission sets (learning-plan Sprint 1) |
 | 5 | 4.1, 4.2, 4.4, 4.5, 4.6 (SCPs + RCPs only), 4.9 | Guardrails + detection + auto-remediation (learning-plan Sprint 2) |
 | 6 | 10.1–10.4 | ADRs, architecture diagram, system-design walkthrough, stories |
@@ -109,9 +109,9 @@ defend a choice out loud, the repo works against you in an interview.
 
 | Day | Model builds (PR) | You: console + review + apply | Done when |
 |---|---|---|---|
-| **Mon 21** | Phase 0 | Tour Organizations. Create `log-archive` + `security-tooling` accounts (plus-addressed emails). Move the workload account into a NonProd OU. Review and merge Phase 0 | 2 new member accounts exist; Phase 0 CI green |
+| **Mon 21** | Phase 0, then 2.0a (CloudFormation bootstrap) | Tour Organizations. Create `log-archive` + `security-tooling` accounts (plus-addressed emails). Move the workload account into a NonProd OU. Enable StackSets trusted access. Review and merge Phase 0. **Don't run the Terragrunt `bootstrap.sh`**; run the 2.0a `bootstrap.sh` once its PR is merged | 2 new member accounts exist; Phase 0 CI green; `platform-bootstrap` stack up in management |
 | **Tue 22** | Phase 1 (rename, one PR) | Identity Center: enable it, create a group and permission sets, assign them to the workload account, `aws sso login` from the CLI. Review and merge Phase 1 | Zero static keys; CLI works via SSO; new folder layout on `main` |
-| **Wed 23** | 2.1–2.6, 2.8 | Import the accounts and OUs you created into `account-factory`. Apply `account-baseline` to `workloads-dev`. Set budgets. Write the state-key migration notes (10.7) | `plan` shows no changes for the org; budget alerts arrive by email |
+| **Wed 23** | 2.0b, 2.1–2.6, 2.8 | Import the accounts and OUs you created into `account-factory`. Apply `account-baseline` to `workloads-dev`. Set budgets. Write the state-key migration notes (10.7) | `plan` shows no changes for the org; budget alerts arrive by email |
 | **Thu 24** | 3.1, 3.2, 3.6 | Write a region-deny SCP in the console on Policy-Staging, trigger `AccessDenied`, then delete it. Import Identity Center into Terraform. Apply the permission sets | You can explain SCP vs IAM vs boundary cold; Access Analyzer is on |
 | **Fri 25** | 4.1, 4.2, 4.4, 4.5, 4.6 (SCP/RCP), 4.9 | Console: GuardDuty + Security Hub + Config with delegated admin to `security-tooling`, and the org trail to `log-archive`. Apply. Open 0.0.0.0/0:22 and time the auto-remediation | Findings visible in `security-tooling`; remediation time < 30s written down |
 | **Sat 26** | — (fix-ups from review) | **You:** ADRs 1–5 (10.1), architecture diagram (10.2), failure drills 1–2 (10.5) | 5 ADRs + diagram committed; 2 runbooks |
@@ -187,6 +187,12 @@ Root
 └── Suspended OU         deny-all; accounts waiting to be closed
 Management account: Organizations, billing, Identity Center only. No workloads, ever.
 ```
+
+This follows the AWS SRA / *Organizing Your AWS Environment* layout. The management account
+sits at the root, not in an OU (SCPs never apply to it anyway). CI/CD and shared services go
+in **Infrastructure**, not Security: the Security OU gets the strictest SCPs and is owned by
+the security team. OUs exist to apply policy, so don't mirror the org chart. Terraform
+manages OUs and accounts (2.3, 2.4). CloudFormation is used only for the Day-0 bootstrap (2.0).
 
 ---
 
@@ -383,6 +389,182 @@ find them with `git grep`.
 
 Today `management`, `dev` and `prod` all use account `954171757349`. SCPs **do not apply to
 the management account**, so none of the guardrails actually protect those workloads.
+`954171757349` is the org's **management (payer) account** and it is **greenfield**: nothing
+has been applied there yet, so there is no state or resource to migrate. Until
+`workloads-dev` exists (2.1), don't apply the `dev` / `prod` live stacks into it.
+
+- [ ] **2.0 Day-0 bootstrap with CloudFormation (replaces the Terragrunt bootstrap).**
+  **May be done before Phase 1**: it only rewrites `infrastructure-bootstrap/`, and 1.2 moves
+  that folder as-is. **Never run the Terragrunt `bootstrap.sh` in `954171757349`.**
+  Why: `--backend-bootstrap` creates the state bucket outside any state, so nobody can plan or
+  drift-check its settings. Terraform also can't reach a new account until that account has a
+  bucket and a role. CloudFormation keeps its own state inside AWS. Service-managed StackSets
+  deploy to every account that joins a targeted OU, with no human step. Decision (owner,
+  2026-09-21): CloudFormation for Day-0, native Terraform for Organizations. **No Control Tower / AFT.**
+  Two PRs: **2.0a** (management stack + cleanup, branch `feat/p2-cfn-bootstrap`) and **2.0b**
+  (StackSets for member accounts, after 2.3 or after the OUs exist by hand).
+
+  **2.0a-1 Template `infrastructure-bootstrap/cloudformation/account-bootstrap.yaml`.** One
+  template for every account. Management deploys it as a plain stack; member accounts get it
+  through 2.0b.
+  - `Parameters`:
+    - `GitHubRepo` (default `ok-karthik/enterprise-aws-infrastructure`, `AllowedPattern` `^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
+    - `GitHubEnvironment` (no default, `AllowedPattern` `^[a-z0-9-]+$`)
+    - `AllowOrganizationsAdmin` (`"true"`/`"false"`, default `"false"`)
+    - `NoncurrentVersionDays` (Number, default 90, min 30)
+  - `Conditions`: `DenyOrganizations` = `AllowOrganizationsAdmin` is `"false"`.
+  - `StateBucket` (`AWS::S3::Bucket`):
+    - name `tg-state-${AWS::AccountId}-${AWS::Region}`, `DeletionPolicy` and `UpdateReplacePolicy` set to `Retain`
+    - versioning on, SSE-S3 (`AES256`) with `BucketKeyEnabled`, all four Block Public Access flags on
+    - `OwnershipControls: BucketOwnerEnforced`
+    - lifecycle: noncurrent versions expire after `NoncurrentVersionDays`; abort incomplete multipart uploads after 7 days
+    - The CMK and access logging come later (2.2, once log-archive exists). Put a Checkov
+      `Metadata` skip on the bucket for the KMS and access-logging checks, each with a reason.
+  - `StateBucketPolicy`: `DenyInsecureTransport` (`aws:SecureTransport = false`) and
+    `DenyOldTls` (`s3:TlsVersion < 1.2`) on the bucket and `/*`.
+  - `GitHubOidcProvider` (`AWS::IAM::OIDCProvider`): URL `https://token.actions.githubusercontent.com`,
+    client ID `sts.amazonaws.com`. Check the current CloudFormation docs for whether
+    `ThumbprintList` is still required. Leave it out if it isn't, because AWS no longer uses it
+    for GitHub. If it is required, use GitHub's published thumbprints and say so in a comment.
+  - `ApplyBoundary` (`AWS::IAM::ManagedPolicy`, name `github-actions-apply-boundary`). Port
+    **every statement** from `infrastructure-bootstrap/dev/_global/security/github-actions-boundary/terragrunt.hcl`
+    before deleting that file. Changes:
+    - `DenyOrganizationAndIdentityCenter` splits in two. `organizations:*` + `account:*` only
+      `!If DenyOrganizations`. The `sso:*`, `sso-directory:*` and `identitystore:*` deny is always on.
+      (3.1 must add an `AllowIdentityCenterAdmin` switch before Identity Center is applied from CI.)
+    - New, always on: `DenyOrgDestruction` on `organizations:DeleteOrganization`, `LeaveOrganization`,
+      `CloseAccount` and `RemoveAccountFromOrganization`.
+    - New, always on: `ProtectStateBucket` on `s3:DeleteBucket`, `s3:PutBucketPolicy`,
+      `s3:DeleteBucketPolicy`, `s3:PutBucketVersioning`, `s3:PutEncryptionConfiguration`,
+      `s3:PutBucketPublicAccessBlock` and `s3:PutLifecycleConfiguration` on the state bucket ARN.
+    - New, always on: `ProtectBootstrapStack` on `cloudformation:DeleteStack`, `UpdateStack`,
+      `UpdateTerminationProtection`, `SetStackPolicy`, `CreateChangeSet` and `ExecuteChangeSet` on
+      `arn:aws:cloudformation:*:${AWS::AccountId}:stack/platform-bootstrap/*` and `.../stack/StackSet-bootstrap-*`.
+    - Build ARNs with `!Sub` and fixed names, not `!Ref` to itself (that would be a circular reference).
+  - `PlanRole` (`github-actions-plan`, max session 3600): trust exactly as today (`aud` =
+    `sts.amazonaws.com`; `sub` in `repo:${GitHubRepo}:pull_request`, `repo:${GitHubRepo}:ref:refs/heads/main`).
+    `ReadOnlyAccess` plus the three inline statements from today's plan role: bucket list,
+    state read, and put/delete on `*.tflock` only.
+  - `ApplyRole` (`github-actions-apply`, max session 3600): `sub` =
+    `repo:${GitHubRepo}:environment:${GitHubEnvironment}` (`StringEquals`, no wildcard),
+    `AdministratorAccess`, `PermissionsBoundary: !Ref ApplyBoundary`.
+  - `Outputs`: `StateBucketName`, `PlanRoleArn`, `ApplyRoleArn`, `OidcProviderArn`. **No
+    `Export`s**, because an export locks the resource against changes.
+  - No tags in the template. Tags come from the stack (`--tags`) and propagate: `Project`,
+    `ManagedBy=CloudFormation`, `Owner` and `DataClassification`, read from `account.hcl`.
+  - `infrastructure-bootstrap/cloudformation/stack-policy.json`: deny `Update:Replace` and
+    `Update:Delete` on `LogicalResourceId/StateBucket`, `LogicalResourceId/GitHubOidcProvider`
+    and `LogicalResourceId/ApplyBoundary`; allow `Update:*` on everything else.
+
+  **2.0a-2 One-time commands (owner only; the agent never runs `aws` commands).**
+  `bootstrap.sh` runs steps 2–4, and the README lists them for a manual run. Use an SSO
+  profile for `954171757349`, **never the shell's default profile**.
+  ```bash
+  export AWS_PROFILE=<management-admin-profile> AWS_REGION=eu-central-1
+  # 1. Preflight: must print 954171757349
+  aws sts get-caller-identity --query Account --output text
+
+  # 2. Organization (all features) + StackSets trusted access. Safe to run again.
+  aws organizations describe-organization >/dev/null 2>&1 \
+    || aws organizations create-organization --feature-set ALL
+  aws cloudformation activate-organizations-access
+  aws cloudformation describe-organizations-access          # expect "Status": "ENABLED"
+
+  # 3. Deploy through a reviewed change set
+  aws cloudformation validate-template \
+    --template-body file://infrastructure-bootstrap/cloudformation/account-bootstrap.yaml
+  aws cloudformation deploy \
+    --stack-name platform-bootstrap \
+    --template-file infrastructure-bootstrap/cloudformation/account-bootstrap.yaml \
+    --parameter-overrides GitHubEnvironment=management AllowOrganizationsAdmin=true \
+    --capabilities CAPABILITY_NAMED_IAM \
+    --tags Project=enterprise-aws-platform ManagedBy=CloudFormation Owner=platform-team DataClassification=internal \
+    --no-execute-changeset
+  aws cloudformation describe-change-set --stack-name platform-bootstrap --change-set-name <name printed above>
+  aws cloudformation execute-change-set  --stack-name platform-bootstrap --change-set-name <name>
+  aws cloudformation wait stack-create-complete --stack-name platform-bootstrap   # stack-update-complete on later runs
+
+  # 4. Lock it down and read the outputs
+  aws cloudformation update-termination-protection --enable-termination-protection --stack-name platform-bootstrap
+  aws cloudformation set-stack-policy --stack-name platform-bootstrap \
+    --stack-policy-body file://infrastructure-bootstrap/cloudformation/stack-policy.json
+  aws cloudformation describe-stacks --stack-name platform-bootstrap --query 'Stacks[0].Outputs'
+  ```
+  GitHub wiring (printed by the script, not run by it):
+  - Create the `management` Environment with the owner as required reviewer.
+  - Set `AWS_REGION`, and set `AWS_DEV_PLAN_ROLE_ARN` / `AWS_PROD_PLAN_ROLE_ARN` to the
+    management plan role. Plans are read-only, so they can stay pointed at management until
+    `workloads-dev` exists.
+  - **Leave `AWS_DEV_APPLY_ROLE_ARN` / `AWS_PROD_APPLY_ROLE_ARN` unset.** The management apply
+    role only trusts `environment:management`, so dev/prod apply jobs can't deploy workloads
+    into management. This is intended; say so in `docs/CICD.md`. CI for `_global` (the org leaf)
+    comes with 2.6.
+
+  **2.0a-3 Clean up `infrastructure-bootstrap/`.**
+  - **Delete:** `root.hcl` and all of `dev/` (`account.hcl`, `env.hcl`, `_global/region.hcl`,
+    the four `_global/security/*/terragrunt.hcl` units and the `.terraform.lock.hcl`). Port
+    the boundary and plan-role statements into the template first (2.0a-1).
+  - **Add:** `cloudformation/account-bootstrap.yaml` and `cloudformation/stack-policy.json`.
+  - **Rewrite `bootstrap.sh`:**
+    - Read the expected account ID, `owner` and `data_classification` from
+      `infrastructure-live/_global/account.hcl` (the management leaf; one source of truth).
+    - Keep the preflight: no credentials → exit 1; wrong account → exit 1, nothing changed.
+    - Run steps 2–4 above. Show the change set and ask before executing it (`--yes` skips the prompt).
+    - Detect "stack already exists" and wait for update-complete instead of create-complete. Treat
+      "no changes" as success.
+    - Print the GitHub wiring.
+    - Must pass `shellcheck`.
+  - **Rewrite `README.md`:** what the stack creates, the commands above, the gotchas below,
+    and "how to change the template later" (edit, then run `bootstrap.sh`, which shows a change set).
+  - `infrastructure-live/root.hcl`: bucket becomes `tg-state-${local.account_id}-${local.aws_region}`.
+    Remove `s3_bucket_tags` and the auto-create comment. Terragrunt no longer creates the
+    bucket, and **no command in the repo may pass `--backend-bootstrap`** (grep for it).
+    Nothing was applied, so no state moves.
+  - Remove `infrastructure-bootstrap` from the `terraform fmt` lists: `Makefile` `FMT_DIRS`,
+    `.pre-commit-config.yaml`, `.github/actions/static-analysis/action.yml`,
+    `infrastructure-live/scripts/smoke-test.sh` and `.agents/scripts/iac_agent.py`.
+    Keep it in `.checkov.yaml` (Checkov scans CloudFormation).
+  - Add `cfn-lint` to pre-commit and to the static-analysis action, run on
+    `infrastructure-bootstrap/cloudformation/*.yaml`.
+  - Update the docs: `.agents/AGENTS.md` (lines ~14, 73 and 149; line 14 also wrongly mentions
+    a DynamoDB lock), `README.md` (~41, ~113), `docs/ARCHITECTURE.md` (~26),
+    `docs/CICD.md` (~28, role variables and the `management` Environment) and the
+    `.github/assets/visualizer.html` comment.
+  - Gotchas for the README:
+    - An account can have only one GitHub OIDC provider, so the stack fails if one already exists.
+    - The bucket and OIDC provider are retained, or protected by the stack policy. A deleted
+      and recreated stack fails on the bucket name, so import the bucket by hand.
+    - `environment:dev` can apply to **any** NonProd account (per-account Environments come with 2.6).
+  - Checks: `cfn-lint`, `checkov -f` on the template (no failures without a reasoned skip),
+    `shellcheck` + `bash -n` on `bootstrap.sh`, a stubbed-`aws` run of the preflight (no
+    credentials → exit 1; wrong account → exit 1), `terragrunt render` showing the new bucket
+    name, and a repo-wide `git grep` showing no stale `infrastructure-bootstrap/dev` or
+    `--backend-bootstrap` references.
+  *Done when (2.0a):* the owner has deployed `platform-bootstrap` with termination protection
+  and the stack policy, and a PR's plan job assumes `github-actions-plan` and passes.
+
+  **2.0b StackSets for member accounts.**
+  - New module `governance/bootstrap-stacksets`:
+    - `aws_cloudformation_stack_set` with `permission_model = "SERVICE_MANAGED"`,
+      `auto_deployment { enabled = true, retain_stacks_on_account_removal = true }`,
+      `capabilities = ["CAPABILITY_NAMED_IAM"]` and `operation_preferences` (max concurrent 25%,
+      failure tolerance 0).
+    - `aws_cloudformation_stack_set_instance` per target, with `deployment_targets { organizational_unit_ids = [...] }`,
+      in the primary region only.
+    - The template body is an **input** (`var.template_body`). The live leaf passes
+      `file("${get_repo_root()}/infrastructure-bootstrap/cloudformation/account-bootstrap.yaml")`,
+      so the module stays pure.
+  - One stack set per GitHub Environment, because the apply trust subject differs:
+    `bootstrap-nonprod` (NonProd OU → `dev`), `bootstrap-prod` (Prod OU → `prod`) and
+    `bootstrap-core` (Security + Infrastructure OUs → `core`). Sandbox and Suspended are not targeted.
+  - Apply from `.../management/_global/governance/bootstrap-stacksets`. OU IDs come from the
+    organization module outputs (2.3). Until then, pass the IDs of the OUs created by hand and
+    import them later.
+  - Gotcha: an account that moves between OUs targeted by different stack sets has its stack
+    deleted and created again, and the create fails on the retained bucket name. Accounts
+    shouldn't move between Prod and NonProd.
+  *Done when (2.0b):* a new account created in NonProd gets its bucket and roles with no
+  manual step, and a PR can run `plan` against it.
 
 - [ ] **2.1 Account and region registry.** `foundation-live-repo/_config/accounts.hcl`:
   ```hcl
@@ -416,11 +598,12 @@ the management account**, so none of the guardrails actually protect those workl
     `<account-name>/account.hcl` holds `aws_account_id`, `account_name`, `ou`, `env`, `owner`
     and `data_classification`. `env.hcl` stays at account level (one account = one env).
   - `root.hcl` reads `env` from `account.hcl` instead of `split(path)[0]`.
-  - The provider gets an `assume_role { role_arn = "arn:aws:iam::${account_id}:role/${get_env("TG_DEPLOY_ROLE", "terraform-plan")}" session_name = "tg-${account_name}" }`.
-    CI logs in to the shared-services pipeline role and assumes into each account (2.4).
-  - The state bucket stays per account per region (`tg-state-<id>-<name>-<region>`), with
-    added KMS CMK encryption, access logging to log-archive, and replication to
-    `secondary_region` (the bucket itself is created in `_bootstrap`, 2.5).
+  - No `assume_role` in the provider. Each CI job logs in over OIDC directly to the
+    `github-actions-plan` / `-apply` role of the one account it targets (2.0, 2.6). Humans use
+    an SSO profile per account. `allowed_account_ids` stays as the guard.
+  - The state bucket stays per account per region (`tg-state-<id>-<region>`, created by the
+    2.0 stack). Later it gets KMS CMK encryption, access logging to log-archive and
+    replication to `secondary_region`. Add those to the 2.0 template, not to Terraform.
   - Move `workloads-live-repo/dev` → `workloads-dev/` and `prod` → `workloads-prod/`. **This
     changes state keys.** Write `scripts/migrate-state-keys.sh`, which prints (dry-run by
     default) the `aws s3 mv` / `terragrunt state` commands needed for each unit. The human
@@ -442,26 +625,28 @@ the management account**, so none of the guardrails actually protect those workl
   allowed). Apply it from `foundation-live-repo/management/_global/governance/account-factory`.
 
 - [ ] **2.5 New module `governance/account-baseline`**, applied to **every** account (a stack
-  per account in the live repos, or a `terragrunt.stack.hcl`, see 8.1). It creates:
-  - The IAM deployer roles `terraform-plan` (ReadOnly + state access) and `terraform-apply`,
-    both trusting only the shared-services pipeline role, plus `ExternalId` and
-    `aws:PrincipalOrgID` conditions.
+  per account in the live repos, or a `terragrunt.stack.hcl`, see 8.1). The state bucket and
+  the CI roles are **not** in here: they come from the 2.0 StackSet, because this module needs
+  them before it can run. It creates:
   - The IAM permissions boundary `platform-workload-boundary`, which every role that
     Terraform, ACK or tenants create must use.
   - An account alias, the IAM password policy, S3 account-level Block Public Access, EBS
     encryption by default, and IMDSv2 as the account default.
   - A KMS CMK per data class (`general`, `confidential`) with rotation on.
   - The discovery parameters (see 2.7).
-  - The state bucket for the account's regions (this replaces the per-env `_bootstrap`
-    folders, leaving `_bootstrap` for management and shared-services only).
 
-- [ ] **2.6 CI identity chain.** One GitHub OIDC provider and one pipeline role pair, in
-  **shared-services only** (`_bootstrap/shared-services/...`). Trust subjects are pinned per
-  repo and per GitHub Environment. The plan pipeline role can only `sts:AssumeRole` into
-  `*:role/terraform-plan`, and the apply pipeline role only into `*:role/terraform-apply`.
-  Workflows run a matrix over accounts (generated from `_config/accounts.hcl` by a small
-  script step) instead of fixed `dev`/`prod` jobs. The prod GitHub Environment keeps its
-  manual approval.
+- [ ] **2.6 CI identity: direct OIDC per account.** Every account has its own GitHub OIDC
+  provider and `github-actions-plan` / `-apply` roles from 2.0. There is no shared-services hub
+  role and no role chaining. The blast radius stays one account, and the pipeline doesn't depend
+  on a shared-services account existing. Workflows run a matrix over accounts (generated from
+  `_config/accounts.hcl` by a small script step) instead of fixed `dev`/`prod` jobs. Each job
+  builds its role ARN from the account ID (`arn:aws:iam::<id>:role/github-actions-plan`), so
+  the per-env `AWS_<ENV>_*_ROLE_ARN` repo variables go away. GitHub Environments: `dev`,
+  `prod` (manual approval kept), `core` and `management` (required reviewers). Optional later:
+  one Environment per account, with the StackSet parameter set per OU target.
+  *Considered and rejected:* one OIDC provider in shared-services that assumes into
+  `terraform-*` roles in each account. It's fewer providers, but it adds a hop and a
+  high-value hub role, and it needs shared-services before anything else can deploy.
 
 - [ ] **2.7 Discovery contract gets an account dimension.** SSM parameters live inside one
   account. Once the VPC sits in network-hub and is shared via RAM (Phase 5), tenants can't
@@ -504,7 +689,7 @@ the management account**, so none of the guardrails actually protect those workl
   log-archive. At minimum, deliver `docs/BREAK_GLASS.md` with the runbook and an
   EventBridge rule plus SNS alert for any `BreakGlassAdmin` sign-in.
 
-- [ ] **3.4 Narrow the apply role.** Replace `AdministratorAccess` on `terraform-apply` with
+- [ ] **3.4 Narrow the apply role.** Replace `AdministratorAccess` on `github-actions-apply` (2.0 template) with
   the managed policies for the services actually used, plus a boundary that denies:
   organizations, account, sso, cloudtrail stop/delete, changes to guardduty, config and
   securityhub, and edits to `platform-*` roles and the boundary itself.
@@ -551,8 +736,9 @@ the management account**, so none of the guardrails actually protect those workl
   - **SCPs:** deny root user actions; deny `LeaveOrganization`; region allow-list per OU
     (from 0.4 and `regions.hcl`); deny disabling CloudTrail/Config/GuardDuty/SecurityHub/
     AccessAnalyzer/Macie; deny `iam:CreateUser` / `CreateAccessKey` (except the break-glass
-    path); protect `platform-*`, `terraform-*` and `github-actions-*` roles from changes by
-    any principal outside that set; require IMDSv2 on `ec2:RunInstances`; deny creating
+    path); protect `platform-*` and `github-actions-*` roles, the GitHub OIDC provider and
+    `tg-state-*` buckets from changes by any principal except the StackSets service role
+    (`AWSServiceRoleForCloudFormationStackSetsOrgMember`) and break-glass; require IMDSv2 on `ec2:RunInstances`; deny creating
     roles without the permissions boundary (`iam:PermissionsBoundary` condition); Sandbox
     only: deny large instance families and Reserved Instance / Savings Plan purchases;
     Suspended: deny all.
@@ -765,7 +951,8 @@ Everything goes under `docs/`.
   parts: *Context · Decision · What I chose against and what it cost.* Required ADRs:
   1. Repository topology and the `-repo` convention (1.8)
   2. Terraform-native Organizations vs Control Tower/AFT
-  3. State bucket per account vs one central state account
+  3. State bucket per account vs one central state account, and Day-0 in CloudFormation
+     StackSets vs Terraform/Terragrunt (2.0)
   4. Identity Center + JIT access vs standing admin
   5. SCP vs RCP vs permissions boundary: which layer blocks what
   6. Transit Gateway vs VPC peering vs Cloud WAN
@@ -863,3 +1050,14 @@ Everything goes under `docs/`.
   - **0.8** Added `deny_admin_attachments`, `deny_public_s3`, `deny_open_ingress`, `deny_iam_wildcards`, `require_encryption` (+ `helpers.rego`), and `require_service_tag.rego` → `require_tags.rego` with `Owner` / `DataClassification` (added to `default_tags` from `account.hcl`). `conftest verify`: 58/58 pass, and a hand-made bad plan is caught. **Not done / differences:** (a) the "443-to-private" case is not implemented, a plan cannot tell a public ALB SG from a private one; (b) SQS accepts SSE-SQS as well as KMS (the Karpenter queue uses SSE-SQS); (c) the "existing plans still pass" check needs a real plan, which needs AWS access, so **CI on this PR is the check**. To avoid a known failure I set `encrypted = true` on the EKS node launch-template volume (an unencrypted mapping would trip `require_encryption`). **Effect:** on the next dev apply the node group rolls to a new launch template. Also added the conftest and module `terraform test` suites to the CI static-analysis step and `make test` (`conftest verify` was not run in CI before).
   - **0.9** Removed the `Project = "Infrastructure-Automation"` override from all three `_envcommon` files (org, vpc, eks), the bootstrap role inputs and the IaC agent's catalog templates. Resources will get an in-place tag update.
   - **Checks run:** `terraform fmt -check` (4 roots), `terragrunt hcl fmt --check`, `terraform validate` (org, eks, human-access), `terraform test` (11 tests), `conftest verify` (58), `tflint --recursive` (clean), `trivy config` (no CRITICAL/HIGH), `.agents` unit tests + eval (pass; 2 fixtures skipped, no LLM key), `bash -n` on `bootstrap.sh`. **Not run:** `smoke-test.sh` (needs credentials for `terragrunt init`; the pre-commit hook for it was skipped with `SKIP=platform-smoke-test` on these commits for that reason, the other hooks ran), real `plan`s, any `apply`. Run `./infrastructure-live/scripts/smoke-test.sh` yourself once logged in to `954171757349`. Checkov's HCL scan lists many pre-existing findings; the CI static Checkov step is `soft_fail`.
+- **2026-09-21 (plan change, Day-0 bootstrap)** — The owner confirmed `954171757349` is the **management (payer)
+  account** and greenfield. Added **2.0**: the Day-0 bootstrap moves to CloudFormation (a plain stack in
+  management, plus service-managed StackSets per OU for member accounts). This **replaces** the Phase 0 note
+  "run `infrastructure-bootstrap/bootstrap.sh`": don't run the Terragrunt bootstrap. Knock-on edits:
+  2.2 (no `assume_role`; bucket name drops the alias), 2.5 (bucket and CI roles removed; they come from 2.0),
+  2.6 (direct OIDC per account instead of a shared-services hub), 3.4 and 4.6 (role names, protecting the
+  bootstrap resources), and ADR 3 in 10.1. Plan text only; no code changed.
+- **2026-09-21 (plan change, 2.0 detailed)** — Owner decision: CloudFormation for Day-0 plus native
+  Terraform for Organizations; no Control Tower / AFT; CI/CD and networking go in the Infrastructure
+  OU, and Security holds only log-archive and security-tooling. 2.0 is split into 2.0a (template spec,
+  one-time CLI commands, `infrastructure-bootstrap/` cleanup list) and 2.0b (StackSets). Plan text only.
