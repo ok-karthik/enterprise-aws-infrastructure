@@ -260,8 +260,7 @@ Resources:
                 "token.actions.githubusercontent.com:aud": sts.amazonaws.com
               StringLike:
                 "token.actions.githubusercontent.com:sub":
-                  - !Sub "repo:${GitHubRepo}:pull_request"
-                  - !Sub "repo:${GitHubRepo}:ref:refs/heads/*"
+                  - !Sub "repo:${GitHubRepo}:*"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/ReadOnlyAccess
       Policies:
