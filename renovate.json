@@ -59,6 +59,15 @@
   ],
   "packageRules": [
     {
+      "description": "identity_center pin in management: own PR, no automerge",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["identity_center"],
+      "matchFileNames": ["**/management/env.hcl"],
+      "groupName": "iac-modules: identity_center pin (management)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "management"]
+    },
+    {
       "description": "budgets pin in management: own PR, no automerge, so the promotion order is kept",
       "matchManagers": ["custom.regex"],
       "matchDepTypes": ["budgets"],
