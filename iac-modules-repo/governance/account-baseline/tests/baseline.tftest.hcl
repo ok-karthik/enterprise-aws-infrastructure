@@ -97,7 +97,7 @@ run "discovery_parameters_use_the_contract_names" {
   command = plan
 
   assert {
-    condition     = toset(keys(aws_ssm_parameter.discovery)) == toset(["account/id", "account/ou", "kms/general_key_arn", "kms/confidential_key_arn", "iam/workload_boundary_arn"])
+    condition     = toset(keys(aws_ssm_parameter.discovery)) == toset(["account/id", "account/ou", "kms/general_key_arn", "kms/confidential_key_arn", "iam/workload_boundary_arn", "iam/developer_policy_arn"])
     error_message = "The account dimension of the discovery contract must be published."
   }
 
@@ -157,4 +157,28 @@ run "unknown_env_is_rejected" {
   }
 
   expect_failures = [var.env]
+}
+
+run "developer_policy_scopes_ec2_by_team_tag" {
+  command = plan
+
+  assert {
+    condition     = aws_iam_policy.developer.name == "platform-developer"
+    error_message = "Identity Center attaches the policy by this name."
+  }
+
+  assert {
+    condition     = contains(keys({ for st in jsondecode(aws_iam_policy.developer.policy).Statement : st.Sid => st }["ControlOwnTeamInstances"].Condition.StringEquals), "aws:ResourceTag/team")
+    error_message = "Starting, stopping and terminating EC2 instances must depend on the team tag (ABAC)."
+  }
+
+  assert {
+    condition     = contains(keys({ for st in jsondecode(aws_iam_policy.developer.policy).Statement : st.Sid => st }["LaunchInstancesTaggedForOwnTeam"].Condition.StringEquals), "aws:RequestTag/team")
+    error_message = "Instances must be launched with the caller's own team tag."
+  }
+
+  assert {
+    condition     = !strcontains(aws_iam_policy.developer.policy, "\"Action\":\"*\"") && !strcontains(aws_iam_policy.developer.policy, "\"iam:*\"")
+    error_message = "The developer policy must never allow every action or iam:*."
+  }
 }

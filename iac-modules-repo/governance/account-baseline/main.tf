@@ -220,6 +220,122 @@ resource "aws_iam_policy" "workload_boundary" {
 }
 
 # ------------------------------------------------------------------------------
+# 4b. platform-developer: the customer-managed policy behind the Developer permission set
+# ------------------------------------------------------------------------------
+# Identity Center attaches a customer-managed policy BY NAME, and the policy must exist in every
+# account the permission set is assigned to, so it lives in the baseline. The Developer set also
+# carries platform-workload-boundary, which caps it further. Developers are only assigned to
+# NonProd / Sandbox accounts (read-only ReadOnly in Prod).
+#
+# ABAC: instances can only be started, stopped, rebooted or terminated by a principal whose `team`
+# session tag (from the IdP, see identity-center) equals the instance's `team` tag, and new
+# instances must be launched with the caller's own `team` tag.
+locals {
+  developer_policy_name = "platform-developer"
+
+  developer_policy = {
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowWorkloadServices"
+        Effect = "Allow"
+        Action = [
+          "apigateway:*",
+          "athena:*",
+          "autoscaling:*",
+          "cloudwatch:*",
+          "dynamodb:*",
+          "ecr:*",
+          "ecs:*",
+          "eks:*",
+          "elasticloadbalancing:*",
+          "events:*",
+          "glue:*",
+          "kinesis:*",
+          "lambda:*",
+          "logs:*",
+          "rds:*",
+          "s3:*",
+          "sns:*",
+          "sqs:*",
+          "ssm:*",
+          "states:*",
+          "xray:*",
+        ]
+        Resource = "*"
+      },
+      {
+        Sid      = "AllowReadOnlyElsewhere"
+        Effect   = "Allow"
+        Action   = ["cloudformation:Describe*", "cloudformation:Get*", "cloudformation:List*", "ec2:Describe*", "ec2:Get*", "route53:Get*", "route53:List*", "secretsmanager:Describe*", "secretsmanager:List*", "iam:Get*", "iam:List*"]
+        Resource = "*"
+      },
+      {
+        Sid       = "AllowPassingPlatformRoles"
+        Effect    = "Allow"
+        Action    = "iam:PassRole"
+        Resource  = "arn:${local.partition}:iam::${local.account_id}:role/platform/*"
+        Condition = { StringEquals = { "iam:PassedToService" = ["ecs-tasks.amazonaws.com", "eks.amazonaws.com", "lambda.amazonaws.com", "states.amazonaws.com"] } }
+      },
+      {
+        Sid      = "AllowEncryptedDataViaServices"
+        Effect   = "Allow"
+        Action   = ["kms:Decrypt", "kms:DescribeKey", "kms:Encrypt", "kms:GenerateDataKey*"]
+        Resource = "*"
+        Condition = {
+          StringLike = { "kms:ViaService" = ["dynamodb.*.amazonaws.com", "logs.*.amazonaws.com", "rds.*.amazonaws.com", "s3.*.amazonaws.com", "secretsmanager.*.amazonaws.com", "sns.*.amazonaws.com", "sqs.*.amazonaws.com"] }
+        }
+      },
+      {
+        Sid      = "ControlOwnTeamInstances"
+        Effect   = "Allow"
+        Action   = ["ec2:RebootInstances", "ec2:StartInstances", "ec2:StopInstances", "ec2:TerminateInstances"]
+        Resource = "arn:${local.partition}:ec2:*:${local.account_id}:instance/*"
+        Condition = {
+          StringEquals = { "aws:ResourceTag/team" = "$${aws:PrincipalTag/team}" }
+        }
+      },
+      {
+        Sid      = "LaunchInstancesTaggedForOwnTeam"
+        Effect   = "Allow"
+        Action   = "ec2:RunInstances"
+        Resource = "arn:${local.partition}:ec2:*:${local.account_id}:instance/*"
+        Condition = {
+          StringEquals = { "aws:RequestTag/team" = "$${aws:PrincipalTag/team}" }
+        }
+      },
+      {
+        Sid    = "LaunchInstancesSupportingResources"
+        Effect = "Allow"
+        Action = "ec2:RunInstances"
+        Resource = [
+          "arn:${local.partition}:ec2:*::image/*",
+          "arn:${local.partition}:ec2:*:${local.account_id}:network-interface/*",
+          "arn:${local.partition}:ec2:*:${local.account_id}:security-group/*",
+          "arn:${local.partition}:ec2:*:${local.account_id}:subnet/*",
+          "arn:${local.partition}:ec2:*:${local.account_id}:volume/*",
+        ]
+      },
+      {
+        Sid       = "TagOnCreate"
+        Effect    = "Allow"
+        Action    = "ec2:CreateTags"
+        Resource  = "arn:${local.partition}:ec2:*:${local.account_id}:*/*"
+        Condition = { StringEquals = { "ec2:CreateAction" = ["RunInstances", "CreateVolume"] } }
+      },
+    ]
+  }
+}
+
+resource "aws_iam_policy" "developer" {
+  name        = local.developer_policy_name
+  description = "Customer-managed policy of the Developer permission set: workload services, ABAC on EC2 by the team tag"
+  policy      = jsonencode(local.developer_policy)
+
+  tags = local.tags
+}
+
+# ------------------------------------------------------------------------------
 # 5. DISCOVERY CONTRACT (account dimension, PLAN 2.7): who and where this account is, and its keys
 # ------------------------------------------------------------------------------
 locals {
@@ -229,6 +345,7 @@ locals {
     "kms/general_key_arn"       = aws_kms_key.general.arn
     "kms/confidential_key_arn"  = aws_kms_key.confidential.arn
     "iam/workload_boundary_arn" = aws_iam_policy.workload_boundary.arn
+    "iam/developer_policy_arn"  = aws_iam_policy.developer.arn
   } : {}
 }
 

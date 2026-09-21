@@ -34,9 +34,10 @@ variable "parameters" {
         "kms/general_key_arn",
         "kms/confidential_key_arn",
         "iam/workload_boundary_arn",
+        "iam/developer_policy_arn",
       ], key)
     ])
-    error_message = "Every key must be part of the discovery contract: vpc/id, vpc/database_subnets, eks/cluster_name, eks/oidc_provider_arn, ack/cross_account_role_arn, account/id, account/ou, kms/general_key_arn, kms/confidential_key_arn, iam/workload_boundary_arn."
+    error_message = "Every key must be part of the discovery contract: vpc/id, vpc/database_subnets, eks/cluster_name, eks/oidc_provider_arn, ack/cross_account_role_arn, account/id, account/ou, kms/general_key_arn, kms/confidential_key_arn, iam/workload_boundary_arn, iam/developer_policy_arn."
   }
 
   validation {
