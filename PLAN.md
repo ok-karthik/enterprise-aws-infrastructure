@@ -669,6 +669,19 @@ has been applied there yet, so there is no state or resource to migrate. Until
   Anomaly Detection monitor. In the management account, set a low org-wide budget
   (e.g. €50) during the job-search period.
 
+- [ ] **2.9 Discovery contract as a versioned API** (low priority, after the Priority track).
+  The SSM contract (2.7, `docs/DISCOVERY_CONTRACT.md`) is what tenants build on, whether
+  they use Terraform, CDK or Pulumi. Treat it like an API:
+  - **Only add, never break:** parameters can be added. Renaming or removing one, or changing
+    its type or format, is a breaking change and goes under a new prefix
+    (`/platform/v2/${env}/...`). The old path is kept, and published alongside, for at least
+    one release.
+  - Add a machine-readable list (`docs/discovery-contract.json`: name, type, description,
+    since-version) and a CI check that fails if a listed parameter disappears from
+    `discovery-publisher` / `account-baseline`.
+  - Add one short example per tool (Terraform `data "aws_ssm_parameter"`, CDK
+    `StringParameter.valueForStringParameter`, Pulumi `aws.ssm.getParameter`) in the doc.
+
 ---
 
 ## Phase 3 — Identity and least privilege
@@ -705,6 +718,20 @@ has been applied there yet, so there is no state or resource to migrate. Until
 
 - [~] **3.6 Access Analyzer.** An org-level analyzer for external access **and** unused
   access, delegated to security-tooling. Findings go to Security Hub.
+
+- [ ] **3.7 Tighten the Developer policy (PR #62 Checkov findings).** `aws_iam_policy.developer`
+  in `governance/account-baseline` grants `s3:*`, `ssm:*`, `lambda:*` and others on `*`. Keep the
+  broad service access (NonProd/Sandbox only, per 3.2), but add explicit Deny statements for:
+  - resource-policy writes (`s3:PutBucketPolicy`/`DeleteBucketPolicy`/`PutBucketAcl`/`PutObjectAcl`/
+    `PutBucketPublicAccessBlock`, `sqs:AddPermission`, `sns:AddPermission`, `lambda:AddPermission`,
+    `lambda:CreateFunctionUrlConfig`, `ecr:SetRepositoryPolicy`)
+  - writes to the discovery contract (`ssm:PutParameter`, `DeleteParameter*`,
+    `LabelParameterVersion` and `AddTagsToResource` on `parameter/platform/*`)
+  - `ssm:SendCommand` / `StartSession` on instances whose `team` tag isn't the caller's.
+  Only then add `#checkov:skip` for what's left (CKV_AWS_286/287/288/289/290/355), each with a
+  reason. Add `terraform test` cases for each Deny. The same checks also fire on
+  `aws_iam_policy.workload_boundary`. That's expected, because a boundary has to allow `*`.
+  Skip them there with that reason.
 
 ---
 
@@ -919,6 +946,40 @@ has been applied there yet, so there is no state or resource to migrate. Until
   templates, the eval fixtures and the tests for the new paths and the account-first layout.
   `python3 .agents/scripts/iac_agent_eval.py` and `python3 -m unittest discover -s .agents/tests`
   must pass.
+
+- [ ] **8.9 One scanner per job (do before 8.10).** Target: **tflint** (lint), **Checkov**
+  (general security, HCL + plan JSON), **conftest/Rego** (org-specific rules only),
+  **Trivy** (the toolbox Docker image only). tfsec is not used (deprecated, folded into Trivy).
+  1. Checkov becomes blocking: remove `soft_fail` from the static-analysis step. Clear or skip
+     (with a reason) every existing finding first. Today that's 33 in `iac-modules-repo`:
+     account-baseline 15 (3.7), postgres 10, s3 5, eks 2, vpc 1.
+  2. Add a Checkov step on each plan (`checkov -f tfplan.json --framework terraform_plan`) in
+     `reusable-terragrunt.yml`, blocking on failures, with SARIF uploaded to code scanning.
+  3. Only then remove `trivy config` from the plan job, `.pre-commit-config.yaml` and the
+     `make security` target. Delete `.trivyignore` entries that only served `trivy config`.
+  4. Add `trivy image --severity HIGH,CRITICAL --exit-code 1` for the toolbox image in
+     `publish-toolchain.yml` before the push (today the image isn't scanned at all).
+  5. Update `GOVERNANCE.md`, `docs/CICD.md` and `.agents/AGENTS.md` (gate list).
+  *Done when:* each class of finding is reported by exactly one tool, and every gate blocks.
+
+- [ ] **8.10 Split the policy rules between Checkov and Rego, with one catalog.**
+  - **The rule:** if Checkov has a built-in check for it, use Checkov. Write Rego only for rules
+    about *this* organization (tag keys, role names, account/OU rules, allowed modules).
+    A PR that adds a Rego rule has to say why Checkov can't do it.
+  - **Remove** the Rego rules that duplicate Checkov built-ins, but only after 8.9 step 1
+    (Checkov blocking). Candidates: `deny_public_s3`, `require_encryption`,
+    `deny_open_ingress` and `deny_iam_wildcards`. Before deleting each one, map every case in
+    its `_test.rego` to a Checkov ID. Keep the Rego rule if any case has no match.
+  - **Keep** in Rego: `require_tags`, `deny_admin_attachments`, `deny_member_org_admin`,
+    `no_legacy_instances`.
+  - **One catalog:** `policy-library-repo/POLICIES.md`, a table of every enforced rule:
+    ID, what it blocks, tool (Checkov ID or Rego file), severity, and how to request an
+    exception. CI fails if a Rego file isn't listed there.
+  - **One way to make exceptions:** inline `#checkov:skip=<ID>: <reason>` for Checkov, and an
+    `exceptions` data file for Rego, both with a reason. No repo-wide skips in `.checkov.yaml`
+    without a comment.
+  - **One report:** both tools run in the same CI step and both upload to code scanning,
+    so findings show up in one place.
 
 ---
 
@@ -1256,3 +1317,23 @@ Everything goes under `docs/`.
     and the workflows on GitHub.
   - **New tag rule followed:** the three new modules (`identity-center`, `break-glass-alerts`, `access-analyzer`) are registered with `"tag-separator": "-"` at `1.0.0` in
     `release-please-config.json` and `.release-please-manifest.json`. The changed modules (`account-baseline`, `organization`, `human-access`) keep their entries; release-please will propose their next versions from the commits (`human-access` is a breaking change).
+- **2026-09-21 (plan change, tooling and contract)** — Added 3.7 (tighten the Developer policy behind the PR #62
+  Checkov findings), 2.9 (versioned discovery contract), 8.9 (one scanner per job: tflint, blocking Checkov,
+  conftest for org rules, Trivy for the image only) and 8.10 (split rules between Checkov and Rego with one
+  catalog). Gemini's "DynamoDB → S3 native locking" topic was already done: no DynamoDB lock table exists and
+  both `root.hcl` files set `use_lockfile = true`. Plan text only.
+- **2026-09-21 (PR #62 Checkov fix, `governance/account-baseline`)** — The code-scanning Checkov check failed on `aws_iam_policy.developer` (`CKV_AWS_286/287/288/289/290/355`, from the SARIF)
+  **and on `aws_iam_policy.workload_boundary`** (the same six plus `CKV_AWS_62`, `CKV_AWS_63`, `CKV2_AWS_40`), so fixing only the Developer policy would have left the check red. I reproduced the exact IDs locally with `checkov -d`.
+  - **Developer policy: four explicit Deny statements.** `DenyResourcePolicyWrites` (`s3:PutBucketPolicy`, `s3:DeleteBucketPolicy`, `s3:PutBucketAcl`, `s3:PutObjectAcl`, `s3:PutBucketPublicAccessBlock`,
+    `sqs:AddPermission`, `sns:AddPermission`, `lambda:AddPermission`, `lambda:CreateFunctionUrlConfig`, `ecr:SetRepositoryPolicy`); `DenyPlatformParameterWrites` (`ssm:PutParameter`, `DeleteParameter`,
+    `DeleteParameters`, `LabelParameterVersion`, `AddTagsToResource` on `parameter/platform/*` in this account; reads stay allowed); `DenySsmAccessToOtherTeamsInstances` (`ssm:SendCommand` / `StartSession` on EC2 and
+    managed instances unless `aws:ResourceTag/team` equals `${aws:PrincipalTag/team}`); and `DenySsmAccessWithoutTeamTag` (a caller with no team tag cannot use them at all: without it, an unresolved tag variable
+    is not a safe comparison). Instances only: SSM documents stay allowed. 5 new `terraform test` runs (14 in the module, all pass) check the exact action lists, the resource ARNs, the ABAC conditions, that reads and documents stay
+    allowed, and that the policy has exactly these four Denies.
+  - **Finding worth knowing: the Denies do not clear any Checkov finding.** Checkov's IAM checks read only the Allow statements and do not subtract Denies (before and after had the identical six IDs), so the Denies are real
+    hardening but the skips are what turns the check green. **Skips** (`#checkov:skip` on the resource, one per ID with its own reason): NonProd/Sandbox-only permission set (PLAN 3.2, enforced by `identity-center`),
+    `platform-workload-boundary`, the explicit Denies, and the SCP/RCP data perimeter (4.6). The boundary's skips say why a permissions boundary must `Allow */*` and then Deny.
+  - **Known gap, not fixed (not in the requested list):** `sqs:SetQueueAttributes` and `sns:SetTopicAttributes` can still set a queue/topic **policy**, which bypasses the `AddPermission` Deny, and `lambda:UpdateFunctionUrlConfig`
+    is not denied. Denying them outright would break normal queue/topic configuration and there is no condition key for "which attribute", so the data perimeter (4.6) is the real backstop. Say if you want them denied anyway.
+  - **Checked (offline):** `terraform fmt`, `validate`, `terraform test` (14), `checkov -d` on the module (20 passed, 0 failed, 16 skipped) and a run with the repo's `.checkov.yaml` (0 findings in `account-baseline`), `conftest verify` (64).
+    Not run: the GitHub check itself, any apply, any AWS access. **Included in this commit:** the pending `PLAN.md` edits from the other session (new task 2.9, the discovery contract as a versioned API), as you asked.
