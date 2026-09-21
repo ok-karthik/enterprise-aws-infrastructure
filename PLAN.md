@@ -598,7 +598,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   repo has an ID that isn't in the registry. (In real life the workloads repo would get this
   file from a pinned foundation release.)
 
-- [ ] **2.2 Account-first layout and `root.hcl` rework** (both live repos):
+- [x] **2.2 Account-first layout and `root.hcl` rework** (both live repos):
   - Layout: `<account-name>/<region|_global>/<category>/<module>/terragrunt.hcl`.
     `<account-name>/account.hcl` holds `aws_account_id`, `account_name`, `ou`, `env`, `owner`
     and `data_classification`. `env.hcl` stays at account level (one account = one env).
@@ -629,7 +629,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   `lifecycle { prevent_destroy = true }`, placed in the right OU, and IAM billing access
   allowed). Apply it from `foundation-live-repo/management/_global/governance/account-factory`.
 
-- [ ] **2.5 New module `governance/account-baseline`**, applied to **every** account (a stack
+- [x] **2.5 New module `governance/account-baseline`**, applied to **every** account (a stack
   per account in the live repos, or a `terragrunt.stack.hcl`, see 8.1). The state bucket and
   the CI roles are **not** in here: they come from the 2.0 StackSet, because this module needs
   them before it can run. It creates:
@@ -640,7 +640,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   - A KMS CMK per data class (`general`, `confidential`) with rotation on.
   - The discovery parameters (see 2.7).
 
-- [ ] **2.6 CI identity: direct OIDC per account.** Every account has its own GitHub OIDC
+- [x] **2.6 CI identity: direct OIDC per account.** Every account has its own GitHub OIDC
   provider and `github-actions-plan` / `-apply` roles from 2.0. There is no shared-services hub
   role and no role chaining. The blast radius stays one account, and the pipeline doesn't depend
   on a shared-services account existing. Workflows run a matrix over accounts (generated from
@@ -653,7 +653,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   `terraform-*` roles in each account. It's fewer providers, but it adds a hop and a
   high-value hub role, and it needs shared-services before anything else can deploy.
 
-- [ ] **2.7 Discovery contract gets an account dimension.** SSM parameters live inside one
+- [x] **2.7 Discovery contract gets an account dimension.** SSM parameters live inside one
   account. Once the VPC sits in network-hub and is shared via RAM (Phase 5), tenants can't
   read it from their own account. So `account-baseline` (or a `discovery-publisher` module
   applied per workload account) writes the **same parameter names** into every workload
@@ -663,7 +663,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   `.../kms/{general,confidential}_key_arn`. Document the full contract in
   `docs/DISCOVERY_CONTRACT.md`, and update the table in `.agents/AGENTS.md` §2.3.
 
-- [ ] **2.8 Budgets from day one** (moved forward from 9.2 because it also protects the
+- [x] **2.8 Budgets from day one** (moved forward from 9.2 because it also protects the
   sandbox bill): `account-baseline` creates an AWS Budget per account (monthly amount from
   `accounts.hcl`, alerts at 50/80/100% actual and 100% forecast, sent to SNS/email) and a Cost
   Anomaly Detection monitor. In the management account, set a low org-wide budget
@@ -1185,3 +1185,38 @@ Everything goes under `docs/`.
     passed), `shellcheck`, `tflint`, `trivy config`, `conftest verify` (63), fmt, `.agents` tests. **Not checked:** a real plan or apply, the imports.
   - **Still open in Phase 2:** 2.2 (account-first layout, `root.hcl` rework, state-key migration), 2.5 (account-baseline), 2.6 (CI identity chain and the pipeline retargeting
     to vended accounts), 2.7 (discovery contract per account), 2.8 (budgets). Not started; 2.2 changes state keys and needs your run of the migration script.
+- **2026-09-21 (rest of Phase 2: 2.2, 2.5, 2.6, 2.7, 2.8)** — Implemented offline, in five commit series (branches `feat/p2-account-baseline-and-layout`,
+  `feat/p2-account-baseline-module`, `feat/p2-discovery-and-budgets`, `feat/p2-ci-account-matrix`, each stacked on the previous). Nothing applied, no AWS credentials
+  used, no account or resource created. **PLAN item 2.0b and 2.0 were ticked as you asked; the 2.0b "Done when" (a new NonProd account gets its bucket and roles and a PR can
+  plan against it) is not verified.**
+  - **2.2** Account-first layout: `foundation-live-repo/management/{account.hcl,env.hcl,_global,eu-central-1}` and `workloads-live-repo/workloads-{dev,prod}/...`.
+    `account.hcl` now has `ou`, `env`, `account_alias`; `root.hcl` (both identical copies) reads `env` from it and has no `assume_role` (`allowed_account_ids` stays). The
+    registry check now verifies folder name, id, OU and env against the registry (positive run plus 4 negative runs). `smoke-test.sh` takes an account directory, and gets
+    regions and envs from `_config/regions.hcl` (2 negative runs). `migrate-state-keys.sh` is dry-run by default, owner only, and refuses to start while any account id is a
+    placeholder (tested against a stub: 0 `aws` calls, then all 7 moves with real-looking ids). **State keys change** (`dev/...` becomes `workloads-dev/...`,
+    `_global/...` becomes `management/_global/...`) and the workload buckets follow the workload accounts; nothing was applied, so there is no state to move.
+    **`workloads-dev` / `workloads-prod` `account.hcl` now carry the registry's placeholder ids (`000000000005` / `...06`)**: no stack can run there (`allowed_account_ids`) until you fill in the real ids in
+    `foundation-live-repo/_config/accounts.hcl` and both `account.hcl` files.
+  - **2.5** `governance/account-baseline` (9 tests): `platform-workload-boundary` (a role under it can only create roles with the same boundary; no user/access-key creation; can't edit
+    `platform-*` / `terraform-*` / `github-actions-*` roles, security services, or the account defaults), account alias, strict password policy, S3 account Block Public Access, EBS
+    encryption by default, IMDSv2 default, two rotating KMS keys, account/kms/boundary discovery parameters. Leaves for management, workloads-dev, workloads-prod.
+    `deny_iam_wildcards` allow-lists the boundary. **Deviation:** the aliases in `account.hcl` (`ok-karthik-...`) are guesses, marked `TODO(owner)`; they must be globally unique.
+  - **2.7** `governance/discovery-publisher` (4 tests) is the single owner of `vpc/*`, `eks/*`, `ack/*` names; the VPC and EKS blueprints now set `publish_ssm_parameters = false` so two
+    resources never share a name. `docs/DISCOVERY_CONTRACT.md` documents the full contract; the `.agents/AGENTS.md` table is updated. The publisher does not yet publish
+    `ack/cross_account_role_arn` (no ack-cross-account stack exists in any account).
+  - **2.8** `governance/budgets` (5 tests): monthly budget with alerts at 50/80/100 % actual and 100 % forecast, plus a per-service Cost Anomaly Detection monitor. `monthly_budget_usd` per
+    account is in the registry (management 50). **Deviation: USD, not EUR** (AWS Budgets reports in USD). The alert address is the account's registry `email`; the module refuses `@example.com`,
+    so **the budgets leaves fail at plan time until you replace the placeholder emails**. The amounts other than management's are my guesses (`TODO(owner)`).
+  - **2.6** Workflows run over an account matrix generated from the registry by `workloads-live-repo/scripts/generate_account_matrix.py` (10 unit tests). An account runs only with `ci = true`, a
+    live folder and a **real** id; roles are built from the id (`arn:aws:iam::<id>:role/github-actions-plan|apply`), so the four `AWS_<ENV>_*_ROLE_ARN` variables are gone (only `AWS_REGION`
+    remains). `apply` runs one account at a time (management, core, dev, staging, prod), only after every plan and governance job passed, in the account's GitHub Environment.
+    `drift-detection.yml` and `destroy.yml` use the same matrix (`destroy` takes an `account`, resolves it through the script, and refuses `management`). `bootstrap.sh`, its README,
+    `docs/CICD.md`, `GOVERNANCE.md` and `AGENTS.md` are updated. **Consequences to know:** (1) the matrix is **empty today** (both workload accounts have placeholder ids and management has
+    `ci = false`), so a PR runs static analysis only: **no plan, OPA, Checkov or cost job runs until you fill in real ids**, and the empty-matrix jobs are skipped, not failed. (2) Required status
+    checks in branch protection are now per account (`workloads-dev / 📝 Plan: workloads-dev` ...); the old `Dev / ...` / `Prod / ...` names no longer exist, so **update branch protection**
+    or PRs will wait on checks that never appear. (3) The CloudFormation output descriptions changed (text only); re-run `bootstrap.sh` to see the change set.
+  - **Checked (offline):** `terraform fmt` and `terragrunt hcl fmt --check`; `conftest verify` (64); `terraform test` for every module; `terragrunt hcl validate --inputs` on all 15 leaves;
+    the generator's and the agent's unit tests; the registry check and the offline smoke-test steps (with negative cases); `shellcheck` on every script; `cfn-lint`; `actionlint` on the 8 workflows
+    (and it catches a deliberate typo); `tflint`; `trivy config`; YAML/JSON parse. **Not checked:** a real plan or apply, `terragrunt init`/`validate` per account (needs credentials, so the smoke test's graph step and
+    the workflows were never run on GitHub), the boundary and SCP JSON against AWS, Renovate's PR grouping, and the imports the owner must run.
+  - **Still open in Phase 2:** the owner steps above (real ids and emails, imports, `ci = true` for management, branch protection). **1.7** (IDP repo) and the **2.0b "Done when"** are also still open.

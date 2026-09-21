@@ -18,13 +18,32 @@ env:
   IAC_MODULES_LOCAL: '1'
 
 jobs:
+  # Which accounts to check: generated from the account registry (see terragrunt.yml).
+  matrix:
+    name: '🧭 Account matrix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      count: ${{ steps.matrix.outputs.count }}
+    steps:
+      - name: "Git Checkout"
+        uses: actions/checkout@v6
+
+      - name: "Generate account matrix"
+        id: matrix
+        run: python3 workloads-live-repo/scripts/generate_account_matrix.py --github-output
+
   detect-drift:
-    name: '🔍 Detect Drift: ${{ matrix.environment }}'
+    name: '🔍 Detect Drift: ${{ matrix.account }}'
+    needs: [matrix]
+    if: needs.matrix.outputs.count != '0'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        environment: [dev, prod]
+      matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
 
     container:
       image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
@@ -43,7 +62,7 @@ jobs:
         uses: ./.github/actions/setup-platform
         with:
           aws_region: ${{ env.AWS_REGION }}
-          aws_role_arn: ${{ matrix.environment == 'prod' && vars.AWS_PROD_PLAN_ROLE_ARN || vars.AWS_DEV_PLAN_ROLE_ARN }}
+          aws_role_arn: ${{ matrix.plan_role_arn }}
 
       - name: "Check for Infrastructure Drift"
         id: plan
@@ -56,14 +75,14 @@ jobs:
 
           if [ $exitcode -eq 2 ]; then
             echo "DRIFT_DETECTED=true" >> $GITHUB_ENV
-            echo "Drift detected in ${{ matrix.environment }}! Exit code 2."
+            echo "Drift detected in ${{ matrix.account }}! Exit code 2."
           elif [ $exitcode -ne 0 ]; then
             echo "Error running plan. Exit code $exitcode"
             exit 1
           else
             echo "No drift detected. Infrastructure matches code."
           fi
-        working-directory: workloads-live-repo/${{ matrix.environment }}
+        working-directory: ${{ matrix.working_directory }}
 
       - name: "Alert or Resolve Drift Issue"
         if: always() && steps.plan.outcome == 'success'
@@ -71,7 +90,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const env = '${{ matrix.environment }}';
+            const env = '${{ matrix.account }}';
             const title = `🚨 Infrastructure Drift Detected: ${env}`;
             const driftDetected = process.env.DRIFT_DETECTED === 'true';
 

@@ -9,5 +9,8 @@
   "iac-modules-repo/governance/organization": "1.0.0",
   "iac-modules-repo/governance/bootstrap-stacksets": "1.0.0",
   "iac-modules-repo/identity/ack-cross-account": "1.0.0",
-  "iac-modules-repo/governance/account-factory": "1.0.0"
+  "iac-modules-repo/governance/account-factory": "1.0.0",
+  "iac-modules-repo/governance/account-baseline": "1.0.0",
+  "iac-modules-repo/governance/discovery-publisher": "1.0.0",
+  "iac-modules-repo/governance/budgets": "1.0.0"
 }

@@ -3,7 +3,8 @@ name: 'Reusable Terragrunt Component'
 on:
   workflow_call:
     inputs:
-      environment:
+      account:
+        description: 'Account name from the registry (workloads-dev, management, ...). Used to name jobs and artifacts.'
         required: true
         type: string
       working_directory:
@@ -33,7 +34,7 @@ permissions:
 
 jobs:
   plan:
-    name: "📝 Plan: ${{ inputs.environment }}"
+    name: "📝 Plan: ${{ inputs.account }}"
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
@@ -52,7 +53,7 @@ jobs:
           aws_role_arn: ${{ inputs.aws_plan_role_arn }}
 
       - name: "Disaster Recovery (Smoke Test)"
-        run: ./workloads-live-repo/scripts/smoke-test.sh
+        run: ./workloads-live-repo/scripts/smoke-test.sh ${{ inputs.working_directory }}
 
       - name: "Terragrunt Plan"
         run: |
@@ -76,13 +77,13 @@ jobs:
       - name: "Upload Plans"
         uses: actions/upload-artifact@v7
         with:
-          name: "plans-${{ inputs.environment }}"
+          name: "plans-${{ inputs.account }}"
           path: "${{ inputs.working_directory }}/**/tfplan.json"
           if-no-files-found: error
           retention-days: 1
 
   security-governance:
-    name: "⚖️ Security & Governance (OPA/Checkov): ${{ inputs.environment }}"
+    name: "⚖️ Security & Governance (OPA/Checkov): ${{ inputs.account }}"
     needs: [plan]
     runs-on: ubuntu-latest
     container:
@@ -108,7 +109,7 @@ jobs:
       - name: "Download Plans"
         uses: actions/download-artifact@v8
         with:
-          name: "plans-${{ inputs.environment }}"
+          name: "plans-${{ inputs.account }}"
           path: plans
 
       - name: "OPA Policy Gate (Conftest)"
@@ -117,14 +118,14 @@ jobs:
       - name: "Checkov Security Audit"
         run: |
           PLAN_FILE=$(find plans -name "tfplan.json" | head -n 1)
-          checkov -f "$PLAN_FILE" --config-file .checkov.yaml --output cli --output sarif --output-file-path console,checkov-results-${{ inputs.environment }}.sarif
+          checkov -f "$PLAN_FILE" --config-file .checkov.yaml --output cli --output sarif --output-file-path console,checkov-results-${{ inputs.account }}.sarif
 
       - name: Upload Checkov SARIF results
         uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles(format('checkov-results-{0}.sarif', inputs.environment)) != ''
+        if: always() && hashFiles(format('checkov-results-{0}.sarif', inputs.account)) != ''
         with:
-          sarif_file: "checkov-results-${{ inputs.environment }}.sarif"
-          category: checkov-plan-${{ inputs.environment }}
+          sarif_file: "checkov-results-${{ inputs.account }}.sarif"
+          category: checkov-plan-${{ inputs.account }}
 
       - name: "📂 X-Ray: Verify File Structure"
         run: |
@@ -142,7 +143,7 @@ jobs:
           trivy config "$PLAN_FILE" \
             --severity CRITICAL,HIGH \
             --format sarif \
-            --output trivy-results-${{ inputs.environment }}.sarif \
+            --output trivy-results-${{ inputs.account }}.sarif \
             --ignorefile plans/.trivyignore
 
           echo "📊 Printing Table Report and enforcing security gate..."
@@ -150,13 +151,13 @@ jobs:
 
       - name: Upload Trivy SARIF results
         uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles(format('trivy-results-{0}.sarif', inputs.environment)) != ''
+        if: always() && hashFiles(format('trivy-results-{0}.sarif', inputs.account)) != ''
         with:
-          sarif_file: "trivy-results-${{ inputs.environment }}.sarif"
-          category: trivy-plan-${{ inputs.environment }}
+          sarif_file: "trivy-results-${{ inputs.account }}.sarif"
+          category: trivy-plan-${{ inputs.account }}
 
   cost-analysis:
-    name: "💰 Cost Analysis (Infracost): ${{ inputs.environment }}"
+    name: "💰 Cost Analysis (Infracost): ${{ inputs.account }}"
     needs: [plan]
     runs-on: ubuntu-latest
     container:
@@ -186,7 +187,7 @@ jobs:
       - name: "Download Plans"
         uses: actions/download-artifact@v8
         with:
-          name: "plans-${{ inputs.environment }}"
+          name: "plans-${{ inputs.account }}"
           path: plans
 
       - name: "Generate FinOps Summary"
@@ -200,8 +201,8 @@ jobs:
           infracost output --path "cost-*.json" --format table --out-file /tmp/infracost-table.txt
 
           # 2. Change Summary (tf-summarize)
-          echo "## 📊 Infrastructure Change Summary (${{ inputs.environment }})" > /tmp/pr-comment.md
-          echo "> 💡 This report summarizes resource changes and estimated cost impact for the **${{ inputs.environment }}** environment." >> /tmp/pr-comment.md
+          echo "## 📊 Infrastructure Change Summary (${{ inputs.account }})" > /tmp/pr-comment.md
+          echo "> 💡 This report summarizes resource changes and estimated cost impact for the **${{ inputs.account }}** account." >> /tmp/pr-comment.md
 
           find plans -name "tfplan.json" | while read -r plan; do
             module_name=$(dirname $plan | sed 's|plans/||')
@@ -215,7 +216,7 @@ jobs:
 
           # 3. Append Cost Table
           echo "" >> /tmp/pr-comment.md
-          echo "## 💰 Cost Estimate (${{ inputs.environment }})" >> /tmp/pr-comment.md
+          echo "## 💰 Cost Estimate (${{ inputs.account }})" >> /tmp/pr-comment.md
           echo "\`\`\`" >> /tmp/pr-comment.md
           cat /tmp/infracost-table.txt >> /tmp/pr-comment.md
           echo "\`\`\`" >> /tmp/pr-comment.md
@@ -227,7 +228,7 @@ jobs:
           script: |
             const fs = require('fs');
             const body = fs.readFileSync('/tmp/pr-comment.md', 'utf8');
-            const envName = '${{ inputs.environment }}';
+            const envName = '${{ inputs.account }}';
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,

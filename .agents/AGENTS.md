@@ -47,6 +47,9 @@ Applied and maintained directly by this platform via Terragrunt environments (`w
 | `iac-modules-repo/identity/workload-identity` | Cluster | `workload-identity-v1.0.0` | EKS Pod Identity associations + IRSA federated OIDC fallback |
 | `iac-modules-repo/governance/bootstrap-stacksets` | Global | `bootstrap-stacksets-v1.0.0` | Service-managed CloudFormation StackSets (one per GitHub Environment) that roll the Day-0 bootstrap template out to every member account in the targeted OUs. Applied by the owner from the management account |
 | `iac-modules-repo/governance/organization` | Global | `organization-v1.0.0` | The AWS Organization (trusted service access, policy types), the OU tree (Security, Infrastructure, Workloads{Prod,NonProd}, Sandbox, Policy-Staging, Suspended) and baseline SCP guardrails attached to `guardrail_target_ous` (Policy-Staging by default). Applied by the owner from the management account |
+| `iac-modules-repo/governance/budgets` | Account | `budgets-v1.0.0` | Monthly cost budget per account (alerts at 50/80/100 % actual, 100 % forecast) and a Cost Anomaly Detection monitor; amount and alert address come from the account registry |
+| `iac-modules-repo/governance/discovery-publisher` | Account | `discovery-publisher-v1.0.0` | Publishes the discovery contract (`/platform/<env>/<region>/...`) into the account from the outputs of the VPC, EKS and ACK stacks; the single owner of those parameter names |
+| `iac-modules-repo/governance/account-baseline` | Account | `account-baseline-v1.0.0` | Applied to every account: `platform-workload-boundary`, account alias, password policy, S3 Block Public Access, EBS encryption and IMDSv2 defaults, KMS CMKs per data class, and the account discovery parameters. Not the state bucket or CI roles (those come from the Day-0 bootstrap) |
 | `iac-modules-repo/governance/account-factory` | Global | `account-factory-v1.0.0` | Creates and places the member accounts from the account registry (`foundation-live-repo/_config/accounts.hcl`, entries with `create = true`); accounts are never closed. Applied by the owner from the management account |
 | `iac-modules-repo/identity/ack-cross-account` | Account | `ack-cross-account-v1.0.0` | ACK hub/spoke trust for one account: spoke role, scoped inline policy, `ack-tenant-boundary`, discovery parameter |
 
@@ -58,6 +61,8 @@ Per **PLAN.md Phase 18.1**, tenant Terraform modules never hardcode AWS IDs (VPC
 - `/platform/${env}/${region}/eks/cluster_name`: Name of the EKS cluster
 - `/platform/${env}/${region}/eks/oidc_provider_arn`: EKS OIDC provider ARN for IRSA / Pod Identity
 - `/platform/${env}/${region}/ack/cross_account_role_arn`: ACK controller cross-account role ARN for hub-spoke provisioning
+
+The same names are written into **every workload account** (SSM is per account), by `governance/discovery-publisher` (vpc, eks, ack) and `governance/account-baseline` (`account/{id,ou}`, `kms/{general,confidential}_key_arn`, `iam/workload_boundary_arn`). Full contract: `docs/DISCOVERY_CONTRACT.md`.
 
 Tenant Terraform ingests these parameters dynamically at plan time via `data "aws_ssm_parameter"`.
 
@@ -137,10 +142,10 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 
 ## 6. CI/CD Pipeline
 
-- `terragrunt.yml` — main orchestrator. Static analysis + `dev`/`prod` reusable stacks run in parallel; on push to `main`, `apply-dev` runs then `apply-prod` (gated by a protected GitHub `prod` Environment requiring manual approval).
-- `reusable-terragrunt.yml` — per-environment plan → governance (OPA/Checkov/Trivy) → cost analysis. Plans are generated as `tfplan.bin`, converted to `tfplan.json`, uploaded as artifacts, and consumed by the gate jobs.
-- Auth is **zero-key OIDC** with two roles: plan/governance/drift jobs assume the read-only `vars.AWS_<ENV>_PLAN_ROLE_ARN` (trusted from PRs and `main`); apply/destroy jobs assume `vars.AWS_<ENV>_APPLY_ROLE_ARN` (trusted only from the `dev` / `prod` GitHub Environments) via `setup-platform`. No static AWS credentials exist.
-- `drift-detection.yml` — nightly matrix over dev/prod; manages one GitHub Issue per env (create/comment/auto-close) and prompts for ChatOps reconciliation.
+- `terragrunt.yml` — main orchestrator. Static analysis + one reusable stack per account run in parallel (the account matrix is generated from `foundation-live-repo/_config/accounts.hcl` by `workloads-live-repo/scripts/generate_account_matrix.py`; an account runs only with `ci = true`, a live folder and a real account id). On push to `main`, an `apply` matrix job runs one account at a time (management, core, dev, staging, prod), each in the account's GitHub Environment (prod requires manual approval).
+- `reusable-terragrunt.yml` — per-account plan → governance (OPA/Checkov/Trivy) → cost analysis. Plans are generated as `tfplan.bin`, converted to `tfplan.json`, uploaded as artifacts, and consumed by the gate jobs.
+- Auth is **zero-key OIDC** with two roles per account, straight into the target account (no shared role, no role chaining, no per-environment role variables): plan/governance/drift jobs assume the read-only `arn:aws:iam::<account-id>:role/github-actions-plan` (trusted from PRs and `main`); apply/destroy jobs assume `.../github-actions-apply` (trusted only from that account's GitHub Environment: `management`, `core`, `dev`, `prod`), via `setup-platform`. The account id comes from the registry. No static AWS credentials exist.
+- `drift-detection.yml` — nightly matrix over the account matrix; manages one GitHub Issue per account (create/comment/auto-close) and prompts for ChatOps reconciliation.
 - `chatops_generator.yml` — listens for `/generate` and `/reconcile` issue/PR comments to trigger automated module authoring and PR creation.
 - `pipeline_healer.yml` — triggers on a failed "Terragrunt CI/CD" run and executes `.agents/scripts/healer_runner.py`.
 

@@ -13,8 +13,8 @@ iam_policy_attribute := {
 }
 
 # Policies that are allowed to be Action "*" / Resource "*", by name. Keep this list tiny and
-# say why: github-actions-apply-boundary is a permissions boundary (it only ever narrows).
-wildcard_policy_allowlist := {"github-actions-apply-boundary"}
+# say why: both are permissions boundaries (one broad Allow, then Denies), which only ever narrow a role.
+wildcard_policy_allowlist := {"github-actions-apply-boundary", "platform-workload-boundary"}
 
 iam_policy_documents contains doc if {
 	some r in changed_resources

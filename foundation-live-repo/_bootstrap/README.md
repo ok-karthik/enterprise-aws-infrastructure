@@ -134,26 +134,21 @@ Once the CloudFormation stack is deployed, wire GitHub Actions to the created ro
 ### Via GitHub CLI (`gh`):
 
 ```bash
-# 1. Create the management environment
+# 1. Create the management environment (add yourself as required reviewer in the UI)
 gh api -X PUT repos/ok-karthik/enterprise-aws-infrastructure/environments/management
 
-# 2. Set repository variables for CI/CD plan jobs
-gh variable set AWS_REGION             --body "eu-central-1"
-gh variable set AWS_DEV_PLAN_ROLE_ARN  --body "arn:aws:iam::954171757349:role/github-actions-plan"
-gh variable set AWS_PROD_PLAN_ROLE_ARN --body "arn:aws:iam::954171757349:role/github-actions-plan"
+# 2. The only repository variable. There are no per-environment role variables: every CI job builds its
+#    role ARN from the account id in foundation-live-repo/_config/accounts.hcl.
+gh variable set AWS_REGION --body "eu-central-1"
 ```
 
 ### Via GitHub Web Console:
 
-1. **GitHub Environment**: Go to **Settings** → **Environments** → click **New environment** → name it `management`. Under **Environment protection rules**, check **Required reviewers** and add yourself as a reviewer.
-2. **Repository Variables**: Go to **Settings** → **Secrets and variables** → **Actions** → **Variables** tab (not Secrets):
-   - `AWS_REGION` = `eu-central-1`
-   - `AWS_DEV_PLAN_ROLE_ARN` = `arn:aws:iam::954171757349:role/github-actions-plan`
-   - `AWS_PROD_PLAN_ROLE_ARN` = `arn:aws:iam::954171757349:role/github-actions-plan`
+1. **GitHub Environment**: Go to **Settings** → **Environments** → click **New environment** → name it `management`. Under **Environment protection rules**, check **Required reviewers** and add yourself as a reviewer. Create `dev`, `prod` (with required reviewers) and `core` the same way when their accounts exist.
+2. **Repository Variable**: Go to **Settings** → **Secrets and variables** → **Actions** → **Variables** tab (not Secrets): `AWS_REGION` = `eu-central-1`.
 
 > [!IMPORTANT]
-> **Leave `AWS_DEV_APPLY_ROLE_ARN` and `AWS_PROD_APPLY_ROLE_ARN` unset for now.**
-> The management apply role trusts only `environment:management`, so dev/prod apply jobs cannot deploy workloads into the management account. That is intended. Dedicated workload apply roles will be configured when member accounts are vended in Phase 2.
+> The old `AWS_DEV_PLAN_ROLE_ARN`, `AWS_PROD_PLAN_ROLE_ARN`, `AWS_DEV_APPLY_ROLE_ARN` and `AWS_PROD_APPLY_ROLE_ARN` variables are no longer read and can be deleted. The pipeline runs an account only once the registry says `ci = true`, the account has a live folder and it has a real (non-placeholder) id. For `management`, set `ci = true` after the organization stack is imported and the placeholders are replaced.
 
 Details of the pipeline architecture are in [`docs/CICD.md`](../docs/CICD.md).
 

@@ -59,6 +59,78 @@
   ],
   "packageRules": [
     {
+      "description": "budgets pin in management: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["budgets"],
+      "matchFileNames": ["**/management/env.hcl"],
+      "groupName": "iac-modules: budgets pin (management)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "management"]
+    },
+    {
+      "description": "budgets pin in dev: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["budgets"],
+      "matchFileNames": ["**/workloads-dev/env.hcl"],
+      "groupName": "iac-modules: budgets pin (dev)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "dev"]
+    },
+    {
+      "description": "budgets pin in prod: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["budgets"],
+      "matchFileNames": ["**/workloads-prod/env.hcl"],
+      "groupName": "iac-modules: budgets pin (prod)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "prod"]
+    },
+    {
+      "description": "discovery_publisher pin in dev: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["discovery_publisher"],
+      "matchFileNames": ["**/workloads-dev/env.hcl"],
+      "groupName": "iac-modules: discovery_publisher pin (dev)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "dev"]
+    },
+    {
+      "description": "discovery_publisher pin in prod: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["discovery_publisher"],
+      "matchFileNames": ["**/workloads-prod/env.hcl"],
+      "groupName": "iac-modules: discovery_publisher pin (prod)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "prod"]
+    },
+    {
+      "description": "account_baseline pin in management: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["account_baseline"],
+      "matchFileNames": ["**/management/env.hcl"],
+      "groupName": "iac-modules: account_baseline pin (management)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "management"]
+    },
+    {
+      "description": "account_baseline pin in dev: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["account_baseline"],
+      "matchFileNames": ["**/workloads-dev/env.hcl"],
+      "groupName": "iac-modules: account_baseline pin (dev)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "dev"]
+    },
+    {
+      "description": "account_baseline pin in prod: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["account_baseline"],
+      "matchFileNames": ["**/workloads-prod/env.hcl"],
+      "groupName": "iac-modules: account_baseline pin (prod)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "prod"]
+    },
+    {
       "description": "vpc pin in dev: own PR, no automerge, so the promotion order dev then prod is kept",
       "matchManagers": ["custom.regex"],
       "matchDepTypes": ["vpc"],

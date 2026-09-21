@@ -66,6 +66,24 @@
       "package-name": "account-factory",
       "component": "account-factory",
       "tag-separator": "-v"
+    },
+    "iac-modules-repo/governance/account-baseline": {
+      "release-type": "terraform-module",
+      "package-name": "account-baseline",
+      "component": "account-baseline",
+      "tag-separator": "-v"
+    },
+    "iac-modules-repo/governance/discovery-publisher": {
+      "release-type": "terraform-module",
+      "package-name": "discovery-publisher",
+      "component": "discovery-publisher",
+      "tag-separator": "-v"
+    },
+    "iac-modules-repo/governance/budgets": {
+      "release-type": "terraform-module",
+      "package-name": "budgets",
+      "component": "budgets",
+      "tag-separator": "-v"
     }
   }
 }
