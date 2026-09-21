@@ -1,55 +1,55 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "packages": {
-    "infrastructure-modules/data/postgres": {
+    "iac-modules-repo/data/postgres": {
       "release-type": "terraform-module",
       "package-name": "postgres",
       "component": "postgres",
       "tag-separator": "-v"
     },
-    "infrastructure-modules/storage/s3": {
+    "iac-modules-repo/storage/s3": {
       "release-type": "terraform-module",
       "package-name": "s3",
       "component": "s3",
       "tag-separator": "-v"
     },
-    "infrastructure-modules/identity/workload-iam": {
+    "iac-modules-repo/identity/workload-iam": {
       "release-type": "terraform-module",
       "package-name": "workload-iam",
       "component": "workload-iam",
       "tag-separator": "-v"
     },
-    "infrastructure-modules/compute/eks": {
+    "iac-modules-repo/compute/eks": {
       "release-type": "terraform-module",
       "package-name": "eks",
       "component": "eks",
       "tag-separator": "-v"
     },
-    "infrastructure-modules/network/vpc": {
+    "iac-modules-repo/network/vpc": {
       "release-type": "terraform-module",
       "package-name": "vpc",
       "component": "vpc",
       "tag-separator": "-v"
     },
-    "infrastructure-modules/identity/human-access": {
+    "iac-modules-repo/identity/human-access": {
       "release-type": "terraform-module",
       "package-name": "human-access",
       "component": "human-access",
       "tag-separator": "-v"
     },
-    "infrastructure-modules/identity/workload-identity": {
+    "iac-modules-repo/identity/workload-identity": {
       "release-type": "terraform-module",
       "package-name": "workload-identity",
       "component": "workload-identity",
       "tag-separator": "-v"
     },
-    "infrastructure-modules/governance/organization": {
+    "iac-modules-repo/governance/organization": {
       "release-type": "terraform-module",
       "package-name": "organization",
       "component": "organization",
       "tag-separator": "-v"
     },
-    "infrastructure-modules/governance/bootstrap-stacksets": {
+    "iac-modules-repo/governance/bootstrap-stacksets": {
       "release-type": "terraform-module",
       "package-name": "bootstrap-stacksets",
       "component": "bootstrap-stacksets",

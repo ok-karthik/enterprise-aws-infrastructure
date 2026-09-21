@@ -292,7 +292,7 @@ def scaffold_skeleton(module_path: str, env: str, region: str, dependencies: Opt
         envcommon_path.write_text(
             f"# Common configuration for {module_path} modules across all environments.\n\n"
             f"terraform {{\n"
-            f'  source = "${{get_repo_root()}}/infrastructure-modules/{module_path}"\n'
+            f'  source = "${{get_repo_root()}}/iac-modules-repo/{module_path}"\n'
             f"}}\n\n"
             f"locals {{\n"
             f'  env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))\n'
@@ -305,7 +305,7 @@ def scaffold_skeleton(module_path: str, env: str, region: str, dependencies: Opt
     else:
         created.append(envcommon_path)
 
-    module_dir = REPO_ROOT / "infrastructure-modules" / module_path
+    module_dir = REPO_ROOT / "iac-modules-repo" / module_path
     main_tf_header = (
         "# Primary resources for this module.\n\n"
         "terraform {\n"
@@ -603,13 +603,13 @@ def validation_ladder(
     and Infracost monthly budget enforcement.
     """
     leaf_dir = REPO_ROOT / "infrastructure-live" / env / region / module_path
-    module_dir = REPO_ROOT / "infrastructure-modules" / module_path
+    module_dir = REPO_ROOT / "iac-modules-repo" / module_path
 
     fmt_step = (
         "terraform fmt",
         [
             "terraform", "fmt", "-check", "-recursive",
-            "infrastructure-modules", "infrastructure-live", "policies",
+            "iac-modules-repo", "infrastructure-live", "policies",
         ],
         REPO_ROOT,
     )
@@ -834,8 +834,8 @@ class IaCPlatformAgent:
                 # Commit locally
                 run(["git", "add", "--", str(REPO_ROOT / "infrastructure-live" / env / region / module_path)], cwd=REPO_ROOT)
                 run(["git", "add", "--", str(REPO_ROOT / "infrastructure-live" / "_envcommon" / f"{module_path}.hcl")], cwd=REPO_ROOT)
-                if (REPO_ROOT / "infrastructure-modules" / module_path).exists():
-                    run(["git", "add", "--", str(REPO_ROOT / "infrastructure-modules" / module_path)], cwd=REPO_ROOT)
+                if (REPO_ROOT / "iac-modules-repo" / module_path).exists():
+                    run(["git", "add", "--", str(REPO_ROOT / "iac-modules-repo" / module_path)], cwd=REPO_ROOT)
                 run(["git", "commit", "-m", f"feat(iac-agent): {req.request}"], cwd=REPO_ROOT)
 
                 res = GenerationResult(

@@ -1,7 +1,7 @@
 # Common configuration for EKS modules across all environments.
 
 terraform {
-  source = "${get_repo_root()}/infrastructure-modules/compute/eks"
+  source = "${get_repo_root()}/iac-modules-repo/compute/eks"
 }
 
 locals {

@@ -30,10 +30,10 @@ A production-grade, multi-environment AWS platform built with **Terragrunt + Ter
 
 ## Architecture at a glance
 
-Strict separation of a generic **blueprint library** (`infrastructure-modules/`) from **live environment config** (`infrastructure-live/`), keeping configuration fully DRY. A single leaf module inherits everything from the layers above it.
+Strict separation of a generic **blueprint library** (`iac-modules-repo/`) from **live environment config** (`infrastructure-live/`), keeping configuration fully DRY. A single leaf module inherits everything from the layers above it.
 
 ```text
-infrastructure-modules/     # Reusable Terraform (hardened VPC, EKS)
+iac-modules-repo/     # Reusable Terraform (hardened VPC, EKS)
 infrastructure-live/        # Terragrunt config per env/region
 ├── root.hcl                #   generates provider.tf + backend.tf, injects default_tags
 ├── _envcommon/             #   shared module inputs + cross-module wiring

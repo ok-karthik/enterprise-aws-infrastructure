@@ -2,7 +2,7 @@
 # Applied from the management account only (infrastructure-live/_global/...), by the owner.
 
 terraform {
-  source = "${get_repo_root()}/infrastructure-modules/governance/bootstrap-stacksets"
+  source = "${get_repo_root()}/iac-modules-repo/governance/bootstrap-stacksets"
 }
 
 locals {

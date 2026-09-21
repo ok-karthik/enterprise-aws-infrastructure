@@ -1,7 +1,7 @@
 # Enterprise AWS Platform — task runner
 # Wraps the platform's command surface. Run `make help` for the list.
 
-FMT_DIRS := infrastructure-modules infrastructure-live policies
+FMT_DIRS := iac-modules-repo infrastructure-live policies
 ENV ?= dev
 
 .DEFAULT_GOAL := help
@@ -44,7 +44,7 @@ plan: ## Plan an environment stack: make plan ENV=dev
 .PHONY: test
 test: ## Run OPA policy unit tests and module unit tests (no AWS credentials needed)
 	conftest verify --policy policies/terraform
-	@for d in infrastructure-modules/*/*/tests; do \
+	@for d in iac-modules-repo/*/*/tests; do \
 		[ -d "$$d" ] || continue; \
 		m=$$(dirname "$$d"); echo "-> $$m"; \
 		(cd "$$m" && terraform init -backend=false -input=false >/dev/null && terraform test) || exit 1; \
@@ -52,12 +52,12 @@ test: ## Run OPA policy unit tests and module unit tests (no AWS credentials nee
 
 .PHONY: docs
 docs: ## Regenerate per-module terraform-docs READMEs
-	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/network/vpc
-	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/compute/eks
-	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/data/postgres
-	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/storage/s3
-	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/identity/workload-iam
-	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/identity/human-access
-	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/identity/workload-identity
-	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/governance/organization
-	terraform-docs markdown table --output-file README.md --output-mode inject infrastructure-modules/governance/bootstrap-stacksets
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/vpc
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/compute/eks
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/data/postgres
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/storage/s3
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/identity/workload-iam
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/identity/human-access
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/identity/workload-identity
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/governance/organization
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/governance/bootstrap-stacksets

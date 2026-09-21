@@ -4,7 +4,7 @@ This platform follows a **Hierarchical Blueprint Pattern**: a generic, reusable 
 
 ## The two halves
 
-- **`infrastructure-modules/`** — generic, reusable Terraform (`network/vpc`, `compute/eks`). Pure `.tf`, no environment specifics. Security hardening lives here, not just in CI.
+- **`iac-modules-repo/`** — generic, reusable Terraform (`network/vpc`, `compute/eks`). Pure `.tf`, no environment specifics. Security hardening lives here, not just in CI.
 - **`infrastructure-live/`** — Terragrunt configuration that composes those modules per environment and region.
 
 ## The inheritance chain
@@ -12,7 +12,7 @@ This platform follows a **Hierarchical Blueprint Pattern**: a generic, reusable 
 To understand any live module you read it top-down through these layers — a leaf `terragrunt.hcl` is often ~10 lines because it inherits everything else:
 
 1. **`infrastructure-live/root.hcl`** — included by every leaf. Generates `provider.tf` and `backend.tf` at runtime and injects `default_tags` (`Environment`, `Service`, `Project`, `ManagedBy`, `Account`). The S3 backend bucket name and tags are computed here — modules never hand-write provider/backend blocks.
-2. **`_envcommon/<category>/<module>.hcl`** — the shared blueprint per module type. Sets `terraform.source` (into `infrastructure-modules/`), declares `dependency` blocks with `mock_outputs` for plan-time, and default `inputs`. Cross-module wiring (EKS → VPC subnets) lives here.
+2. **`_envcommon/<category>/<module>.hcl`** — the shared blueprint per module type. Sets `terraform.source` (into `iac-modules-repo/`), declares `dependency` blocks with `mock_outputs` for plan-time, and default `inputs`. Cross-module wiring (EKS → VPC subnets) lives here.
 3. **Data files** loaded via `find_in_parent_folders`:
    - `<env>/account.hcl` — account id (the account the stack is *allowed* to run in), alias, `owner`, `data_classification`
    - `<env>/env.hcl` — `env`, `cluster_name`, cost / resilience knobs (`min_size`, `desired_size`, `enable_nat_gateway`, `single_nat_gateway`) and `api_allowed_cidrs` (EKS public API allow-list; empty = private endpoint only)

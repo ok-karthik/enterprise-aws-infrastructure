@@ -8,7 +8,7 @@ runs:
       shell: bash
       run: |
         echo "🎨 Checking HCL formatting..."
-        terraform fmt -check -recursive infrastructure-modules
+        terraform fmt -check -recursive iac-modules-repo
         terraform fmt -check -recursive infrastructure-live
         terraform fmt -check -recursive policies
 
@@ -16,7 +16,7 @@ runs:
       shell: bash
       run: |
         echo "✅ Validating Terraform modules..."
-        find infrastructure-modules -maxdepth 2 -name "main.tf" -exec sh -c 'cd $(dirname {}) && terraform init -backend=false && terraform validate' \;
+        find iac-modules-repo -maxdepth 2 -name "main.tf" -exec sh -c 'cd $(dirname {}) && terraform init -backend=false && terraform validate' \;
 
     - name: Unit Tests (Rego policies + module guardrails)
       shell: bash
@@ -25,7 +25,7 @@ runs:
         conftest verify --policy policies/terraform
 
         echo "🧪 Running module unit tests (mock provider, no AWS credentials)..."
-        for tests_dir in infrastructure-modules/*/*/tests; do
+        for tests_dir in iac-modules-repo/*/*/tests; do
           [ -d "$tests_dir" ] || continue
           module_dir=$(dirname "$tests_dir")
           echo "→ $module_dir"
@@ -44,7 +44,7 @@ runs:
       run: |
         echo "🔍 Running TFLint..."
         tflint --init
-        tflint --chdir=infrastructure-modules --recursive --format=compact
+        tflint --chdir=iac-modules-repo --recursive --format=compact
         tflint --chdir=infrastructure-live --recursive --format=compact
       env:
         GITHUB_TOKEN: ${{ github.token }}

@@ -35,7 +35,7 @@ done
 echo "✅ Compliance checks passed."
 
 echo -e "\n2. Checking HCL formatting..."
-if terraform fmt -check -recursive infrastructure-modules && \
+if terraform fmt -check -recursive iac-modules-repo && \
    terraform fmt -check -recursive infrastructure-live && \
    terraform fmt -check -recursive policies; then
     echo -e "${GREEN}✅ HCL Formatting is correct.${NC}"

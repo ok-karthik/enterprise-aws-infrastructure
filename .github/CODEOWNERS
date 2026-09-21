@@ -5,7 +5,7 @@
 *       @ok-karthik
 
 # Module-specific owners
-/infrastructure-modules/   @ok-karthik
+/iac-modules-repo/   @ok-karthik
 /infrastructure-live/      @ok-karthik
 
 # Security & Compliance policies

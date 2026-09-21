@@ -1,7 +1,7 @@
 # Common configuration for VPC modules across all environments.
 
 terraform {
-  source = "${get_repo_root()}/infrastructure-modules/network/vpc"
+  source = "${get_repo_root()}/iac-modules-repo/network/vpc"
 }
 
 locals {

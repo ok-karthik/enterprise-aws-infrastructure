@@ -20,7 +20,7 @@ repos:
       - id: terraform-fmt
         name: 🎨 Terraform & Terragrunt Format
         # Automatically fixes formatting before the smoke test runs
-        entry: bash -c 'terraform fmt -recursive infrastructure-modules infrastructure-live policies && terragrunt hcl fmt'
+        entry: bash -c 'terraform fmt -recursive iac-modules-repo infrastructure-live policies && terragrunt hcl fmt'
         language: system
         pass_filenames: false
         always_run: true

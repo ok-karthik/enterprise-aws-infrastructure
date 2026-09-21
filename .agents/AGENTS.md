@@ -10,7 +10,7 @@ A multi-environment AWS Infrastructure-as-Code platform built with **Terragrunt 
 
 ### Infrastructure Layout
 *   `/infrastructure-live/`: Contains environment-specific configurations (`terragrunt.hcl`) and shared category blueprints (`_envcommon/`).
-*   `/infrastructure-modules/`: Custom reusable Terraform modules. Pure `.tf`, no environment specifics, no provider blocks.
+*   `/iac-modules-repo/`: Custom reusable Terraform modules. Pure `.tf`, no environment specifics, no provider blocks.
 *   `/infrastructure-bootstrap/`: Day-0 **CloudFormation** stack `platform-bootstrap` (`cloudformation/account-bootstrap.yaml`: S3 state bucket, GitHub OIDC provider, `github-actions-plan` / `github-actions-apply` roles + permissions boundary) and the `bootstrap.sh` that deploys it. Run once by a human in the management account; member accounts get it through StackSets (PLAN 2.0b). Terragrunt never creates the state bucket: **no command may pass `--backend-bootstrap`**.
 *   `/policies/terraform/`: Rego-based OPA compliance rules enforced against Terraform plan JSON.
 *   `/.agents/`: Catalog, prompts, eval fixtures, SRE policies, and scripts for autonomous agents.
@@ -19,31 +19,31 @@ A multi-environment AWS Infrastructure-as-Code platform built with **Terragrunt 
 
 ## 2. Module Boundary: Tenant-Facing Capabilities vs. Internal Foundation
 
-Per **ADR 0011** and **ADR 0012**, all AWS Terraform previously located in `internal-developer-platform` is owned and published from this repository. Because `infrastructure-modules/` uses domain-first grouping (`data/`, `storage/`, `identity/`, `compute/`, `network/`, `governance/`), the architectural boundary between **tenant-facing capabilities** and **internal foundation stacks** is defined below:
+Per **ADR 0011** and **ADR 0012**, all AWS Terraform previously located in `internal-developer-platform` is owned and published from this repository. Because `iac-modules-repo/` uses domain-first grouping (`data/`, `storage/`, `identity/`, `compute/`, `network/`, `governance/`), the architectural boundary between **tenant-facing capabilities** and **internal foundation stacks** is defined below:
 
 ### 1. Tenant-Facing Capability Modules (Consumed via IDP Catalog)
 Consumed externally by the `ok-karthik/internal-developer-platform` catalog and scaffolder engines via Git URL + pinned semantic version tag:
 ```
-git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//infrastructure-modules/<category>/<module>?ref=<module>-vX.Y.Z
+git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//iac-modules-repo/<category>/<module>?ref=<module>-vX.Y.Z
 ```
 
 | Module Path | Capability Name | Public Release Tag | Contract & Guardrails |
 |---|---|---|---|
-| `infrastructure-modules/data/postgres` | `postgres` | `postgres-v1.0.0` | KMS encryption, Secrets Manager password rotation, private subnets only, automated backups |
-| `infrastructure-modules/storage/s3` | `s3` | `s3-v1.0.0` | S3 Block Public Access, AES256 server-side encryption, versioning enabled |
-| `infrastructure-modules/identity/workload-iam` | `iam` | `workload-iam-v1.0.0` | Documented interface stub for workload pod identity / IRSA role vending |
+| `iac-modules-repo/data/postgres` | `postgres` | `postgres-v1.0.0` | KMS encryption, Secrets Manager password rotation, private subnets only, automated backups |
+| `iac-modules-repo/storage/s3` | `s3` | `s3-v1.0.0` | S3 Block Public Access, AES256 server-side encryption, versioning enabled |
+| `iac-modules-repo/identity/workload-iam` | `iam` | `workload-iam-v1.0.0` | Documented interface stub for workload pod identity / IRSA role vending |
 
 ### 2. Platform Foundation Modules (Internal to this Repository)
 Applied and maintained directly by this platform via Terragrunt environments (`infrastructure-live/{dev,prod}/...` and `_global/`):
 
 | Module Path | Scope | Release Tag | Purpose |
 |---|---|---|---|
-| `infrastructure-modules/network/vpc` | Regional | `vpc-v1.0.0` | Multi-AZ VPC, flow logs, deny-all default NACL, private & database subnets |
-| `infrastructure-modules/compute/eks` | Regional | `eks-v1.0.0` | Hardened EKS, IMDSv2 (hop limit 1), private API endpoint, KMS rot., full audit logs |
-| `infrastructure-modules/identity/human-access` | Account | `human-access-v1.0.0` | IAM Identity Center permission sets + EKS Access Entries & View policies |
-| `infrastructure-modules/identity/workload-identity` | Cluster | `workload-identity-v1.0.0` | EKS Pod Identity associations + IRSA federated OIDC fallback |
-| `infrastructure-modules/governance/bootstrap-stacksets` | Global | `bootstrap-stacksets-v1.0.0` | Service-managed CloudFormation StackSets (one per GitHub Environment) that roll the Day-0 bootstrap template out to every member account in the targeted OUs. Applied by the owner from the management account |
-| `infrastructure-modules/governance/organization` | Global | `organization-v1.0.0` | AWS Organizations OUs, SCP guardrails, and ACK cross-account hub/spoke trust |
+| `iac-modules-repo/network/vpc` | Regional | `vpc-v1.0.0` | Multi-AZ VPC, flow logs, deny-all default NACL, private & database subnets |
+| `iac-modules-repo/compute/eks` | Regional | `eks-v1.0.0` | Hardened EKS, IMDSv2 (hop limit 1), private API endpoint, KMS rot., full audit logs |
+| `iac-modules-repo/identity/human-access` | Account | `human-access-v1.0.0` | IAM Identity Center permission sets + EKS Access Entries & View policies |
+| `iac-modules-repo/identity/workload-identity` | Cluster | `workload-identity-v1.0.0` | EKS Pod Identity associations + IRSA federated OIDC fallback |
+| `iac-modules-repo/governance/bootstrap-stacksets` | Global | `bootstrap-stacksets-v1.0.0` | Service-managed CloudFormation StackSets (one per GitHub Environment) that roll the Day-0 bootstrap template out to every member account in the targeted OUs. Applied by the owner from the management account |
+| `iac-modules-repo/governance/organization` | Global | `organization-v1.0.0` | AWS Organizations OUs, SCP guardrails, and ACK cross-account hub/spoke trust |
 
 ### 3. The Discovery Contract (SSM Parameter Store Service Catalog)
 Per **PLAN.md Phase 18.1**, tenant Terraform modules never hardcode AWS IDs (VPC IDs, subnets, OIDC ARNs, cluster names). On every foundation stack apply, standard parameters are published to AWS SSM Parameter Store:
@@ -71,7 +71,7 @@ All tooling is baked into the toolchain container (`.github/docker/Dockerfile`);
 ./infrastructure-live/scripts/smoke-test.sh
 
 # Formatting — MUST cover all four roots or CI fails (see static-analysis action)
-terraform fmt -recursive infrastructure-modules infrastructure-live policies
+terraform fmt -recursive iac-modules-repo infrastructure-live policies
 terragrunt hcl fmt
 
 # Lint / security / policy
@@ -99,11 +99,11 @@ pre-commit install
 
 The core pattern is **strict separation of "blueprint" from "live config"**, kept 100% DRY through a layered `include`/`read_terragrunt_config` chain:
 
-1. **`infrastructure-modules/`** — generic, reusable Terraform (`network/vpc`, `compute/eks`). Pure `.tf`, no environment specifics. Security hardening lives *here* (VPC deny-all NACLs, EKS KMS encryption), not just in CI.
+1. **`iac-modules-repo/`** — generic, reusable Terraform (`network/vpc`, `compute/eks`). Pure `.tf`, no environment specifics. Security hardening lives *here* (VPC deny-all NACLs, EKS KMS encryption), not just in CI.
 
 2. **`infrastructure-live/root.hcl`** — the global root included by every leaf. It **generates `provider.tf` and `backend.tf`** at runtime (`generate` blocks) and injects `default_tags` (`Environment`, `Service`, `Project`, `ManagedBy`, `Account`). The S3 backend bucket name and `default_tags` are computed here — do not add provider/backend blocks by hand in modules.
 
-3. **`infrastructure-live/_envcommon/<category>/<module>.hcl`** — the shared blueprint per module type. Sets `terraform.source` (pointing into `infrastructure-modules/` or registry `tfr://`), declares `dependency` blocks (with `mock_outputs` for plan-time), and default `inputs`. Cross-module wiring (EKS → VPC subnets) lives here.
+3. **`infrastructure-live/_envcommon/<category>/<module>.hcl`** — the shared blueprint per module type. Sets `terraform.source` (pointing into `iac-modules-repo/` or registry `tfr://`), declares `dependency` blocks (with `mock_outputs` for plan-time), and default `inputs`. Cross-module wiring (EKS → VPC subnets) lives here.
 
 4. **Data files loaded via `find_in_parent_folders`:**
    - `<env>/account.hcl` — `aws_account_id`, `account_name`
@@ -147,7 +147,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 - **EKS API endpoint is private by default.** `env.hcl` `api_allowed_cidrs` (empty by default) turns on the public endpoint and restricts it to those CIDRs; the module rejects public access with no CIDRs.
 - **Never hand-write `provider.tf` or `backend.tf`** — they are generated by `root.hcl`. Editing them has no effect (`if_exists = "overwrite_terragrunt"`).
 - When adding a module, create both the blueprint (`_envcommon/.../<m>.hcl` → `terraform.source`) and the leaf `terragrunt.hcl` in each env; don't inline module logic into a live dir.
-- `fmt` must pass across `infrastructure-modules`, `infrastructure-live` **and** `policies` — a stray unformatted `.tf`/`.hcl` in any of the three fails Gate 1. The CloudFormation template in `infrastructure-bootstrap/cloudformation/` is checked by `cfn-lint` instead.
+- `fmt` must pass across `iac-modules-repo`, `infrastructure-live` **and** `policies` — a stray unformatted `.tf`/`.hcl` in any of the three fails Gate 1. The CloudFormation template in `infrastructure-bootstrap/cloudformation/` is checked by `cfn-lint` instead.
 - Rego policies target Rego v1 (`import rego.v1`) and package `main`.
 - Cost / resilience knobs (spot/scaling, `enable_nat_gateway`, `single_nat_gateway`) live in `env.hcl`; keep dev cheap (spot, min sizes) — the README's FinOps numbers depend on it.
 

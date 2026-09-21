@@ -1,7 +1,7 @@
 # Common configuration for AWS Organizations governance across all environments.
 
 terraform {
-  source = "${get_repo_root()}/infrastructure-modules/governance/organization"
+  source = "${get_repo_root()}/iac-modules-repo/governance/organization"
 }
 
 locals {

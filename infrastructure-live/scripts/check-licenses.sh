@@ -7,7 +7,7 @@ set -e
 echo "⚖️ Checking module licenses..."
 
 FAIL=0
-for dir in infrastructure-modules/*/; do
+for dir in iac-modules-repo/*/; do
     if [ ! -f "${dir}LICENSE" ] && [ ! -f "${dir}LICENSE.md" ]; then
         echo "❌ Missing LICENSE in ${dir}"
         FAIL=1
