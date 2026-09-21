@@ -23,9 +23,9 @@ inputs = {
   public_subnets   = ["10.0.101.0/24"]
   database_subnets = ["10.0.201.0/24", "10.0.202.0/24", "10.0.203.0/24"]
 
-  # --- COST OPTIMIZATION: Dynamic NAT ---
+  # --- COST OPTIMIZATION / RESILIENCE: NAT settings come from env.hcl ---
   enable_nat_gateway = local.env_vars.locals.enable_nat_gateway
-  single_nat_gateway = true
+  single_nat_gateway = local.env_vars.locals.single_nat_gateway
 
   # Discovery contract
   env                    = local.env
@@ -33,7 +33,6 @@ inputs = {
   publish_ssm_parameters = true
 
   tags = {
-    Project     = "Infrastructure-Automation"
     Environment = title(local.env)
   }
 }

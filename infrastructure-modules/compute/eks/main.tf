@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.9.0" # cross-variable validation (api_allowed_cidrs) needs 1.9+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -19,10 +19,12 @@ module "eks" {
   subnet_ids = var.subnet_ids
 
   # --- HARDENING: Control Plane Endpoint Access ---
-  # Nodes always reach the API privately; public access is configurable with CIDR restrictions.
+  # Nodes always reach the API privately. Public access is off by default and, when enabled,
+  # must come with an explicit CIDR allow-list (enforced by a validation in variables.tf).
+  # There is deliberately no "0.0.0.0/0" fallback: an empty list must never mean "open to all".
   endpoint_private_access      = true
   endpoint_public_access       = var.cluster_endpoint_public_access
-  endpoint_public_access_cidrs = length(var.api_allowed_cidrs) > 0 ? var.api_allowed_cidrs : (var.cluster_endpoint_public_access ? ["0.0.0.0/0"] : null)
+  endpoint_public_access_cidrs = var.cluster_endpoint_public_access ? var.api_allowed_cidrs : null
 
   # --- GOVERNANCE: Standard Node Groups ---
   eks_managed_node_groups = {
@@ -53,6 +55,7 @@ module "eks" {
           ebs = {
             volume_size           = 20
             volume_type           = "gp3"
+            encrypted             = true # enforced by policies/terraform/require_encryption.rego
             delete_on_termination = true
           }
         }

@@ -16,8 +16,10 @@ inputs = {
   region                 = local.aws_region
   publish_ssm_parameters = true
 
+  # Region allow-list for the region SCP. Add a region here before workloads can use it.
+  allowed_regions = ["eu-central-1"]
+
   tags = {
-    Project     = "Infrastructure-Automation"
     Environment = title(local.env)
   }
 }

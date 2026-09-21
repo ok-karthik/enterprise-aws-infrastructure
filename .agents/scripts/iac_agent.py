@@ -609,7 +609,7 @@ def validation_ladder(
         "terraform fmt",
         [
             "terraform", "fmt", "-check", "-recursive",
-            "infrastructure-modules", "infrastructure-live", "infrastructure-bootstrap", "policies",
+            "infrastructure-modules", "infrastructure-live", "policies",
         ],
         REPO_ROOT,
     )

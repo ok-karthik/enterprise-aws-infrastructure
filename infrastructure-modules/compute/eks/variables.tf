@@ -68,15 +68,20 @@ variable "node_security_group_tags" {
 }
 
 variable "cluster_endpoint_public_access" {
-  description = "Indicates whether or not the Amazon EKS public API server endpoint is enabled"
+  description = "Whether the Amazon EKS public API server endpoint is enabled. Defaults to false (private endpoint only). When true, api_allowed_cidrs must be non-empty."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "api_allowed_cidrs" {
-  description = "List of CIDR blocks that can access the Amazon EKS public API server endpoint"
+  description = "CIDR blocks allowed to reach the public EKS API endpoint. Required (non-empty) when cluster_endpoint_public_access is true; ignored otherwise."
   type        = list(string)
   default     = []
+
+  validation {
+    condition     = !var.cluster_endpoint_public_access || length(var.api_allowed_cidrs) > 0
+    error_message = "cluster_endpoint_public_access is true but api_allowed_cidrs is empty. Provide explicit CIDRs (never fall back to 0.0.0.0/0) or set cluster_endpoint_public_access = false."
+  }
 }
 
 variable "env" {

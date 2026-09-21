@@ -10,6 +10,8 @@ Mandatory tags are enforced at the Plan JSON level via OPA (Open Policy Agent). 
 | `Environment` | Yes | Cost allocation and environment isolation (Dev/Prod) |
 | `Project` | Yes | Project grouping for unified billing |
 | `Service` | Yes | Identifies the specific functional component |
+| `Owner` | Yes | Team that owns the resource (from `account.hcl`) |
+| `DataClassification` | Yes | `public` / `internal` / `confidential` (from `account.hcl`) |
 | `ManagedBy` | Yes | Set to `Terragrunt` to identify IaC resources |
 | `CostCenter` | Optional | Internal department billing |
 
@@ -17,7 +19,8 @@ Mandatory tags are enforced at the Plan JSON level via OPA (Open Policy Agent). 
 
 ### Identity & Access (IAM)
 - **Zero-Key Pipeline**: No AWS IAM Users or static Access Keys are used. All CI/CD deployments use short-lived **OIDC tokens** via GitHub Actions.
-- **Least Privilege**: Deployment roles are strictly scoped to the specific AWS region and account required for the module.
+- **Least Privilege**: CI uses a read-only `github-actions-plan` role (PRs, `main`, drift) and a separate `github-actions-apply` role that only the `dev` / `prod` GitHub Environments can assume, capped by a permissions boundary. Humans get `PlatformEngineer` (power user, IAM limited to `role/platform/*`); `BreakGlassAdmin` (1-hour sessions) exists but is not assigned to anyone by default.
+- **Account guard**: stacks refuse to run against any account other than the one in `account.hcl`.
 
 ### Encryption
 - **At Rest**: KMS encryption is mandatory for all S3 buckets, RDS instances, and EBS volumes.

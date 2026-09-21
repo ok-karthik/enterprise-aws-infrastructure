@@ -8,12 +8,19 @@ repos:
         args: ['--unsafe']
       - id: check-merge-conflict
 
+  - repo: https://github.com/aws-cloudformation/cfn-lint
+    rev: v1.57.0
+    hooks:
+      - id: cfn-lint
+        name: ☁️ CloudFormation Lint (cfn-lint)
+        files: ^infrastructure-bootstrap/cloudformation/.*\.ya?ml$
+
   - repo: local
     hooks:
       - id: terraform-fmt
         name: 🎨 Terraform & Terragrunt Format
         # Automatically fixes formatting before the smoke test runs
-        entry: bash -c 'terraform fmt -recursive infrastructure-modules infrastructure-live infrastructure-bootstrap policies && terragrunt hcl fmt'
+        entry: bash -c 'terraform fmt -recursive infrastructure-modules infrastructure-live policies && terragrunt hcl fmt'
         language: system
         pass_filenames: false
         always_run: true
@@ -25,6 +32,11 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        # Disabled on commit: it runs `terragrunt init` and needs real AWS credentials for the
+        # account in account.hcl, which do not exist until the PLAN.md 2.0-2.6 setup is done.
+        # TODO(owner): delete the next line once that setup is finished.
+        # Run it by hand meanwhile: pre-commit run platform-smoke-test --hook-stage manual
+        stages: [manual]
 
       - id: trivy-security-scan
         name: 🛡️ Trivy Security Scan (HCL)

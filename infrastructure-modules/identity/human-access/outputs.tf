@@ -1,6 +1,11 @@
-output "platform_admin_permission_set_arn" {
-  description = "The ARN of the PlatformAdmin permission set"
-  value       = try(aws_ssoadmin_permission_set.platform_admin[0].arn, null)
+output "platform_engineer_permission_set_arn" {
+  description = "The ARN of the PlatformEngineer permission set"
+  value       = try(aws_ssoadmin_permission_set.platform_engineer[0].arn, null)
+}
+
+output "break_glass_permission_set_arn" {
+  description = "The ARN of the BreakGlassAdmin permission set (not assigned to anyone by this module)"
+  value       = try(aws_ssoadmin_permission_set.break_glass[0].arn, null)
 }
 
 output "developer_permission_set_arn" {

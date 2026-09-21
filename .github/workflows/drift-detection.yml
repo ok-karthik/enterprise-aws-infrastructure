@@ -39,7 +39,7 @@ jobs:
         uses: ./.github/actions/setup-platform
         with:
           aws_region: ${{ env.AWS_REGION }}
-          aws_role_arn: ${{ matrix.environment == 'prod' && vars.AWS_PROD_ROLE_ARN || vars.AWS_DEV_ROLE_ARN }}
+          aws_role_arn: ${{ matrix.environment == 'prod' && vars.AWS_PROD_PLAN_ROLE_ARN || vars.AWS_DEV_PLAN_ROLE_ARN }}
 
       - name: "Check for Infrastructure Drift"
         id: plan

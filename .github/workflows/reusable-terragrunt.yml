@@ -9,7 +9,8 @@ on:
       working_directory:
         required: true
         type: string
-      aws_role_arn:
+      aws_plan_role_arn:
+        description: 'Read-only github-actions-plan role. Reusable plan/governance jobs never get the apply role.'
         required: true
         type: string
     secrets:
@@ -42,7 +43,7 @@ jobs:
         uses: ./.github/actions/setup-platform
         with:
           aws_region: ${{ vars.AWS_REGION }}
-          aws_role_arn: ${{ inputs.aws_role_arn }}
+          aws_role_arn: ${{ inputs.aws_plan_role_arn }}
 
       - name: "Disaster Recovery (Smoke Test)"
         run: ./infrastructure-live/scripts/smoke-test.sh

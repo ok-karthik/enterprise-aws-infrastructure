@@ -10,7 +10,6 @@ runs:
         echo "🎨 Checking HCL formatting..."
         terraform fmt -check -recursive infrastructure-modules
         terraform fmt -check -recursive infrastructure-live
-        terraform fmt -check -recursive infrastructure-bootstrap
         terraform fmt -check -recursive policies
 
     - name: Terraform Validate
@@ -18,6 +17,27 @@ runs:
       run: |
         echo "✅ Validating Terraform modules..."
         find infrastructure-modules -maxdepth 2 -name "main.tf" -exec sh -c 'cd $(dirname {}) && terraform init -backend=false && terraform validate' \;
+
+    - name: Unit Tests (Rego policies + module guardrails)
+      shell: bash
+      run: |
+        echo "🧪 Running policy unit tests..."
+        conftest verify --policy policies/terraform
+
+        echo "🧪 Running module unit tests (mock provider, no AWS credentials)..."
+        for tests_dir in infrastructure-modules/*/*/tests; do
+          [ -d "$tests_dir" ] || continue
+          module_dir=$(dirname "$tests_dir")
+          echo "→ $module_dir"
+          (cd "$module_dir" && terraform init -backend=false -input=false >/dev/null && terraform test)
+        done
+
+    - name: CloudFormation Lint (Day-0 bootstrap template)
+      shell: bash
+      run: |
+        echo "☁️ Linting CloudFormation templates..."
+        pip3 install --quiet --no-cache-dir --break-system-packages cfn-lint
+        cfn-lint infrastructure-bootstrap/cloudformation/*.yaml
 
     - name: Run TFLint
       shell: bash

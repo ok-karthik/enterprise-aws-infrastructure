@@ -8,12 +8,13 @@ terraform {
 }
 
 locals {
-  env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
-  env      = local.env_vars.locals.env
+  env_vars     = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+  account_vars = read_terragrunt_config(find_in_parent_folders("account.hcl"))
+  env          = local.env_vars.locals.env
 }
 
 inputs = {
-  bucket = "__BUCKET_SLUG__-${local.env}-${get_aws_account_id()}"
+  bucket = "__BUCKET_SLUG__-${local.env}-${local.account_vars.locals.aws_account_id}"
 
   versioning = {
     enabled = true
@@ -36,6 +37,5 @@ inputs = {
   tags = {
     Environment = title(local.env)
     Service     = "__SERVICE_NAME__"
-    Project     = "Infrastructure-Automation"
   }
 }

@@ -35,13 +35,17 @@ inputs = {
   max_size     = 3
   desired_size = local.env_vars.locals.desired_size
 
+  # --- SECURITY: API endpoint is private unless env.hcl lists allowed CIDRs ---
+  # Fail closed: an empty api_allowed_cidrs list keeps the public endpoint disabled.
+  cluster_endpoint_public_access = length(local.env_vars.locals.api_allowed_cidrs) > 0
+  api_allowed_cidrs              = local.env_vars.locals.api_allowed_cidrs
+
   # Discovery contract
   env                    = local.env
   region                 = local.aws_region
   publish_ssm_parameters = true
 
   tags = {
-    Project     = "Infrastructure-Automation"
     Environment = title(local.env)
   }
 }

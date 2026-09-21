@@ -1,0 +1,330 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Day-0 bootstrap for one AWS account: the Terraform state bucket, the GitHub OIDC provider,
+  and the two CI roles (github-actions-plan: read-only, github-actions-apply: admin capped by a
+  permissions boundary). The management account deploys this as a plain stack
+  (platform-bootstrap); member accounts get it through StackSets (PLAN 2.0b).
+
+# No tags here on purpose: they come from the stack (--tags) and propagate to every resource.
+# No Exports either: an export locks the exported resource against changes.
+
+Parameters:
+  GitHubRepo:
+    Type: String
+    Default: ok-karthik/enterprise-aws-infrastructure
+    AllowedPattern: '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
+    Description: GitHub repository (owner/name) allowed to assume the CI roles.
+  GitHubEnvironment:
+    Type: String
+    AllowedPattern: '^[a-z0-9-]+$'
+    Description: >-
+      GitHub Environment whose jobs may assume github-actions-apply in this account
+      (management, dev, prod, core, ...). The apply role trusts exactly this one.
+  AllowOrganizationsAdmin:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: >-
+      "true" only in the management account, where the apply role has to manage AWS
+      Organizations. Everywhere else the boundary denies organizations:* and account:*.
+  NoncurrentVersionDays:
+    Type: Number
+    Default: 90
+    MinValue: 30
+    Description: Days before old (noncurrent) versions of state files are deleted.
+
+Conditions:
+  DenyOrganizations: !Equals [!Ref AllowOrganizationsAdmin, "false"]
+
+Resources:
+  # ---------------------------------------------------------------------------
+  # Terraform state bucket. Retained if the stack is ever deleted.
+  # ---------------------------------------------------------------------------
+  StateBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_145
+            comment: >-
+              SSE-S3 (AES256) for now. A customer-managed KMS key comes with PLAN 2.2, once the
+              key and its policy can live in the account baseline.
+          - id: CKV_AWS_18
+            comment: >-
+              Access logging needs a log-archive bucket, which does not exist yet (PLAN 4.1).
+              Added in PLAN 2.2. State access is already recorded by CloudTrail.
+    Properties:
+      BucketName: !Sub "tg-state-${AWS::AccountId}-${AWS::Region}"
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-noncurrent-state-versions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: !Ref NoncurrentVersionDays
+          - Id: abort-incomplete-multipart-uploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+
+  StateBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StateBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt StateBucket.Arn
+              - !Sub "${StateBucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+          - Sid: DenyOldTls
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt StateBucket.Arn
+              - !Sub "${StateBucket.Arn}/*"
+            Condition:
+              NumericLessThan:
+                "s3:TlsVersion": 1.2
+
+  # ---------------------------------------------------------------------------
+  # GitHub OIDC provider. An account can have only ONE provider for this URL, so the stack
+  # fails if one already exists (delete it or import it first).
+  # ThumbprintList is left out on purpose: it is optional in CloudFormation, and AWS validates
+  # GitHub's certificate against its trusted CA library instead of a pinned thumbprint.
+  # ---------------------------------------------------------------------------
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+        - 1c5876bd527751ce6668e91661cb0d2a4ddf9514
+
+  # ---------------------------------------------------------------------------
+  # Permissions boundary for github-actions-apply. The role carries AdministratorAccess (PLAN 3.4
+  # narrows that), but a boundary caps what it can actually do. Names and ARNs are built with
+  # !Sub from fixed names, never !Ref to a resource that depends on this policy (circular).
+  # ---------------------------------------------------------------------------
+  ApplyBoundary:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: github-actions-apply-boundary
+      Description: >-
+        Permissions boundary for github-actions-apply: blocks Identity Center, CloudTrail and
+        CI-identity changes, protects this bootstrap, and (outside management) blocks Organizations.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowEverythingElse
+            Effect: Allow
+            Action: "*"
+            Resource: "*"
+          # Only in accounts where AllowOrganizationsAdmin is "false" (everything except management).
+          - !If
+              - DenyOrganizations
+              - Sid: DenyOrganizationsAndAccount
+                Effect: Deny
+                Action:
+                  - "organizations:*"
+                  - "account:*"
+                Resource: "*"
+              - !Ref AWS::NoValue
+          # Always on. (PLAN 3.1 must add an AllowIdentityCenterAdmin switch before Identity Center
+          # is applied from CI.)
+          - Sid: DenyIdentityCenter
+            Effect: Deny
+            Action:
+              - "sso:*"
+              - "sso-directory:*"
+              - "identitystore:*"
+            Resource: "*"
+          - Sid: DenyOrgDestruction
+            Effect: Deny
+            Action:
+              - "organizations:DeleteOrganization"
+              - "organizations:LeaveOrganization"
+              - "organizations:CloseAccount"
+              - "organizations:RemoveAccountFromOrganization"
+            Resource: "*"
+          - Sid: DenyCloudTrailChanges
+            Effect: Deny
+            Action:
+              - "cloudtrail:Create*"
+              - "cloudtrail:Delete*"
+              - "cloudtrail:Update*"
+              - "cloudtrail:Put*"
+              - "cloudtrail:Stop*"
+              - "cloudtrail:RegisterOrganizationDelegatedAdmin"
+              - "cloudtrail:DeregisterOrganizationDelegatedAdmin"
+            Resource: "*"
+          - Sid: DenyEditingThisBoundary
+            Effect: Deny
+            Action:
+              - "iam:CreatePolicyVersion"
+              - "iam:DeletePolicy"
+              - "iam:DeletePolicyVersion"
+              - "iam:SetDefaultPolicyVersion"
+            Resource: !Sub "arn:aws:iam::${AWS::AccountId}:policy/github-actions-apply-boundary"
+          - Sid: DenyEditingCiRoles
+            Effect: Deny
+            Action:
+              - "iam:AttachRolePolicy"
+              - "iam:DeleteRole"
+              - "iam:DeleteRolePermissionsBoundary"
+              - "iam:DeleteRolePolicy"
+              - "iam:DetachRolePolicy"
+              - "iam:PutRolePermissionsBoundary"
+              - "iam:PutRolePolicy"
+              - "iam:UpdateAssumeRolePolicy"
+              - "iam:UpdateRole"
+            Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/github-actions-*"
+          - Sid: DenyEditingGithubOidcProvider
+            Effect: Deny
+            Action:
+              - "iam:AddClientIDToOpenIDConnectProvider"
+              - "iam:DeleteOpenIDConnectProvider"
+              - "iam:RemoveClientIDFromOpenIDConnectProvider"
+              - "iam:UpdateOpenIDConnectProviderThumbprint"
+            Resource: !Sub "arn:aws:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com"
+          - Sid: ProtectStateBucket
+            Effect: Deny
+            Action:
+              - "s3:DeleteBucket"
+              - "s3:PutBucketPolicy"
+              - "s3:DeleteBucketPolicy"
+              - "s3:PutBucketVersioning"
+              - "s3:PutEncryptionConfiguration"
+              - "s3:PutBucketPublicAccessBlock"
+              - "s3:PutLifecycleConfiguration"
+            Resource: !Sub "arn:aws:s3:::tg-state-${AWS::AccountId}-${AWS::Region}"
+          - Sid: ProtectBootstrapStack
+            Effect: Deny
+            Action:
+              - "cloudformation:DeleteStack"
+              - "cloudformation:UpdateStack"
+              - "cloudformation:UpdateTerminationProtection"
+              - "cloudformation:SetStackPolicy"
+              - "cloudformation:CreateChangeSet"
+              - "cloudformation:ExecuteChangeSet"
+            Resource:
+              - !Sub "arn:aws:cloudformation:*:${AWS::AccountId}:stack/platform-bootstrap/*"
+              - !Sub "arn:aws:cloudformation:*:${AWS::AccountId}:stack/StackSet-bootstrap-*"
+
+  # ---------------------------------------------------------------------------
+  # github-actions-plan: plan / governance / drift jobs (read-only).
+  # ---------------------------------------------------------------------------
+  PlanRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: github-actions-plan
+      Description: "GitHub Actions: terragrunt plan (read-only)"
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GitHubOidcProvider
+            Action:
+              - "sts:AssumeRoleWithWebIdentity"
+              - "sts:TagSession"
+            Condition:
+              StringEquals:
+                "token.actions.githubusercontent.com:aud": sts.amazonaws.com
+              StringLike:
+                "token.actions.githubusercontent.com:sub":
+                  - !Sub "repo:${GitHubRepo}:*"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+      Policies:
+        - PolicyName: state-bucket-access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: StateBucketList
+                Effect: Allow
+                Action:
+                  - "s3:ListBucket"
+                  - "s3:GetBucketLocation"
+                Resource: !GetAtt StateBucket.Arn
+              - Sid: StateRead
+                Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                  - "s3:GetObjectVersion"
+                Resource: !Sub "${StateBucket.Arn}/*"
+              # use_lockfile = true: Terraform creates and deletes <key>.tflock next to the state
+              # file. Nothing else in the bucket is writable, so a plan cannot change state.
+              - Sid: StateLockWrite
+                Effect: Allow
+                Action:
+                  - "s3:PutObject"
+                  - "s3:DeleteObject"
+                Resource: !Sub "${StateBucket.Arn}/*.tflock"
+
+  # ---------------------------------------------------------------------------
+  # github-actions-apply: apply / destroy jobs. Trusts exactly one GitHub Environment.
+  # ---------------------------------------------------------------------------
+  ApplyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: github-actions-apply
+      Description: "GitHub Actions: terragrunt apply/destroy (one GitHub Environment only)"
+      MaxSessionDuration: 3600
+      PermissionsBoundary: !Ref ApplyBoundary
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GitHubOidcProvider
+            Action:
+              - "sts:AssumeRoleWithWebIdentity"
+              - "sts:TagSession"
+            Condition:
+              StringEquals:
+                "token.actions.githubusercontent.com:aud": sts.amazonaws.com
+                "token.actions.githubusercontent.com:sub": !Sub "repo:${GitHubRepo}:environment:${GitHubEnvironment}"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+Outputs:
+  StateBucketName:
+    Description: Terraform state bucket for this account and region
+    Value: !Ref StateBucket
+  PlanRoleArn:
+    Description: Set as AWS_<ENV>_PLAN_ROLE_ARN
+    Value: !GetAtt PlanRole.Arn
+  ApplyRoleArn:
+    Description: Set as AWS_<ENV>_APPLY_ROLE_ARN
+    Value: !GetAtt ApplyRole.Arn
+  OidcProviderArn:
+    Description: GitHub OIDC provider in this account
+    Value: !Ref GitHubOidcProvider
