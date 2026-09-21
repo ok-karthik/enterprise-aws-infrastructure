@@ -9,5 +9,6 @@ locals {
     account_factory     = "account-factory-v1.0.0"
     account_baseline    = "account-baseline-v1.0.0"
     budgets             = "budgets-v1.0.0"
+    identity_center     = "identity-center-v1.0.0"
   }
 }
