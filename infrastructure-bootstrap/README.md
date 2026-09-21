@@ -1,65 +1,67 @@
 # 🚀 Platform Bootstrap Reference
 
-This directory contains the "Pre-CI/CD" infrastructure required to stand up the foundational trust and state management layers. These resources must be applied manually once to enable the automated pipelines.
+This directory holds the "pre-CI/CD" infrastructure that everything else stands on: the S3 state bucket, the GitHub OIDC trust, and the IAM roles the pipeline assumes. It is applied **once, by a human**, with admin credentials for the target account. After that, CI takes over with short-lived OIDC credentials and no stored keys.
 
-## 🏗️ Bootstrapping Order
+## What it creates
 
-To initialize the enterprise platform, you can use the **guided automation script** or follow the manual steps below:
+| Stack (`dev/_global/security/…`) | What | Why |
+|---|---|---|
+| *(state bucket)* | `tg-state-<account-id>-<alias>-<region>` | Created by Terragrunt (`--backend-bootstrap`) on the first run. Versioned, encrypted, public access blocked |
+| `github-oidc-provider` | IAM OIDC provider for `token.actions.githubusercontent.com` | Lets GitHub jobs exchange their token for AWS credentials |
+| `github-actions-boundary` | `github-actions-apply-boundary` permissions boundary | Caps the apply role: no organizations, Identity Center or CloudTrail changes, no edits to the CI roles, the OIDC provider or the boundary itself |
+| `github-actions-plan` | Role for plan / governance / drift jobs | `ReadOnlyAccess`; on the state bucket it can read state and write/delete `*.tflock` lock files only. Trusts `pull_request` and `refs/heads/main` |
+| `github-actions-apply` | Role for apply / destroy jobs | `AdministratorAccess` **with the boundary**. Trusts only the `dev` and `prod` GitHub Environments, so a branch or PR can never assume it |
 
-### ⚡ Guided Bootstrap (Recommended)
-We provide a script that automates the deployment and provides direct instructions for GitHub:
+## Guided bootstrap (recommended)
+
 ```bash
-cd infrastructure-bootstrap
-chmod +x bootstrap.sh
-./bootstrap.sh
+aws sso login                      # or any way of getting admin credentials for the target account
+./infrastructure-bootstrap/bootstrap.sh
 ```
 
----
+The script:
 
-### 📖 Manual Bootstrap Steps
-If you prefer to run things manually, deploy these components in order:
+1. **Checks the account.** It compares the account your credentials belong to with `aws_account_id` in `dev/account.hcl` and stops if they differ. Nothing is created in the wrong account.
+2. Shows the plan (this also creates the state bucket on the first run) and **asks before applying**. `--yes` skips the prompt.
+3. Applies everything in dependency order.
+4. Prints the exact `gh variable set` / `gh api` commands for the next step. It does not run them.
 
-### 1. OIDC Identity Trust (Global)
-- **Purpose**: Establishes OIDC trust between AWS and GitHub. This allows the CI/CD pipeline to assume IAM roles without using long-lived Access Keys.
-- **Action**:
-  ```bash
-  cd infrastructure-bootstrap/dev/_global/security/github-oidc-provider
-  terragrunt apply
-  ```
+## Wire GitHub to the roles
 
-### 2. CI/CD Permission Layer
-- **Purpose**: Creates the IAM Role assumed by the GitHub Actions runners.
-- **Action**:
-  ```bash
-  cd infrastructure-bootstrap/dev/_global/security/github-oidc-role
-  terragrunt apply
-  ```
+Repository variables (Settings → Secrets and variables → Actions → **Variables**):
 
-### 3. GitHub Action Variables (CRITICAL)
-Once the infrastructure is applied, you must register the Role ARNs in GitHub to enable the automated pipeline.
+| Variable | Value |
+|---|---|
+| `AWS_REGION` | primary region, e.g. `eu-central-1` |
+| `AWS_DEV_PLAN_ROLE_ARN`, `AWS_PROD_PLAN_ROLE_ARN` | `github-actions-plan` ARN |
+| `AWS_DEV_APPLY_ROLE_ARN`, `AWS_PROD_APPLY_ROLE_ARN` | `github-actions-apply` ARN |
 
-1.  Navigate to your repository on GitHub.
-2.  Go to **Settings** -> **Actions** -> **Variables** -> **Repository**.
-3.  Add the following **Repository Variables**:
-    *   `AWS_DEV_ROLE_ARN`: The ARN of the role created in Step 2.
-    *   `AWS_PROD_ROLE_ARN`: (If applicable) The ARN for the production role.
-    *   `AWS_REGION`: Your primary deployment region (e.g., `eu-central-1`).
+Dev and prod share one AWS account today, so they point at the same two roles. Create the `dev` and `prod` **GitHub Environments** (Settings → Environments) and add yourself as a required reviewer on `prod`: that is the manual approval gate, and the apply role only trusts jobs running in those environments.
 
----
+We use repository *variables* rather than environment variables for the ARNs so `terragrunt plan` can run on pull requests without waiting on an environment approval.
 
-## 🔐 Why Repository Variables?
-We use **Repository Variables** instead of Environment Variables for the Role ARNs because:
-1.  **Automatic Planning**: It allows `terragrunt plan` to run automatically on Pull Requests without being blocked by environment approval gates.
-2.  **Scalability**: New environments can be added by simply adding a new variable (e.g., `AWS_STAGING_ROLE_ARN`) without modifying workflow YAML.
+## Manual steps (if you don't use the script)
 
----
+```bash
+cd infrastructure-bootstrap/dev
+terragrunt run --all plan  --backend-bootstrap     # review
+terragrunt run --all apply --backend-bootstrap
+```
 
-## 🛠️ Toolchain & CI/CD Architecture
-The CI/CD pipeline relies on a custom, pre-packaged Docker container (`ghcr.io/ok-karthik/infrastructure-toolchain`) to ensure absolute consistency across all runs.
-*   **Node.js 24 Standard**: All internal GitHub Actions (`checkout`, `upload-artifact`, etc.) have been modernized to use Node.js 24, permanently resolving runtime deprecation warnings.
-*   **Runner Compatibility**: To prevent `EACCES` (Permission Denied) errors when the GitHub runner writes to the workspace (`/__w/_temp`), the container runs with explicit root privileges (`options: --user root` in the workflow) while the underlying image is highly optimized with `--no-install-recommends`.
+Check first that `aws sts get-caller-identity` shows the account in `dev/account.hcl`.
 
----
+## Changing the account
 
-## 🔐 Security Note
-The OIDC trust is strictly scoped to this specific GitHub repository. This follows the **Principle of Least Privilege**, ensuring that only authorized CI/CD runs can modify your production infrastructure.
+The account is declared in **`account.hcl`** (`infrastructure-bootstrap/dev/`, `infrastructure-live/{dev,prod,_global}/`). `root.hcl` reads it for `allowed_account_ids` and for the state bucket name, so a mismatch with your credentials fails immediately instead of quietly targeting whichever account you happen to be logged in to.
+
+Moving to a new account means: change `aws_account_id` in those files, log in to the new account, run `bootstrap.sh`, and update the repository variables. The new account gets a fresh state bucket, so there is nothing to migrate. Resources in the old account are untouched; remove them separately if you no longer want them.
+
+## Migrating from the old single admin role
+
+Earlier versions created one role, `github-actions-oidc-role`, that any branch or PR could assume with `AdministratorAccess`, and the pipeline read `AWS_DEV_ROLE_ARN` / `AWS_PROD_ROLE_ARN`. To retire it in an account that has it: run the bootstrap for the two new roles, set the four new variables, merge, then delete the old role (and the two old variables). The old stack no longer exists in this repo, so remove the role from the console, or with `terragrunt destroy` from a checkout of the previous commit.
+
+## 🛠️ Toolchain & CI/CD architecture
+
+The pipeline runs in a pre-packaged container (`ghcr.io/ok-karthik/infrastructure-toolchain`) so tool versions never drift.
+* **Node.js 24**: all GitHub Actions used (`checkout`, `upload-artifact`, …) run on Node 24.
+* **Runner compatibility**: the container runs as root (`options: --user root`) so the runner can write to the workspace (`/__w/_temp`) without `EACCES` errors.

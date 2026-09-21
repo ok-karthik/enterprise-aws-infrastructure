@@ -70,7 +70,7 @@ jobs:
     with:
       environment: 'dev'
       working_directory: 'infrastructure-live/dev'
-      aws_role_arn: ${{ vars.AWS_DEV_ROLE_ARN }}
+      aws_plan_role_arn: ${{ vars.AWS_DEV_PLAN_ROLE_ARN }}
     secrets:
       INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
 
@@ -80,7 +80,7 @@ jobs:
     with:
       environment: 'prod'
       working_directory: 'infrastructure-live/prod'
-      aws_role_arn: ${{ vars.AWS_PROD_ROLE_ARN }}
+      aws_plan_role_arn: ${{ vars.AWS_PROD_PLAN_ROLE_ARN }}
     secrets:
       INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
 
@@ -108,7 +108,7 @@ jobs:
         uses: ./.github/actions/setup-platform
         with:
           aws_region: ${{ env.AWS_REGION }}
-          aws_role_arn: ${{ vars.AWS_DEV_ROLE_ARN }}
+          aws_role_arn: ${{ vars.AWS_DEV_APPLY_ROLE_ARN }}
 
       - name: "Terragrunt Apply"
         run: terragrunt run --all apply --non-interactive -auto-approve
@@ -135,7 +135,7 @@ jobs:
         uses: ./.github/actions/setup-platform
         with:
           aws_region: ${{ env.AWS_REGION }}
-          aws_role_arn: ${{ vars.AWS_PROD_ROLE_ARN }}
+          aws_role_arn: ${{ vars.AWS_PROD_APPLY_ROLE_ARN }}
 
       - name: "Terragrunt Apply"
         run: terragrunt run --all apply --non-interactive -auto-approve

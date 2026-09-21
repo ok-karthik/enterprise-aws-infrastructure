@@ -15,7 +15,7 @@ AVD-AWS-0041
 AWS-0041
 
 # --- Global / Upstream Noise ---
-# AVD-AWS-0178: AdministratorAccess is required for the CI/CD bootstrap role.
+# AVD-AWS-0178: AdministratorAccess is held only by the github-actions-apply role (capped by a permissions boundary; PLAN 3.4 narrows it) and the BreakGlassAdmin permission set.
 AVD-AWS-0178
 AWS-0178
 
