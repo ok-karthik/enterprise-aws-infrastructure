@@ -42,6 +42,9 @@ while IFS= read -r region_file; do
 done < <(find foundation-live-repo workloads-live-repo -name "region.hcl" -not -path "*/.terragrunt-cache/*")
 echo "✅ Compliance checks passed."
 
+# Every account.hcl must use an account listed in the registry (no AWS access needed).
+./workloads-live-repo/scripts/check-account-registry.sh
+
 echo -e "\n2. Checking HCL formatting..."
 if terraform fmt -check -recursive iac-modules-repo && \
    terraform fmt -check -recursive foundation-live-repo && \
