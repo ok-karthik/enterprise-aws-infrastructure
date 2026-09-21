@@ -21,5 +21,6 @@ locals {
     account_baseline    = "account-baseline-v1.0.0"
     discovery_publisher = "discovery-publisher-v1.0.0"
     budgets             = "budgets-v1.0.0"
+    break_glass_alerts  = "break-glass-alerts-v1.0.0"
   }
 }
