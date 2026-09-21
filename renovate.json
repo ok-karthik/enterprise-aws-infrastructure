@@ -59,6 +59,33 @@
   ],
   "packageRules": [
     {
+      "description": "budgets pin in management: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["budgets"],
+      "matchFileNames": ["**/management/env.hcl"],
+      "groupName": "iac-modules: budgets pin (management)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "management"]
+    },
+    {
+      "description": "budgets pin in dev: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["budgets"],
+      "matchFileNames": ["**/workloads-dev/env.hcl"],
+      "groupName": "iac-modules: budgets pin (dev)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "dev"]
+    },
+    {
+      "description": "budgets pin in prod: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["budgets"],
+      "matchFileNames": ["**/workloads-prod/env.hcl"],
+      "groupName": "iac-modules: budgets pin (prod)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "prod"]
+    },
+    {
       "description": "discovery_publisher pin in dev: own PR, no automerge, so the promotion order is kept",
       "matchManagers": ["custom.regex"],
       "matchDepTypes": ["discovery_publisher"],
