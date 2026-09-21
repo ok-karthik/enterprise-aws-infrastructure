@@ -1,67 +1,94 @@
-# 🚀 Platform Bootstrap Reference
+# 🚀 Day-0 Bootstrap (CloudFormation)
 
-This directory holds the "pre-CI/CD" infrastructure that everything else stands on: the S3 state bucket, the GitHub OIDC trust, and the IAM roles the pipeline assumes. It is applied **once, by a human**, with admin credentials for the target account. After that, CI takes over with short-lived OIDC credentials and no stored keys.
+Everything Terraform needs before it can run: a state bucket, the GitHub OIDC trust, and the two IAM roles CI assumes. It is one CloudFormation template, deployed once by a human into the **management account** (`954171757349`). Member accounts get the same template through StackSets (PLAN 2.0b).
 
-## What it creates
+Why CloudFormation and not Terraform/Terragrunt: Terraform cannot create the bucket that holds its own state, and Terragrunt's `--backend-bootstrap` creates that bucket *outside any state*, so nobody could plan or drift-check its settings. CloudFormation keeps its own state inside AWS, and StackSets deploy it to every new account automatically. Organizations, OUs, SCPs and everything after Day-0 stay in Terraform.
 
-| Stack (`dev/_global/security/…`) | What | Why |
+## What the stack (`platform-bootstrap`) creates
+
+Template: [`cloudformation/account-bootstrap.yaml`](cloudformation/account-bootstrap.yaml). Stack policy: [`cloudformation/stack-policy.json`](cloudformation/stack-policy.json).
+
+| Resource | What | Notes |
 |---|---|---|
-| *(state bucket)* | `tg-state-<account-id>-<alias>-<region>` | Created by Terragrunt (`--backend-bootstrap`) on the first run. Versioned, encrypted, public access blocked |
-| `github-oidc-provider` | IAM OIDC provider for `token.actions.githubusercontent.com` | Lets GitHub jobs exchange their token for AWS credentials |
-| `github-actions-boundary` | `github-actions-apply-boundary` permissions boundary | Caps the apply role: no organizations, Identity Center or CloudTrail changes, no edits to the CI roles, the OIDC provider or the boundary itself |
-| `github-actions-plan` | Role for plan / governance / drift jobs | `ReadOnlyAccess`; on the state bucket it can read state and write/delete `*.tflock` lock files only. Trusts `pull_request` and `refs/heads/main` |
-| `github-actions-apply` | Role for apply / destroy jobs | `AdministratorAccess` **with the boundary**. Trusts only the `dev` and `prod` GitHub Environments, so a branch or PR can never assume it |
+| `StateBucket` | `tg-state-<account-id>-<region>` | Versioned, SSE-S3, all Block Public Access on, `BucketOwnerEnforced`, old versions expire after 90 days. `Retain` on delete. TLS 1.2+ only (bucket policy). KMS and access logging come with PLAN 2.2 |
+| `GitHubOidcProvider` | IAM OIDC provider for `token.actions.githubusercontent.com` | No thumbprint needed |
+| `ApplyBoundary` | `github-actions-apply-boundary` | Caps the apply role. Denies Identity Center, CloudTrail changes, organization destruction, edits to the CI roles/OIDC provider/boundary, changes to the state bucket's settings and to this stack. Denies `organizations:*` / `account:*` too, except where `AllowOrganizationsAdmin=true` (management) |
+| `PlanRole` | `github-actions-plan` | `ReadOnlyAccess`; on the state bucket: read state, write/delete `*.tflock` only. Trusts `pull_request` and `refs/heads/main` |
+| `ApplyRole` | `github-actions-apply` | `AdministratorAccess` **with** the boundary. Trusts exactly one GitHub Environment (`management` here) |
 
-## Guided bootstrap (recommended)
+Tags come from the stack, not the template: `Project`, `ManagedBy=CloudFormation`, `Owner`, `DataClassification` (read from `infrastructure-live/_global/account.hcl`). There are no `Export`s: an export locks the exported resource against changes.
+
+## Deploy it (owner only)
+
+Use an SSO profile for the management account. **Never the default profile.**
 
 ```bash
-aws sso login                      # or any way of getting admin credentials for the target account
-./infrastructure-bootstrap/bootstrap.sh
+aws sso login --profile <management-admin-profile>
+AWS_PROFILE=<management-admin-profile> ./infrastructure-bootstrap/bootstrap.sh
 ```
 
 The script:
 
-1. **Checks the account.** It compares the account your credentials belong to with `aws_account_id` in `dev/account.hcl` and stops if they differ. Nothing is created in the wrong account.
-2. Shows the plan (this also creates the state bucket on the first run) and **asks before applying**. `--yes` skips the prompt.
-3. Applies everything in dependency order.
-4. Prints the exact `gh variable set` / `gh api` commands for the next step. It does not run them.
+1. **Preflight.** It reads the expected account from `infrastructure-live/_global/account.hcl` and refuses to continue unless your credentials belong to it (no credentials or the wrong account: exit 1, nothing changed).
+2. Makes sure the AWS Organization exists (all features; asks before creating one) and that StackSets trusted access is enabled.
+3. Creates a **change set**, shows it, and asks before executing it. `--yes` skips the prompts. "No changes" counts as success.
+4. Enables termination protection, sets the stack policy, prints the outputs and the GitHub wiring.
+
+It never touches GitHub. Do the printed steps yourself.
+
+<details>
+<summary>The same steps by hand</summary>
+
+```bash
+export AWS_PROFILE=<management-admin-profile> AWS_REGION=eu-central-1
+# 1. Preflight: must print 954171757349
+aws sts get-caller-identity --query Account --output text
+
+# 2. Organization (all features) + StackSets trusted access. Safe to run again.
+aws organizations describe-organization >/dev/null 2>&1 \
+  || aws organizations create-organization --feature-set ALL
+aws cloudformation activate-organizations-access
+aws cloudformation describe-organizations-access          # expect "Status": "ENABLED"
+
+# 3. Deploy through a reviewed change set
+aws cloudformation validate-template \
+  --template-body file://infrastructure-bootstrap/cloudformation/account-bootstrap.yaml
+aws cloudformation deploy \
+  --stack-name platform-bootstrap \
+  --template-file infrastructure-bootstrap/cloudformation/account-bootstrap.yaml \
+  --parameter-overrides GitHubEnvironment=management AllowOrganizationsAdmin=true \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --tags Project=enterprise-aws-platform ManagedBy=CloudFormation Owner=platform-team DataClassification=internal \
+  --no-execute-changeset
+aws cloudformation describe-change-set --stack-name platform-bootstrap --change-set-name <name printed above>
+aws cloudformation execute-change-set  --stack-name platform-bootstrap --change-set-name <name>
+aws cloudformation wait stack-create-complete --stack-name platform-bootstrap   # stack-update-complete on later runs
+
+# 4. Lock it down and read the outputs
+aws cloudformation update-termination-protection --enable-termination-protection --stack-name platform-bootstrap
+aws cloudformation set-stack-policy --stack-name platform-bootstrap \
+  --stack-policy-body file://infrastructure-bootstrap/cloudformation/stack-policy.json
+aws cloudformation describe-stacks --stack-name platform-bootstrap --query 'Stacks[0].Outputs'
+```
+
+</details>
 
 ## Wire GitHub to the roles
 
-Repository variables (Settings → Secrets and variables → Actions → **Variables**):
+1. Create the **`management`** GitHub Environment and add yourself as a required reviewer (Settings → Environments). The apply role only trusts jobs running in it.
+2. Repository variables (Settings → Secrets and variables → Actions → **Variables**): `AWS_REGION`, and `AWS_DEV_PLAN_ROLE_ARN` / `AWS_PROD_PLAN_ROLE_ARN` set to the management **plan** role. Plans are read-only, so they can stay pointed at management until `workloads-dev` exists.
+3. **Leave `AWS_DEV_APPLY_ROLE_ARN` / `AWS_PROD_APPLY_ROLE_ARN` unset.** The management apply role trusts only `environment:management`, so the dev/prod apply jobs cannot deploy workloads into the management account. That is intended. CI for the org stack (`_global`) comes with PLAN 2.6.
 
-| Variable | Value |
-|---|---|
-| `AWS_REGION` | primary region, e.g. `eu-central-1` |
-| `AWS_DEV_PLAN_ROLE_ARN`, `AWS_PROD_PLAN_ROLE_ARN` | `github-actions-plan` ARN |
-| `AWS_DEV_APPLY_ROLE_ARN`, `AWS_PROD_APPLY_ROLE_ARN` | `github-actions-apply` ARN |
+The script prints the exact `gh` commands. Details of the pipeline are in [`docs/CICD.md`](../docs/CICD.md).
 
-Dev and prod share one AWS account today, so they point at the same two roles. Create the `dev` and `prod` **GitHub Environments** (Settings → Environments) and add yourself as a required reviewer on `prod`: that is the manual approval gate, and the apply role only trusts jobs running in those environments.
+## Changing the template later
 
-We use repository *variables* rather than environment variables for the ARNs so `terragrunt plan` can run on pull requests without waiting on an environment approval.
+Edit `cloudformation/account-bootstrap.yaml`, then run `bootstrap.sh` again. It creates an **update** change set, shows you exactly what will change (and whether anything is replaced), and asks before executing. Never edit the stack in the console: the next run would show it as drift. The stack policy blocks replacing or deleting the state bucket, the OIDC provider and the boundary; if you really must, lift the policy for one update on purpose.
 
-## Manual steps (if you don't use the script)
+## Gotchas
 
-```bash
-cd infrastructure-bootstrap/dev
-terragrunt run --all plan  --backend-bootstrap     # review
-terragrunt run --all apply --backend-bootstrap
-```
-
-Check first that `aws sts get-caller-identity` shows the account in `dev/account.hcl`.
-
-## Changing the account
-
-The account is declared in **`account.hcl`** (`infrastructure-bootstrap/dev/`, `infrastructure-live/{dev,prod,_global}/`). `root.hcl` reads it for `allowed_account_ids` and for the state bucket name, so a mismatch with your credentials fails immediately instead of quietly targeting whichever account you happen to be logged in to.
-
-Moving to a new account means: change `aws_account_id` in those files, log in to the new account, run `bootstrap.sh`, and update the repository variables. The new account gets a fresh state bucket, so there is nothing to migrate. Resources in the old account are untouched; remove them separately if you no longer want them.
-
-## Migrating from the old single admin role
-
-Earlier versions created one role, `github-actions-oidc-role`, that any branch or PR could assume with `AdministratorAccess`, and the pipeline read `AWS_DEV_ROLE_ARN` / `AWS_PROD_ROLE_ARN`. To retire it in an account that has it: run the bootstrap for the two new roles, set the four new variables, merge, then delete the old role (and the two old variables). The old stack no longer exists in this repo, so remove the role from the console, or with `terragrunt destroy` from a checkout of the previous commit.
-
-## 🛠️ Toolchain & CI/CD architecture
-
-The pipeline runs in a pre-packaged container (`ghcr.io/ok-karthik/infrastructure-toolchain`) so tool versions never drift.
-* **Node.js 24**: all GitHub Actions used (`checkout`, `upload-artifact`, …) run on Node 24.
-* **Runner compatibility**: the container runs as root (`options: --user root`) so the runner can write to the workspace (`/__w/_temp`) without `EACCES` errors.
+- **One OIDC provider per account.** An account can have only one provider for `token.actions.githubusercontent.com`, so the stack fails if one already exists. Delete it (if nothing uses it) or import it into the stack first.
+- **Retained, not deletable.** The bucket is `Retain`, and the bucket, OIDC provider and boundary are protected by the stack policy; the stack also has termination protection. If the stack is ever deleted and recreated, creation fails on the bucket name because the old bucket still exists: import that bucket into the new stack by hand.
+- **`environment:dev` can apply to any NonProd account.** Every NonProd account trusts the same `dev` GitHub Environment, so a job in `dev` can apply to all of them. Per-account Environments come with PLAN 2.6.
+- **`ROLLBACK_COMPLETE`** (a failed first deploy): delete that stack and run the script again. Nothing was created.
+- Checks that run without AWS access: `cfn-lint` and `checkov -f infrastructure-bootstrap/cloudformation/account-bootstrap.yaml` (also in pre-commit and CI).
