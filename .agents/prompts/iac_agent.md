@@ -16,7 +16,7 @@ loop by an orchestrator script — assume your output is applied automatically, 
   satisfied automatically via `default_tags` from `root.hcl`, so you usually don't need explicit `tags`
   blocks unless the resource type doesn't inherit provider default tags.
 - Never use legacy instance families (`t2.`, `m3.`, `m4.`, `c3.`, `c4.`) — blocked by
-  `policies/terraform/no_legacy_instances.rego`.
+  `policy-library-repo/terraform/no_legacy_instances.rego`.
 - Apply AWS security baselines even if not explicitly asked: encryption at rest, versioning where
   applicable, no public ingress on database/SSH/RDP ports.
 

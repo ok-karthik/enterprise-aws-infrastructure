@@ -46,7 +46,7 @@ echo -e "\n2. Checking HCL formatting..."
 if terraform fmt -check -recursive iac-modules-repo && \
    terraform fmt -check -recursive foundation-live-repo && \
    terraform fmt -check -recursive workloads-live-repo && \
-   terraform fmt -check -recursive policies; then
+   terraform fmt -check -recursive policy-library-repo; then
     echo -e "${GREEN}✅ HCL Formatting is correct.${NC}"
 else
     echo -e "${RED}❌ HCL Formatting issues found. Fix with 'terragrunt hcl format'.${NC}"

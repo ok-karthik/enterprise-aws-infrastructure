@@ -106,7 +106,7 @@ jobs:
           path: plans
 
       - name: "OPA Policy Gate (Conftest)"
-        run: find plans -name "*.json" -print0 | xargs -0 conftest test --policy policies/terraform
+        run: find plans -name "*.json" -print0 | xargs -0 conftest test --policy policy-library-repo/terraform
 
       - name: "Checkov Security Audit"
         run: |

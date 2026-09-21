@@ -45,7 +45,7 @@ workloads-live-repo/        # Platform stacks in workload accounts
 ├── _envcommon/             #   shared module inputs + cross-module wiring
 ├── scripts/                #   smoke test, module generator
 └── <env>/<region>/<cat>/<module>/terragrunt.hcl   # ~10-line leaf: includes + overrides
-policies/terraform/         # OPA/Rego governance rules (+ unit tests)
+policy-library-repo/terraform/         # OPA/Rego governance rules (+ unit tests)
 .agents/                    # Self-healing CI agent
 .github/                    # Workflows, composite actions, toolchain image
 ```
@@ -122,7 +122,7 @@ Run `make help` for the full command surface. Plan a single environment with `ma
 
 ## Security & governance highlights
 
-- **Policy gates on plan JSON** (not just HCL): mandatory tags (incl. `Owner` / `DataClassification`), no legacy instance families, no admin-policy attachments outside the CI apply / break-glass roles, no public S3, no internet ingress on sensitive ports, no `*`/`*` IAM policies, encryption at rest — see `policies/terraform/`, unit-tested via `conftest verify`.
+- **Policy gates on plan JSON** (not just HCL): mandatory tags (incl. `Owner` / `DataClassification`), no legacy instance families, no admin-policy attachments outside the CI apply / break-glass roles, no public S3, no internet ingress on sensitive ports, no `*`/`*` IAM policies, encryption at rest — see `policy-library-repo/terraform/`, unit-tested via `conftest verify`.
 - **Least-privilege CI**: a read-only plan role for PRs and drift detection, and a separate apply role only the `dev` / `prod` GitHub Environments can assume (permissions-boundary capped). Stacks refuse to run in any AWS account other than the one in `account.hcl`.
 - **Module hardening**: VPC ships a deny-all default NACL, a black-hole default SG, and Flow Logs → CloudWatch; EKS encrypts secrets with a dedicated KMS key and enables full control-plane logging.
 - **State backend**: S3 versioning (point-in-time rollback), native S3 lock files (`use_lockfile`), block-public-access, TLS 1.2+ only, SSE at rest. The bucket is created by the Day-0 CloudFormation stack, not by Terragrunt.

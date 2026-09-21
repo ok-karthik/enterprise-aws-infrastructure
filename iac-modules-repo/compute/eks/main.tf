@@ -55,7 +55,7 @@ module "eks" {
           ebs = {
             volume_size           = 20
             volume_type           = "gp3"
-            encrypted             = true # enforced by policies/terraform/require_encryption.rego
+            encrypted             = true # enforced by policy-library-repo/terraform/require_encryption.rego
             delete_on_termination = true
           }
         }

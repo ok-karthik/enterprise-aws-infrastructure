@@ -375,7 +375,7 @@ fetch_aws_doc = fetch_docs
 # ==========================================
 def build_policy_digest() -> str:
     lines = ["## Active governance rules (auto-extracted — treat as binding constraints, not suggestions)"]
-    rego_dir = REPO_ROOT / "policies" / "terraform"
+    rego_dir = REPO_ROOT / "policy-library-repo" / "terraform"
     for rego_file in sorted(rego_dir.glob("*.rego")) if rego_dir.exists() else []:
         if rego_file.name.endswith("_test.rego"):
             continue
@@ -609,7 +609,7 @@ def validation_ladder(
         "terraform fmt",
         [
             "terraform", "fmt", "-check", "-recursive",
-            "iac-modules-repo", "foundation-live-repo", "workloads-live-repo", "policies",
+            "iac-modules-repo", "foundation-live-repo", "workloads-live-repo", "policy-library-repo",
         ],
         REPO_ROOT,
     )
@@ -672,7 +672,7 @@ def validation_ladder(
         else:
             print("   ⏭️  Skipping Infracost cost check (infracost CLI or API key unavailable).")
 
-    gates = [("conftest", ["conftest", "test", "--policy", str(REPO_ROOT / "policies" / "terraform"), str(plan_json)], REPO_ROOT)]
+    gates = [("conftest", ["conftest", "test", "--policy", str(REPO_ROOT / "policy-library-repo" / "terraform"), str(plan_json)], REPO_ROOT)]
     if module_dir.exists():
         gates.append(("checkov", ["checkov", "-d", str(module_dir), "--config-file", str(REPO_ROOT / ".checkov.yaml")], REPO_ROOT))
         gates.append((

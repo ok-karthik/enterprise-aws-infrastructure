@@ -1,0 +1,4 @@
+# Becomes <org>/policy-library — extract with: git subtree split -P policy-library-repo -b policy-library
+# Rego policies + tests, used by every IaC pipeline. Changing a rule changes what every repo may deploy.
+
+*   @ok-karthik

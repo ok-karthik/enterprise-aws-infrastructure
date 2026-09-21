@@ -15,7 +15,7 @@ A directory ending in `-repo` is a separate Git repository in a real company (se
 *   `/foundation-live-repo/`: The landing zone: `_global/` (organization, bootstrap StackSets; management account), `_envcommon/governance/` blueprints, its own `root.hcl`, and `_bootstrap/`. Security + cloud-infra approve changes.
 *   `/workloads-live-repo/`: Platform stacks in workload accounts: `dev/`, `prod/`, `_envcommon/{compute,data,network}/`, its own `root.hcl`, and `scripts/` (smoke test, module generator). The platform team approves changes.
 *   `/foundation-live-repo/_bootstrap/` (inside the foundation repo): Day-0 **CloudFormation** stack `platform-bootstrap` (`cloudformation/account-bootstrap.yaml`: S3 state bucket, GitHub OIDC provider, `github-actions-plan` / `github-actions-apply` roles + permissions boundary) and the `bootstrap.sh` that deploys it. Run once by a human in the management account; member accounts get it through StackSets (PLAN 2.0b). Terragrunt never creates the state bucket: **no command may pass `--backend-bootstrap`**.
-*   `/policies/terraform/` (becomes `policy-library-repo/` in PLAN 1.3): Rego-based OPA compliance rules enforced against Terraform plan JSON.
+*   `/policy-library-repo/terraform/`: Rego-based OPA compliance rules enforced against Terraform plan JSON.
 *   `/.agents/`: Catalog, prompts, eval fixtures, SRE policies, and scripts for autonomous agents.
 
 ---
@@ -74,13 +74,13 @@ All tooling is baked into the toolchain container (`.github/docker/Dockerfile`);
 ./workloads-live-repo/scripts/smoke-test.sh
 
 # Formatting — MUST cover all four roots or CI fails (see static-analysis action)
-terraform fmt -recursive iac-modules-repo foundation-live-repo workloads-live-repo policies
+terraform fmt -recursive iac-modules-repo foundation-live-repo workloads-live-repo policy-library-repo
 terragrunt hcl fmt
 
 # Lint / security / policy
 tflint --init && tflint --recursive --format=compact
 trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --tf-exclude-downloaded-modules
-conftest test --policy policies/terraform <plan.json>   # policy runs against plan JSON, not HCL
+conftest test --policy policy-library-repo/terraform <plan.json>   # policy runs against plan JSON, not HCL
 
 # Plan/apply a single environment stack (uses run --all across the dependency graph)
 cd workloads-live-repo/dev && terragrunt run --all plan --non-interactive
@@ -123,7 +123,7 @@ The core pattern is **strict separation of "blueprint" from "live config"**, kep
 
 These are enforced against the **Terraform plan JSON** in CI (`reusable-terragrunt.yml`), so a change can pass `terraform validate` and still fail here:
 
-- **OPA/Conftest** (`policies/terraform/*.rego`, package `main`):
+- **OPA/Conftest** (`policy-library-repo/terraform/*.rego`, package `main`):
   - `require_tags.rego` — every created/updated resource must carry `Service`, `Environment`, `Project`, `Owner` and `DataClassification` tags (checked in `tags_all`). The `root.hcl` `default_tags` normally satisfies this (`Owner` / `DataClassification` come from `account.hcl`); resources that escape provider default tags will fail.
   - `no_legacy_instances.rego` — blocks old instance families (`t2.`, `m3.`, `m4.`, `c3.`, `c4.`).
   - `deny_admin_attachments.rego`, `deny_public_s3.rego`, `deny_open_ingress.rego`, `deny_iam_wildcards.rego`, `require_encryption.rego` — see `docs/CICD.md` for what each blocks. Shared helpers live in `helpers.rego` (all files are package `main`, so helper names must not collide).
@@ -166,7 +166,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 ### 2. Policy Auditor (`.agents/prompts/auditor.md`)
 *   **Role**: Security & Governance Compliance Officer.
 *   **Responsibility**: Performs independent semantic review and automated compliance checks, returning `STATUS: PASSED/FAILED`.
-*   **Directives**: Enforces Rego policy checks in `/policies/terraform/`, Checkov/TFLint standards, and semantic sanity checks (no wildcard IAM, no public ingress on DB/SSH ports).
+*   **Directives**: Enforces Rego policy checks in `/policy-library-repo/terraform/`, Checkov/TFLint standards, and semantic sanity checks (no wildcard IAM, no public ingress on DB/SSH ports).
 
 ### 3. Pipeline Healer (`.agents/prompts/ci_healer.md`, `.agents/scripts/healer_runner.py`)
 *   **Role**: Incident & CI/CD Recovery Specialist.

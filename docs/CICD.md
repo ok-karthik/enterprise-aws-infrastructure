@@ -7,7 +7,7 @@ All jobs run inside a purpose-built toolchain container (`ghcr.io/ok-karthik/inf
 1. **Static analysis** (parallel with planning): `terraform fmt -check`, `terraform validate`, TFLint, Checkov (HCL), Trivy. Results upload as SARIF to the GitHub Security tab.
 2. **Plan** per environment: `terragrunt run --all plan` produces `tfplan.bin`, converted to `tfplan.json` and uploaded as an artifact.
 3. **Governance gates** consume the plan JSON:
-   - **OPA/Conftest** against `policies/terraform/` — mandatory tagging, no legacy instance families.
+   - **OPA/Conftest** against `policy-library-repo/terraform/` — mandatory tagging, no legacy instance families.
    - **Checkov** (plan-level, CIS benchmark) and **Trivy** (CRITICAL/HIGH) as blocking gates.
 4. **Cost** — Infracost posts a per-module breakdown as a PR comment (`tf-summarize` adds a change summary).
 5. **Apply** — on push to `main`, `apply-dev` runs, then `apply-prod`, which is gated by a protected GitHub **Environment** requiring manual approval.
@@ -39,7 +39,7 @@ The old `AWS_DEV_ROLE_ARN` / `AWS_PROD_ROLE_ARN` variables are no longer read an
 
 **Account guard:** `root.hcl` takes the account ID from `account.hcl` (not from the caller's credentials) and sets it as `allowed_account_ids`, so running a stack with credentials for the wrong account fails at provider init.
 
-## Governance rules (`policies/terraform/`)
+## Governance rules (`policy-library-repo/terraform/`)
 
 - `require_tags.rego` — every created/updated resource must carry `Service`, `Environment`, `Project`, `Owner` and `DataClassification` (checked in `tags_all`; satisfied by `root.hcl` default tags, which read `owner` / `data_classification` from `account.hcl`).
 - `no_legacy_instances.rego` — blocks `t2.`, `m3.`, `m4.`, `c3.`, `c4.` families.

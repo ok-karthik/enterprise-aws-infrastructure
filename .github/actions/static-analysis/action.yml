@@ -11,7 +11,7 @@ runs:
         terraform fmt -check -recursive iac-modules-repo
         terraform fmt -check -recursive foundation-live-repo
         terraform fmt -check -recursive workloads-live-repo
-        terraform fmt -check -recursive policies
+        terraform fmt -check -recursive policy-library-repo
 
     - name: Terraform Validate
       shell: bash
@@ -23,7 +23,7 @@ runs:
       shell: bash
       run: |
         echo "🧪 Running policy unit tests..."
-        conftest verify --policy policies/terraform
+        conftest verify --policy policy-library-repo/terraform
 
         echo "🧪 Running module unit tests (mock provider, no AWS credentials)..."
         for tests_dir in iac-modules-repo/*/*/tests; do

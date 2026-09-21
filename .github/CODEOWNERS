@@ -10,7 +10,7 @@
 /workloads-live-repo/      @ok-karthik
 
 # Security & Compliance policies
-/policies/                 @ok-karthik
+/policy-library-repo/      @ok-karthik
 
 # CI/CD Workflows & Actions
 /.github/                  @ok-karthik

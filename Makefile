@@ -1,7 +1,7 @@
 # Enterprise AWS Platform — task runner
 # Wraps the platform's command surface. Run `make help` for the list.
 
-FMT_DIRS := iac-modules-repo foundation-live-repo workloads-live-repo policies
+FMT_DIRS := iac-modules-repo foundation-live-repo workloads-live-repo policy-library-repo
 ENV ?= dev
 
 .DEFAULT_GOAL := help
@@ -43,7 +43,7 @@ plan: ## Plan an environment stack: make plan ENV=dev
 
 .PHONY: test
 test: ## Run OPA policy unit tests and module unit tests (no AWS credentials needed)
-	conftest verify --policy policies/terraform
+	conftest verify --policy policy-library-repo/terraform
 	@for d in iac-modules-repo/*/*/tests; do \
 		[ -d "$$d" ] || continue; \
 		m=$$(dirname "$$d"); echo "-> $$m"; \
