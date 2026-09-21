@@ -37,6 +37,17 @@ validate: ## Full local validation suite (compliance, fmt, init/validate, tflint
 security: ## Trivy security scan of the repo
 	trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --tf-exclude-downloaded-modules
 
+.PHONY: checkov
+checkov: ## Checkov with the CI settings (.checkov.yaml); the same result as the CI check
+	./workloads-live-repo/scripts/run-checkov.sh --compact --quiet
+
+.PHONY: image-scan
+image-scan: ## Build the toolbox image and scan it with Trivy (needs Docker), like publish-toolchain.yml
+	docker build -t infrastructure-toolchain:scan -f .github/docker/Dockerfile .
+	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+		public.ecr.aws/aquasecurity/trivy:$$(sed -n 's/^ARG TRIVY_VERSION=//p' .github/docker/Dockerfile | head -n 1) \
+		image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 infrastructure-toolchain:scan
+
 .PHONY: plan
 plan: ## Plan one workload account: make plan ENV=dev (folder workloads-live-repo/workloads-<ENV>)
 	cd workloads-live-repo/workloads-$(ENV) && terragrunt run --all plan --non-interactive

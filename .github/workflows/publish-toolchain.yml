@@ -41,13 +41,39 @@ jobs:
             type=ref,event=branch
             type=sha,format=short
 
-      - name: Build and push Docker image
+      # Build first, scan, and only then push: a toolbox image with a fixable HIGH/CRITICAL
+      # vulnerability must never reach the registry (PLAN 8.9 step 6). The image is loaded into the
+      # runner's Docker so Trivy scans exactly what would be pushed, with no second build.
+      - name: Build Docker image (not pushed yet)
         uses: docker/build-push-action@v7
         with:
           context: .
           file: .github/docker/Dockerfile
-          push: true
+          push: false
+          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # cache-from: type=gha
           # cache-to: type=gha,mode=max
+
+      - name: Scan image with Trivy (fails on fixable HIGH/CRITICAL)
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          # Same Trivy version the image itself ships (ARG TRIVY_VERSION in the Dockerfile, kept up to
+          # date by Renovate). Same command as `make image-scan`.
+          trivy_version=$(sed -n 's/^ARG TRIVY_VERSION=//p' .github/docker/Dockerfile | head -n 1)
+          [ -n "$trivy_version" ] || { echo "::error::TRIVY_VERSION not found in the Dockerfile"; exit 1; }
+          image=$(printf '%s\n' "$IMAGE_TAGS" | head -n 1)
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            "public.ecr.aws/aquasecurity/trivy:${trivy_version}" \
+            image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 "$image"
+
+      - name: Push Docker image
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          for tag in $IMAGE_TAGS; do
+            docker push "$tag"
+          done
