@@ -123,6 +123,9 @@ Resources:
       Url: https://token.actions.githubusercontent.com
       ClientIdList:
         - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+        - 1c5876bd527751ce6668e91661cb0d2a4ddf9514
 
   # ---------------------------------------------------------------------------
   # Permissions boundary for github-actions-apply. The role carries AdministratorAccess (PLAN 3.4
@@ -255,9 +258,10 @@ Resources:
             Condition:
               StringEquals:
                 "token.actions.githubusercontent.com:aud": sts.amazonaws.com
+              StringLike:
                 "token.actions.githubusercontent.com:sub":
                   - !Sub "repo:${GitHubRepo}:pull_request"
-                  - !Sub "repo:${GitHubRepo}:ref:refs/heads/main"
+                  - !Sub "repo:${GitHubRepo}:ref:refs/heads/*"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/ReadOnlyAccess
       Policies:
