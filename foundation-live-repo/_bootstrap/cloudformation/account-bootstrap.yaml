@@ -214,6 +214,56 @@ Resources:
               - "iam:RemoveClientIDFromOpenIDConnectProvider"
               - "iam:UpdateOpenIDConnectProviderThumbprint"
             Resource: !Sub "arn:aws:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com"
+          # Tampering with the security services. Enabling and configuring them is fine (PLAN 4.4 applies
+          # them from CI); switching them off or removing them is not.
+          - Sid: DenySecurityServiceTampering
+            Effect: Deny
+            Action:
+              - "access-analyzer:DeleteAnalyzer"
+              - "config:DeleteConfigurationAggregator"
+              - "config:DeleteConfigurationRecorder"
+              - "config:DeleteDeliveryChannel"
+              - "config:StopConfigurationRecorder"
+              - "guardduty:DeleteDetector"
+              - "guardduty:DisassociateFromAdministratorAccount"
+              - "guardduty:DisassociateFromMasterAccount"
+              - "guardduty:StopMonitoringMembers"
+              - "inspector2:Disable"
+              - "macie2:DisableMacie"
+              - "securityhub:BatchDisableStandards"
+              - "securityhub:DisableSecurityHub"
+              - "securityhub:DisassociateFromAdministratorAccount"
+            Resource: "*"
+          # Roles that belong to the platform, not to a stack: the platform-* and terraform-* roles and the
+          # role AWS creates for the management account. (Roles a stack creates must not be named platform-*.)
+          - Sid: DenyEditingPlatformRoles
+            Effect: Deny
+            Action:
+              - "iam:AttachRolePolicy"
+              - "iam:DeleteRole"
+              - "iam:DeleteRolePolicy"
+              - "iam:DetachRolePolicy"
+              - "iam:PutRolePermissionsBoundary"
+              - "iam:PutRolePolicy"
+              - "iam:UpdateAssumeRolePolicy"
+              - "iam:UpdateRole"
+            Resource:
+              - !Sub "arn:aws:iam::${AWS::AccountId}:role/platform-*"
+              - !Sub "arn:aws:iam::${AWS::AccountId}:role/terraform-*"
+              - !Sub "arn:aws:iam::${AWS::AccountId}:role/OrganizationAccountAccessRole"
+          # The workload boundary (governance/account-baseline) must not be deleted or detached from roles. It
+          # can still be updated: the baseline stack changes it with CreatePolicyVersion.
+          - Sid: DenyDeletingWorkloadBoundary
+            Effect: Deny
+            Action:
+              - "iam:DeletePolicy"
+            Resource: !Sub "arn:aws:iam::${AWS::AccountId}:policy/platform-workload-boundary"
+          - Sid: DenyRemovingAnyRoleBoundary
+            Effect: Deny
+            Action:
+              - "iam:DeleteRolePermissionsBoundary"
+              - "iam:DeleteUserPermissionsBoundary"
+            Resource: "*"
           - Sid: ProtectStateBucket
             Effect: Deny
             Action:

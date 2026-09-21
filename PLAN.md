@@ -370,7 +370,7 @@ find them with `git grep`.
   `working_directory` values. Update the fmt command in `.agents/AGENTS.md` §3 to cover
   `iac-modules-repo foundation-live-repo workloads-live-repo policy-library-repo`.
 
-- [ ] **1.7 IDP repo follow-up** (in `../internal-developer-platform`, separate PR):
+- [x] **1.7 IDP repo follow-up** (in `../internal-developer-platform`, separate PR):
   - `1-platform-catalog/catalog.yaml` `capabilities_source_base` → `//iac-modules-repo`
   - `1-platform-catalog/per-tenant/infra/platform/team-iam.tf.tmpl` source path + new tag
   - `.agents/AGENTS.md` line ~218, `PLAN.md` examples
@@ -669,11 +669,24 @@ has been applied there yet, so there is no state or resource to migrate. Until
   Anomaly Detection monitor. In the management account, set a low org-wide budget
   (e.g. €50) during the job-search period.
 
+- [ ] **2.9 Discovery contract as a versioned API** (low priority, after the Priority track).
+  The SSM contract (2.7, `docs/DISCOVERY_CONTRACT.md`) is what tenants build on, whether
+  they use Terraform, CDK or Pulumi. Treat it like an API:
+  - **Only add, never break:** parameters can be added. Renaming or removing one, or changing
+    its type or format, is a breaking change and goes under a new prefix
+    (`/platform/v2/${env}/...`). The old path is kept, and published alongside, for at least
+    one release.
+  - Add a machine-readable list (`docs/discovery-contract.json`: name, type, description,
+    since-version) and a CI check that fails if a listed parameter disappears from
+    `discovery-publisher` / `account-baseline`.
+  - Add one short example per tool (Terraform `data "aws_ssm_parameter"`, CDK
+    `StringParameter.valueForStringParameter`, Pulumi `aws.ssm.getParameter`) in the doc.
+
 ---
 
 ## Phase 3 — Identity and least privilege
 
-- [ ] **3.1 Identity Center with an external IdP.** New module
+- [x] **3.1 Identity Center with an external IdP.** New module
   `identity/identity-center` (applied in management, or in a delegated admin account if you
   choose to delegate). It creates groups (or reads SCIM-synced groups via
   `data "aws_identitystore_group"`), a permission-set catalog, and **account assignments
@@ -681,30 +694,44 @@ has been applied there yet, so there is no state or resource to migrate. Until
   The IdP itself (Okta / Entra ID / Google) is set up by hand. Document the SCIM steps in
   `docs/IDENTITY.md`.
 
-- [ ] **3.2 Permission-set catalog** (in `identity/human-access`, or merged into 3.1):
+- [x] **3.2 Permission-set catalog** (in `identity/human-access`, or merged into 3.1):
   `ReadOnly`, `Developer` (a customer-managed policy + the `platform-workload-boundary`, only
   in NonProd/Sandbox; read-only in Prod), `PlatformEngineer` (from 0.6), `SecurityAudit`
   (`SecurityAudit` + `ViewOnlyAccess`), `Billing`, `BreakGlassAdmin`. Sessions: 1h for
   admin-level sets, 8h otherwise. Use ABAC session tags (`team`, `cost_center`) from the IdP
   where they make sense.
 
-- [ ] **3.3 Just-in-time elevated access.** Document and scaffold AWS TEAM (Temporary
+- [x] **3.3 Just-in-time elevated access.** Document and scaffold AWS TEAM (Temporary
   Elevated Access Management), or a SaaS equivalent, for `BreakGlassAdmin` and
   prod-`PlatformEngineer`. Requests need approval, are time-limited and are logged to
   log-archive. At minimum, deliver `docs/BREAK_GLASS.md` with the runbook and an
   EventBridge rule plus SNS alert for any `BreakGlassAdmin` sign-in.
 
-- [ ] **3.4 Narrow the apply role.** Replace `AdministratorAccess` on `github-actions-apply` (2.0 template) with
+- [~] **3.4 Narrow the apply role.** Replace `AdministratorAccess` on `github-actions-apply` (2.0 template) with
   the managed policies for the services actually used, plus a boundary that denies:
   organizations, account, sso, cloudtrail stop/delete, changes to guardduty, config and
   securityhub, and edits to `platform-*` roles and the boundary itself.
 
-- [ ] **3.5 Centralized root access management.** Enable the org feature that removes root
+- [x] **3.5 Centralized root access management.** Enable the org feature that removes root
   credentials from member accounts (`aws_iam_organizations_features` with
   `RootCredentialsManagement` and `RootSessions`). Document how to do a privileged root task.
 
-- [ ] **3.6 Access Analyzer.** An org-level analyzer for external access **and** unused
+- [~] **3.6 Access Analyzer.** An org-level analyzer for external access **and** unused
   access, delegated to security-tooling. Findings go to Security Hub.
+
+- [ ] **3.7 Tighten the Developer policy (PR #62 Checkov findings).** `aws_iam_policy.developer`
+  in `governance/account-baseline` grants `s3:*`, `ssm:*`, `lambda:*` and others on `*`. Keep the
+  broad service access (NonProd/Sandbox only, per 3.2), but add explicit Deny statements for:
+  - resource-policy writes (`s3:PutBucketPolicy`/`DeleteBucketPolicy`/`PutBucketAcl`/`PutObjectAcl`/
+    `PutBucketPublicAccessBlock`, `sqs:AddPermission`, `sns:AddPermission`, `lambda:AddPermission`,
+    `lambda:CreateFunctionUrlConfig`, `ecr:SetRepositoryPolicy`)
+  - writes to the discovery contract (`ssm:PutParameter`, `DeleteParameter*`,
+    `LabelParameterVersion` and `AddTagsToResource` on `parameter/platform/*`)
+  - `ssm:SendCommand` / `StartSession` on instances whose `team` tag isn't the caller's.
+  Only then add `#checkov:skip` for what's left (CKV_AWS_286/287/288/289/290/355), each with a
+  reason. Add `terraform test` cases for each Deny. The same checks also fire on
+  `aws_iam_policy.workload_boundary`. That's expected, because a boundary has to allow `*`.
+  Skip them there with that reason.
 
 ---
 
@@ -920,6 +947,40 @@ has been applied there yet, so there is no state or resource to migrate. Until
   `python3 .agents/scripts/iac_agent_eval.py` and `python3 -m unittest discover -s .agents/tests`
   must pass.
 
+- [ ] **8.9 One scanner per job (do before 8.10).** Target: **tflint** (lint), **Checkov**
+  (general security, HCL + plan JSON), **conftest/Rego** (org-specific rules only),
+  **Trivy** (the toolbox Docker image only). tfsec is not used (deprecated, folded into Trivy).
+  1. Checkov becomes blocking: remove `soft_fail` from the static-analysis step. Clear or skip
+     (with a reason) every existing finding first. Today that's 33 in `iac-modules-repo`:
+     account-baseline 15 (3.7), postgres 10, s3 5, eks 2, vpc 1.
+  2. Add a Checkov step on each plan (`checkov -f tfplan.json --framework terraform_plan`) in
+     `reusable-terragrunt.yml`, blocking on failures, with SARIF uploaded to code scanning.
+  3. Only then remove `trivy config` from the plan job, `.pre-commit-config.yaml` and the
+     `make security` target. Delete `.trivyignore` entries that only served `trivy config`.
+  4. Add `trivy image --severity HIGH,CRITICAL --exit-code 1` for the toolbox image in
+     `publish-toolchain.yml` before the push (today the image isn't scanned at all).
+  5. Update `GOVERNANCE.md`, `docs/CICD.md` and `.agents/AGENTS.md` (gate list).
+  *Done when:* each class of finding is reported by exactly one tool, and every gate blocks.
+
+- [ ] **8.10 Split the policy rules between Checkov and Rego, with one catalog.**
+  - **The rule:** if Checkov has a built-in check for it, use Checkov. Write Rego only for rules
+    about *this* organization (tag keys, role names, account/OU rules, allowed modules).
+    A PR that adds a Rego rule has to say why Checkov can't do it.
+  - **Remove** the Rego rules that duplicate Checkov built-ins, but only after 8.9 step 1
+    (Checkov blocking). Candidates: `deny_public_s3`, `require_encryption`,
+    `deny_open_ingress` and `deny_iam_wildcards`. Before deleting each one, map every case in
+    its `_test.rego` to a Checkov ID. Keep the Rego rule if any case has no match.
+  - **Keep** in Rego: `require_tags`, `deny_admin_attachments`, `deny_member_org_admin`,
+    `no_legacy_instances`.
+  - **One catalog:** `policy-library-repo/POLICIES.md`, a table of every enforced rule:
+    ID, what it blocks, tool (Checkov ID or Rego file), severity, and how to request an
+    exception. CI fails if a Rego file isn't listed there.
+  - **One way to make exceptions:** inline `#checkov:skip=<ID>: <reason>` for Checkov, and an
+    `exceptions` data file for Rego, both with a reason. No repo-wide skips in `.checkov.yaml`
+    without a comment.
+  - **One report:** both tools run in the same CI step and both upload to code scanning,
+    so findings show up in one place.
+
 ---
 
 ## Phase 9 — Observability and FinOps across accounts
@@ -994,7 +1055,7 @@ Everything goes under `docs/`.
 
 ## Changes needed in `internal-developer-platform` (separate PRs in that repo)
 
-- [ ] **IDP-1** Module source paths and pins (task 1.7).
+- [x] **IDP-1** Module source paths and pins (task 1.7).
 - [ ] **IDP-2** `1-platform-catalog/per-tenant/infra/platform/providers.tf.tmpl`: the provider
   assumes a role into the **tenant's own account** (from `tenant.yaml` → account per env), not
   a shared account. The IDP scaffolder asks for or looks up the tenant account.
@@ -1219,4 +1280,60 @@ Everything goes under `docs/`.
     the generator's and the agent's unit tests; the registry check and the offline smoke-test steps (with negative cases); `shellcheck` on every script; `cfn-lint`; `actionlint` on the 8 workflows
     (and it catches a deliberate typo); `tflint`; `trivy config`; YAML/JSON parse. **Not checked:** a real plan or apply, `terragrunt init`/`validate` per account (needs credentials, so the smoke test's graph step and
     the workflows were never run on GitHub), the boundary and SCP JSON against AWS, Renovate's PR grouping, and the imports the owner must run.
-  - **Still open in Phase 2:** the owner steps above (real ids and emails, imports, `ci = true` for management, branch protection). **1.7** (IDP repo) and the **2.0b "Done when"** are also still open.
+  - **Still open in Phase 2:** the owner steps above (real ids and emails, imports, `ci = true` for management, branch protection). **1.7** (IDP repo) is complete; the **2.0b "Done when"** remains open for owner deployment.
+- **2026-09-21 (Phase 3: 3.1-3.6, branches `feat/p3-identity-center`, `feat/p3-break-glass`, `feat/p3-apply-boundary`, `feat/p3-root-access-analyzer`, each stacked on the previous)** —
+  Implemented offline. Nothing applied, no AWS credentials used, no resource created. 3.4 and 3.6 are `[~]` for the reasons below.
+  - **3.1 / 3.2** New module `identity/identity-center` (16 tests) owns the whole catalog, groups and assignments. Catalog: `ReadOnly`, `Developer`, `PlatformEngineer`, `SecurityAudit`, `Billing`,
+    `BreakGlassAdmin`. Assignments are `OU -> group -> permission set`, expanded with the registry (real account ids only). Groups are read from SCIM (or created with `manage_groups`). ABAC:
+    `team` and `cost_center` session tags. Guardrails refuse a bad assignment at plan time: `BreakGlassAdmin` never static, `PlatformEngineer` / `BreakGlassAdmin` not static in Prod, `Developer` only in
+    NonProd / Sandbox / Policy-Staging, unknown sets/groups, placeholder ids. `Developer` = customer-managed policy `platform-developer` + boundary `platform-workload-boundary`, attached by name; **`platform-developer`
+    is new in `governance/account-baseline`** (ABAC on EC2 by the team tag; published as `iam/developer_policy_arn`, added to the discovery contract). `identity/human-access` lost its permission sets
+    (**breaking**, nothing used them) and keeps only EKS access entries. `docs/IDENTITY.md` covers the manual IdP and SCIM steps. **Decisions to confirm:** (1) I read "1h for admin-level sets" as `BreakGlassAdmin`
+    **and** `PlatformEngineer` (it can change IAM); the rest get 8h. (2) The catalog was **merged into identity-center** (the plan allowed either place) so `PlatformEngineer` and `BreakGlassAdmin` are not defined twice.
+    (3) The ABAC attribute paths (`${path:enterprise.department}`, `${path:enterprise.costCenter}`) are my guess for a SCIM enterprise extension: **check them against your IdP** (`TODO(owner)`); the IdP group names in the
+    leaf are placeholders too.
+  - **3.3** New module `security/break-glass-alerts` (7 tests): EventBridge rules for `AssumeRoleWithSAML`, console sign-in and (management only) the Identity Center portal calls, an SNS topic **encrypted with its own
+    rotating KMS key** (the org's own `require_encryption` rule demands it), one email subscription per address. Leaves in management, workloads-dev and workloads-prod; the address is the account's registry email and the module
+    refuses `@example.com`, so **these leaves fail at plan time until you replace the placeholder emails**, and each address must confirm the SNS subscription. `docs/BREAK_GLASS.md` has the JIT design (AWS TEAM or a SaaS
+    equivalent: request, approve by someone else, time-limit, log to log-archive), a setup checklist, the runbook, what to do on an unexpected alert, when the tool or the IdP is down, and a drill.
+    **Not delivered:** the JIT tool itself (it is a product you deploy; I could not check the current AWS TEAM install guide offline). **Not verified:** the CloudTrail event field names in the rules (especially the portal rule, whose
+    fields differ between `Federate` and `GetRoleCredentials`): confirm them in the drill. The rules only see events in their own region.
+  - **3.4 (half done)** The apply-role **boundary** now also denies switching off GuardDuty / Config / Security Hub / Macie / Inspector / Access Analyzer, editing `platform-*` / `terraform-*` roles and
+    `OrganizationAccountAccessRole`, deleting `platform-workload-boundary` and removing any role's boundary (organizations, account, SSO, CloudTrail and the CI-identity protections were already there). Checked by an offline test
+    that parses the template (structure, both `AllowOrganizationsAdmin` variants, 3,865 of the 6,144 allowed characters, CI roles), plus `cfn-lint` and `checkov -f` (24 passed, 0 failed, same reasoned skip). **Not done:** the role is
+    **still `AdministratorAccess`**. Replacing it with "the managed policies for the services actually used" needs real applies to know which services, and a wrong list would break CI apply silently, so I left it: generate the policy from
+    CloudTrail with Access Analyzer policy generation after the first real applies. **Two consequences:** the apply role can no longer update `platform-*` roles (a stack must not name its roles that way), and the change reaches management
+    through `bootstrap.sh` and members through an update of the bootstrap StackSets (both are owner steps, documented in the bootstrap README). I deliberately did **not** deny editing `platform-workload-boundary` versions: the baseline stack
+    updates it with `CreatePolicyVersion`, so only deleting it is denied.
+  - **3.5** `governance/organization` now has `aws_iam_organizations_features` (`RootCredentialsManagement`, `RootSessions`; default on; refuses to plan without trusted access for `iam.amazonaws.com`) and
+    `aws_organizations_delegated_administrator` (real ids only, only for services with trusted access). 15 organization tests (6 new). `docs/ROOT_ACCESS.md` explains removing member root credentials and doing a privileged task with
+    `sts:AssumeRoot`. **The task-policy names and the CLI call are from memory (I could not check the AWS docs): confirm them.** The code does not delete existing root credentials: that is the one-off procedure in the doc.
+  - **3.6 (`[~]`)** New module `security/access-analyzer` (3 tests): an organization analyzer for external access and one for unused access (default 90 days), in the `security-tooling` account, which the org leaf registers as
+    delegated administrator **only once its registry id is real**. New folder `foundation-live-repo/security-tooling` (placeholder id, `ci = false`, matches the registry). **Not done / not verified:** "findings go to Security
+    Hub" is not something this code configures: it happens on its own once Security Hub is enabled with the same delegated administrator, which is PLAN 4.4. Unused-access analysis is billed per role analyzed.
+  - **Checked (offline):** `terraform fmt` and `terragrunt hcl fmt --check`; `conftest verify` (64); `terraform test` for all 13 modules with tests (two needed a rerun after a transient provider-download timeout, both passed);
+    `terragrunt hcl validate --inputs` on all 20 leaves; the account-matrix generator (10) and bootstrap-template (9) tests; the IaC agent tests; the registry check and the offline smoke-test steps; `shellcheck`; `cfn-lint`; `actionlint`;
+    `tflint`; `trivy config`; YAML/JSON parse. **Not checked:** a real plan or apply of anything, `terragrunt init` per account, the IAM policies against the policy simulator, Identity Center behaviour (attribute paths, customer-managed policy by name),
+    and the workflows on GitHub.
+  - **New tag rule followed:** the three new modules (`identity-center`, `break-glass-alerts`, `access-analyzer`) are registered with `"tag-separator": "-"` at `1.0.0` in
+    `release-please-config.json` and `.release-please-manifest.json`. The changed modules (`account-baseline`, `organization`, `human-access`) keep their entries; release-please will propose their next versions from the commits (`human-access` is a breaking change).
+- **2026-09-21 (plan change, tooling and contract)** — Added 3.7 (tighten the Developer policy behind the PR #62
+  Checkov findings), 2.9 (versioned discovery contract), 8.9 (one scanner per job: tflint, blocking Checkov,
+  conftest for org rules, Trivy for the image only) and 8.10 (split rules between Checkov and Rego with one
+  catalog). Gemini's "DynamoDB → S3 native locking" topic was already done: no DynamoDB lock table exists and
+  both `root.hcl` files set `use_lockfile = true`. Plan text only.
+- **2026-09-21 (PR #62 Checkov fix, `governance/account-baseline`)** — The code-scanning Checkov check failed on `aws_iam_policy.developer` (`CKV_AWS_286/287/288/289/290/355`, from the SARIF)
+  **and on `aws_iam_policy.workload_boundary`** (the same six plus `CKV_AWS_62`, `CKV_AWS_63`, `CKV2_AWS_40`), so fixing only the Developer policy would have left the check red. I reproduced the exact IDs locally with `checkov -d`.
+  - **Developer policy: four explicit Deny statements.** `DenyResourcePolicyWrites` (`s3:PutBucketPolicy`, `s3:DeleteBucketPolicy`, `s3:PutBucketAcl`, `s3:PutObjectAcl`, `s3:PutBucketPublicAccessBlock`,
+    `sqs:AddPermission`, `sns:AddPermission`, `lambda:AddPermission`, `lambda:CreateFunctionUrlConfig`, `ecr:SetRepositoryPolicy`); `DenyPlatformParameterWrites` (`ssm:PutParameter`, `DeleteParameter`,
+    `DeleteParameters`, `LabelParameterVersion`, `AddTagsToResource` on `parameter/platform/*` in this account; reads stay allowed); `DenySsmAccessToOtherTeamsInstances` (`ssm:SendCommand` / `StartSession` on EC2 and
+    managed instances unless `aws:ResourceTag/team` equals `${aws:PrincipalTag/team}`); and `DenySsmAccessWithoutTeamTag` (a caller with no team tag cannot use them at all: without it, an unresolved tag variable
+    is not a safe comparison). Instances only: SSM documents stay allowed. 5 new `terraform test` runs (14 in the module, all pass) check the exact action lists, the resource ARNs, the ABAC conditions, that reads and documents stay
+    allowed, and that the policy has exactly these four Denies.
+  - **Finding worth knowing: the Denies do not clear any Checkov finding.** Checkov's IAM checks read only the Allow statements and do not subtract Denies (before and after had the identical six IDs), so the Denies are real
+    hardening but the skips are what turns the check green. **Skips** (`#checkov:skip` on the resource, one per ID with its own reason): NonProd/Sandbox-only permission set (PLAN 3.2, enforced by `identity-center`),
+    `platform-workload-boundary`, the explicit Denies, and the SCP/RCP data perimeter (4.6). The boundary's skips say why a permissions boundary must `Allow */*` and then Deny.
+  - **Known gap, not fixed (not in the requested list):** `sqs:SetQueueAttributes` and `sns:SetTopicAttributes` can still set a queue/topic **policy**, which bypasses the `AddPermission` Deny, and `lambda:UpdateFunctionUrlConfig`
+    is not denied. Denying them outright would break normal queue/topic configuration and there is no condition key for "which attribute", so the data perimeter (4.6) is the real backstop. Say if you want them denied anyway.
+  - **Checked (offline):** `terraform fmt`, `validate`, `terraform test` (14), `checkov -d` on the module (20 passed, 0 failed, 16 skipped) and a run with the repo's `.checkov.yaml` (0 findings in `account-baseline`), `conftest verify` (64).
+    Not run: the GitHub check itself, any apply, any AWS access. **Included in this commit:** the pending `PLAN.md` edits from the other session (new task 2.9, the discovery contract as a versioned API), as you asked.

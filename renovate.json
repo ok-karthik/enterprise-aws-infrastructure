@@ -59,6 +59,51 @@
   ],
   "packageRules": [
     {
+      "description": "access_analyzer pin in security-tooling: own PR, no automerge",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["access_analyzer"],
+      "matchFileNames": ["**/security-tooling/env.hcl"],
+      "groupName": "iac-modules: access_analyzer pin (security-tooling)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "security-tooling"]
+    },
+    {
+      "description": "break_glass_alerts pin in management: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["break_glass_alerts"],
+      "matchFileNames": ["**/management/env.hcl"],
+      "groupName": "iac-modules: break_glass_alerts pin (management)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "management"]
+    },
+    {
+      "description": "break_glass_alerts pin in dev: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["break_glass_alerts"],
+      "matchFileNames": ["**/workloads-dev/env.hcl"],
+      "groupName": "iac-modules: break_glass_alerts pin (dev)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "dev"]
+    },
+    {
+      "description": "break_glass_alerts pin in prod: own PR, no automerge, so the promotion order is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["break_glass_alerts"],
+      "matchFileNames": ["**/workloads-prod/env.hcl"],
+      "groupName": "iac-modules: break_glass_alerts pin (prod)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "prod"]
+    },
+    {
+      "description": "identity_center pin in management: own PR, no automerge",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["identity_center"],
+      "matchFileNames": ["**/management/env.hcl"],
+      "groupName": "iac-modules: identity_center pin (management)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "management"]
+    },
+    {
       "description": "budgets pin in management: own PR, no automerge, so the promotion order is kept",
       "matchManagers": ["custom.regex"],
       "matchDepTypes": ["budgets"],

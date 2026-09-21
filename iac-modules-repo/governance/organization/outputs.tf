@@ -22,3 +22,13 @@ output "guardrail_policy_ids" {
   description = "Map of guardrail name to SCP ID"
   value       = local.guardrail_policy_ids
 }
+
+output "centralized_root_access_enabled" {
+  description = "Whether centralized root access management is enabled"
+  value       = var.enable_centralized_root_access
+}
+
+output "delegated_administrators" {
+  description = "Delegated administrator accounts, keyed by service principal"
+  value       = { for principal, d in aws_organizations_delegated_administrator.this : principal => d.account_id }
+}

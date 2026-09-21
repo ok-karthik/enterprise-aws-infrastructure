@@ -60,6 +60,32 @@ variable "aws_service_access_principals" {
   ]
 }
 
+variable "enable_centralized_root_access" {
+  description = "Enable centralized root access management (RootCredentialsManagement and RootSessions), so member accounts need no root credentials. See docs/ROOT_ACCESS.md."
+  type        = bool
+  default     = true
+}
+
+variable "delegated_administrators" {
+  description = <<-EOT
+    Delegated administrator accounts: service principal => account id, for example
+    { "access-analyzer.amazonaws.com" = "<security-tooling account id>" }. Each service needs trusted access in
+    aws_service_access_principals. Leave a service out until its account really exists (no placeholder ids).
+  EOT
+  type        = map(string)
+  default     = {}
+
+  validation {
+    condition     = alltrue([for _, id in var.delegated_administrators : can(regex("^[0-9]{12}$", id)) && !startswith(id, "00000000")])
+    error_message = "Every delegated administrator needs a real 12-digit account id (a 000000000xxx registry placeholder is refused)."
+  }
+
+  validation {
+    condition     = alltrue([for principal, _ in var.delegated_administrators : contains(var.aws_service_access_principals, principal)])
+    error_message = "Every delegated service needs trusted access: add its principal to aws_service_access_principals."
+  }
+}
+
 variable "enabled_policy_types" {
   description = "Policy types enabled on the organization root. Must include SERVICE_CONTROL_POLICY."
   type        = list(string)

@@ -26,6 +26,7 @@ All under `/platform/<env>/<region>/`. `<env>` is `dev`, `staging`, `prod` or `g
 | `kms/general_key_arn` | CMK for general (internal) data | `governance/account-baseline` |
 | `kms/confidential_key_arn` | CMK for confidential data | `governance/account-baseline` |
 | `iam/workload_boundary_arn` | `platform-workload-boundary`, which every role a tenant creates must carry | `governance/account-baseline` |
+| `iam/developer_policy_arn` | `platform-developer`, the customer-managed policy behind the Developer permission set | `governance/account-baseline` |
 
 ## Rules
 

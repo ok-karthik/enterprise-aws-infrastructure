@@ -84,6 +84,24 @@
       "package-name": "budgets",
       "component": "budgets",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/identity/identity-center": {
+      "release-type": "terraform-module",
+      "package-name": "identity-center",
+      "component": "identity-center",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/security/break-glass-alerts": {
+      "release-type": "terraform-module",
+      "package-name": "break-glass-alerts",
+      "component": "break-glass-alerts",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/security/access-analyzer": {
+      "release-type": "terraform-module",
+      "package-name": "access-analyzer",
+      "component": "access-analyzer",
+      "tag-separator": "-"
     }
   }
 }

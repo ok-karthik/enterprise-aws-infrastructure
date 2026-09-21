@@ -12,5 +12,8 @@
   "iac-modules-repo/governance/account-factory": "1.0.0",
   "iac-modules-repo/governance/account-baseline": "1.0.0",
   "iac-modules-repo/governance/discovery-publisher": "1.0.0",
-  "iac-modules-repo/governance/budgets": "1.0.0"
+  "iac-modules-repo/governance/budgets": "1.0.0",
+  "iac-modules-repo/identity/identity-center": "1.0.0",
+  "iac-modules-repo/security/break-glass-alerts": "1.0.0",
+  "iac-modules-repo/security/access-analyzer": "1.0.0"
 }
