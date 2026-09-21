@@ -14,3 +14,4 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .agents/metrics/*.jsonl
+*.sarif
