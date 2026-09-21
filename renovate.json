@@ -104,6 +104,15 @@
       "addLabels": ["iac-modules", "global"]
     },
     {
+      "description": "account_factory pin in _global: own PR, no automerge, so the promotion order dev then prod is kept",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["account_factory"],
+      "matchFileNames": ["**/_global/env.hcl"],
+      "groupName": "iac-modules: account_factory pin (_global)",
+      "automerge": false,
+      "addLabels": ["iac-modules", "global"]
+    },
+    {
       "description": "bootstrap_stacksets pin in _global: own PR, no automerge, so the promotion order dev then prod is kept",
       "matchManagers": ["custom.regex"],
       "matchDepTypes": ["bootstrap_stacksets"],
