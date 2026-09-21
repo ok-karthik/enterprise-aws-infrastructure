@@ -14,12 +14,19 @@ REGISTRY="foundation-live-repo/_config/accounts.hcl"
 [[ -f "$REGISTRY" ]] || { echo "❌ Registry not found: $REGISTRY" >&2; exit 1; }
 
 # One line per registry account: "<name> <id> <ou> <env>"
-registry=$(awk '
-  /^[[:space:]]{4}[A-Za-z0-9_-]+ = \{/ { name=$1; id=""; ou=""; env="" }
-  name != "" && /^[[:space:]]+id[[:space:]]*=/  { split($0, a, "\""); id=a[2] }
-  name != "" && /^[[:space:]]+ou[[:space:]]*=/  { split($0, a, "\""); ou=a[2] }
-  name != "" && /^[[:space:]]+env[[:space:]]*=/ { split($0, a, "\""); env=a[2] }
-  name != "" && /^[[:space:]]{4}\}/ { print name, id, ou, env; name="" }
+registry=$(python3 -c '
+import re, sys
+from pathlib import Path
+
+text = Path(sys.argv[1]).read_text()
+for match in re.finditer(r"^    ([A-Za-z0-9_-]+) = \{\n(.*?)^    \}", text, re.M | re.S):
+    name, body = match.groups()
+    fields = {}
+    for line in body.splitlines():
+        m = re.match(r"^\s+(\w+)\s*=\s*(?:\"([^\"]*)\"|([^\s#]+))", line)
+        if m:
+            fields[m.group(1)] = m.group(2) if m.group(2) is not None else m.group(3)
+    print(name, fields.get("id", ""), fields.get("ou", ""), fields.get("env", ""))
 ' "$REGISTRY")
 [[ -n "$registry" ]] || { echo "❌ No accounts found in $REGISTRY" >&2; exit 1; }
 

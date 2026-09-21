@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/workload-identity-vv1.0.0...workload-identity-vv2.0.0) (2026-09-21)
+## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/workload-identity-v1.0.0...workload-identity-v2.0.0) (2026-09-21)
 
 
 ### ⚠ BREAKING CHANGES

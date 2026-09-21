@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/workload-iam-vv1.0.0...workload-iam-vv2.0.0) (2026-09-21)
+## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/workload-iam-v1.0.0...workload-iam-v2.0.0) (2026-09-21)
 
 
 ### ⚠ BREAKING CHANGES

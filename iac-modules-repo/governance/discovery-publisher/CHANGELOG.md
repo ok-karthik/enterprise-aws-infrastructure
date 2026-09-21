@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.1.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/discovery-publisher-vv1.0.0...discovery-publisher-vv1.1.0) (2026-09-21)
+## 1.0.0 (2026-09-21)
 
 
 ### Features

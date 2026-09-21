@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/s3-vv1.0.0...s3-vv2.0.0) (2026-09-21)
+## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/s3-v1.0.0...s3-v2.0.0) (2026-09-21)
 
 
 ### ⚠ BREAKING CHANGES

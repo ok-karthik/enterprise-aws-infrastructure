@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/bootstrap-stacksets-vv1.0.0...bootstrap-stacksets-vv2.0.0) (2026-09-21)
+## [2.0.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/bootstrap-stacksets-v1.0.0...bootstrap-stacksets-v2.0.0) (2026-09-21)
 
 
 ### ⚠ BREAKING CHANGES
