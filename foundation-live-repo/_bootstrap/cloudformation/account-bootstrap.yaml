@@ -27,6 +27,14 @@ Parameters:
     Description: >-
       "true" only in the management account, where the apply role has to manage AWS
       Organizations. Everywhere else the boundary denies organizations:* and account:*.
+  AllowIdentityCenterAdmin:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: >-
+      "true" only in the management account, where the apply role has to manage IAM Identity Center
+      (the identity-center stack). Everywhere else the boundary denies sso:*, sso-directory:* and
+      identitystore:*. The StackSets never set this.
   NoncurrentVersionDays:
     Type: Number
     Default: 90
@@ -35,6 +43,7 @@ Parameters:
 
 Conditions:
   DenyOrganizations: !Equals [!Ref AllowOrganizationsAdmin, "false"]
+  DenyIdentityCenter: !Equals [!Ref AllowIdentityCenterAdmin, "false"]
 
 Resources:
   # ---------------------------------------------------------------------------
@@ -138,8 +147,8 @@ Resources:
     Properties:
       ManagedPolicyName: github-actions-apply-boundary
       Description: >-
-        Permissions boundary for github-actions-apply: blocks Identity Center, CloudTrail and
-        CI-identity changes, protects this bootstrap, and (outside management) blocks Organizations.
+        Permissions boundary for github-actions-apply: blocks CloudTrail and CI-identity changes, protects
+        this bootstrap, and (outside management) blocks Organizations and Identity Center.
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -157,15 +166,18 @@ Resources:
                   - "account:*"
                 Resource: "*"
               - !Ref AWS::NoValue
-          # Always on. (PLAN 3.1 must add an AllowIdentityCenterAdmin switch before Identity Center
-          # is applied from CI.)
-          - Sid: DenyIdentityCenter
-            Effect: Deny
-            Action:
-              - "sso:*"
-              - "sso-directory:*"
-              - "identitystore:*"
-            Resource: "*"
+          # Only in accounts where AllowIdentityCenterAdmin is "false" (everything except management,
+          # where CI applies the identity-center stack). Member accounts never allow it.
+          - !If
+              - DenyIdentityCenter
+              - Sid: DenyIdentityCenter
+                Effect: Deny
+                Action:
+                  - "sso:*"
+                  - "sso-directory:*"
+                  - "identitystore:*"
+                Resource: "*"
+              - !Ref AWS::NoValue
           - Sid: DenyOrgDestruction
             Effect: Deny
             Action:

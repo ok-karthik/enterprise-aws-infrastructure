@@ -31,13 +31,17 @@ def load():
     return yaml.load(TEMPLATE.read_text(encoding="utf-8"), Loader=CfnLoader)
 
 
-def statements(deny_organizations: bool) -> list[dict]:
-    """The boundary's statements with the DenyOrganizations condition resolved."""
+def statements(deny_organizations: bool, deny_identity_center: bool = True) -> list[dict]:
+    """The boundary's statements with the DenyOrganizations / DenyIdentityCenter conditions resolved.
+
+    (True, True) is a member account; (False, False) is the management account, where the apply role
+    manages Organizations and Identity Center."""
+    conditions = {"DenyOrganizations": deny_organizations, "DenyIdentityCenter": deny_identity_center}
     result = []
     for st in load()["Resources"]["ApplyBoundary"]["Properties"]["PolicyDocument"]["Statement"]:
         if "!If" in st:
-            _, when_true, when_false = st["!If"]
-            chosen = when_true if deny_organizations else when_false
+            name, when_true, when_false = st["!If"]
+            chosen = when_true if conditions[name] else when_false
             if isinstance(chosen, dict) and "!Ref" in chosen:  # AWS::NoValue
                 continue
             st = chosen
@@ -45,21 +49,24 @@ def statements(deny_organizations: bool) -> list[dict]:
     return result
 
 
-def sids(deny_organizations: bool) -> set[str]:
-    return {st["Sid"] for st in statements(deny_organizations)}
+def sids(deny_organizations: bool, deny_identity_center: bool = True) -> set[str]:
+    return {st["Sid"] for st in statements(deny_organizations, deny_identity_center)}
+
+
+# member account, management account, and the two "one switch on" mixes
+COMBINATIONS = [(True, True), (False, False), (False, True), (True, False)]
 
 
 class ApplyBoundary(unittest.TestCase):
     def test_one_broad_allow_then_only_denies(self):
-        for flag in (True, False):
-            sts = statements(flag)
+        for org, idc in COMBINATIONS:
+            sts = statements(org, idc)
             self.assertEqual(sts[0]["Sid"], "AllowEverythingElse")
             self.assertEqual(sts[0]["Effect"], "Allow")
             self.assertTrue(all(s["Effect"] == "Deny" for s in sts[1:]), "a boundary only ever narrows: everything after the Allow is a Deny")
 
     def test_required_denies_are_always_on(self):
         required = {
-            "DenyIdentityCenter",
             "DenyOrgDestruction",
             "DenyCloudTrailChanges",
             "DenyEditingThisBoundary",
@@ -72,14 +79,32 @@ class ApplyBoundary(unittest.TestCase):
             "ProtectStateBucket",
             "ProtectBootstrapStack",
         }
-        for flag in (True, False):
-            self.assertLessEqual(required, sids(flag), f"missing a required deny (DenyOrganizations={flag})")
+        for org, idc in COMBINATIONS:
+            self.assertLessEqual(required, sids(org, idc), f"missing a required deny (DenyOrganizations={org}, DenyIdentityCenter={idc})")
 
     def test_organizations_are_denied_everywhere_except_where_allowed(self):
         self.assertIn("DenyOrganizationsAndAccount", sids(True))  # member accounts
         self.assertNotIn("DenyOrganizationsAndAccount", sids(False))  # management (AllowOrganizationsAdmin = true)
         deny = next(s for s in statements(True) if s["Sid"] == "DenyOrganizationsAndAccount")
         self.assertEqual(set(deny["Action"]), {"organizations:*", "account:*"})
+
+    def test_identity_center_is_denied_everywhere_except_where_allowed(self):
+        # Member accounts (and the StackSets) never allow it; only management, where CI applies the identity-center stack.
+        self.assertIn("DenyIdentityCenter", sids(True, True))
+        self.assertNotIn("DenyIdentityCenter", sids(False, False))
+        deny = next(s for s in statements(True, True) if s["Sid"] == "DenyIdentityCenter")
+        self.assertEqual(set(deny["Action"]), {"sso:*", "sso-directory:*", "identitystore:*"})
+
+    def test_the_two_switches_are_independent(self):
+        # Allowing Identity Center must not allow Organizations, and the other way round.
+        self.assertIn("DenyOrganizationsAndAccount", sids(True, False))
+        self.assertNotIn("DenyIdentityCenter", sids(True, False))
+        self.assertIn("DenyIdentityCenter", sids(False, True))
+        self.assertNotIn("DenyOrganizationsAndAccount", sids(False, True))
+
+    def test_org_destruction_is_denied_even_where_organizations_are_managed(self):
+        deny = next(s for s in statements(False, False) if s["Sid"] == "DenyOrgDestruction")
+        self.assertIn("organizations:DeleteOrganization", deny["Action"])
 
     def test_security_services_cannot_be_switched_off(self):
         st = next(s for s in statements(True) if s["Sid"] == "DenySecurityServiceTampering")
@@ -97,16 +122,24 @@ class ApplyBoundary(unittest.TestCase):
         self.assertEqual(boundary["Action"], ["iam:DeletePolicy"])
 
     def test_policy_fits_the_aws_size_limit(self):
-        for flag in (True, False):
-            text = json.dumps({"Version": "2012-10-17", "Statement": statements(flag)}, separators=(",", ":"))
+        for org, idc in COMBINATIONS:
+            text = json.dumps({"Version": "2012-10-17", "Statement": statements(org, idc)}, separators=(",", ":"))
             size = len("".join(text.split()))
             # !Sub strings are a little longer once the account id and region are filled in
-            self.assertLess(size + 400, POLICY_SIZE_LIMIT, f"boundary is {size} characters (limit {POLICY_SIZE_LIMIT}, DenyOrganizations={flag})")
+            self.assertLess(size + 400, POLICY_SIZE_LIMIT, f"boundary is {size} characters (limit {POLICY_SIZE_LIMIT}, DenyOrganizations={org}, DenyIdentityCenter={idc})")
 
 
 class CiRoles(unittest.TestCase):
     def setUp(self):
         self.resources = load()["Resources"]
+
+    def test_admin_switches_default_to_false_and_are_strings(self):
+        params = load()["Parameters"]
+        for name in ("AllowOrganizationsAdmin", "AllowIdentityCenterAdmin"):
+            self.assertEqual(params[name]["Default"], "false", f"{name} must default to the safe value")
+            self.assertEqual(params[name]["AllowedValues"], ["true", "false"])
+        conditions = load()["Conditions"]
+        self.assertEqual(conditions["DenyIdentityCenter"], {"!Equals": [{"!Ref": "AllowIdentityCenterAdmin"}, "false"]})
 
     def test_apply_role_is_capped_and_trusts_one_environment(self):
         role = self.resources["ApplyRole"]["Properties"]

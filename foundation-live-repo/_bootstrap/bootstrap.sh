@@ -140,6 +140,7 @@ aws cloudformation create-change-set \
   "ParameterKey=GitHubRepo,ParameterValue=${GITHUB_REPO}" \
   "ParameterKey=GitHubEnvironment,ParameterValue=${GITHUB_ENVIRONMENT}" \
   "ParameterKey=AllowOrganizationsAdmin,ParameterValue=true" \
+  "ParameterKey=AllowIdentityCenterAdmin,ParameterValue=true" \
   --capabilities CAPABILITY_NAMED_IAM \
   --tags \
   "Key=Project,Value=enterprise-aws-platform" \
