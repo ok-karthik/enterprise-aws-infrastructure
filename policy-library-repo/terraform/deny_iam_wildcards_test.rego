@@ -40,3 +40,7 @@ test_iam_wildcards_deny_statement_allowed if {
 test_iam_wildcards_allowlisted_boundary_allowed if {
 	count(deny) == 0 with input as iam_input("aws_iam_policy", "policy", "github-actions-apply-boundary", {"Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]})
 }
+
+test_iam_wildcards_workload_boundary_allowed if {
+	count(deny) == 0 with input as iam_input("aws_iam_policy", "policy", "platform-workload-boundary", {"Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]})
+}
