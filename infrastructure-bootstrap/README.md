@@ -129,11 +129,33 @@ aws cloudformation describe-stacks --stack-name platform-bootstrap --query 'Stac
 
 ## Wire GitHub to the roles
 
-1. Create the **`management`** GitHub Environment and add yourself as a required reviewer (Settings → Environments). The apply role only trusts jobs running in it.
-2. Repository variables (Settings → Secrets and variables → Actions → **Variables**): `AWS_REGION`, and `AWS_DEV_PLAN_ROLE_ARN` / `AWS_PROD_PLAN_ROLE_ARN` set to the management **plan** role. Plans are read-only, so they can stay pointed at management until `workloads-dev` exists.
-3. **Leave `AWS_DEV_APPLY_ROLE_ARN` / `AWS_PROD_APPLY_ROLE_ARN` unset.** The management apply role trusts only `environment:management`, so the dev/prod apply jobs cannot deploy workloads into the management account. That is intended. CI for the org stack (`_global`) comes with PLAN 2.6.
+Once the CloudFormation stack is deployed, wire GitHub Actions to the created roles using either the GitHub CLI (`gh`) or the GitHub Web UI:
 
-The script prints the exact `gh` commands. Details of the pipeline are in [`docs/CICD.md`](../docs/CICD.md).
+### Via GitHub CLI (`gh`):
+
+```bash
+# 1. Create the management environment
+gh api -X PUT repos/ok-karthik/enterprise-aws-infrastructure/environments/management
+
+# 2. Set repository variables for CI/CD plan jobs
+gh variable set AWS_REGION             --body "eu-central-1"
+gh variable set AWS_DEV_PLAN_ROLE_ARN  --body "arn:aws:iam::954171757349:role/github-actions-plan"
+gh variable set AWS_PROD_PLAN_ROLE_ARN --body "arn:aws:iam::954171757349:role/github-actions-plan"
+```
+
+### Via GitHub Web Console:
+
+1. **GitHub Environment**: Go to **Settings** → **Environments** → click **New environment** → name it `management`. Under **Environment protection rules**, check **Required reviewers** and add yourself as a reviewer.
+2. **Repository Variables**: Go to **Settings** → **Secrets and variables** → **Actions** → **Variables** tab (not Secrets):
+   - `AWS_REGION` = `eu-central-1`
+   - `AWS_DEV_PLAN_ROLE_ARN` = `arn:aws:iam::954171757349:role/github-actions-plan`
+   - `AWS_PROD_PLAN_ROLE_ARN` = `arn:aws:iam::954171757349:role/github-actions-plan`
+
+> [!IMPORTANT]
+> **Leave `AWS_DEV_APPLY_ROLE_ARN` and `AWS_PROD_APPLY_ROLE_ARN` unset for now.**
+> The management apply role trusts only `environment:management`, so dev/prod apply jobs cannot deploy workloads into the management account. That is intended. Dedicated workload apply roles will be configured when member accounts are vended in Phase 2.
+
+Details of the pipeline architecture are in [`docs/CICD.md`](../docs/CICD.md).
 
 ## Changing the template later
 
