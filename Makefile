@@ -1,7 +1,7 @@
 # Enterprise AWS Platform — task runner
 # Wraps the platform's command surface. Run `make help` for the list.
 
-FMT_DIRS := infrastructure-modules infrastructure-live infrastructure-bootstrap policies
+FMT_DIRS := infrastructure-modules infrastructure-live policies
 ENV ?= dev
 
 .DEFAULT_GOAL := help
