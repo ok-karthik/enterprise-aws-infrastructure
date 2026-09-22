@@ -118,3 +118,105 @@ run "unknown_egress_mode_is_rejected" {
 
   expect_failures = [var.egress_mode]
 }
+
+run "flow_logs_default_to_cloudwatch_only" {
+  command = plan
+
+  variables {
+    cidr = "10.0.0.0/16"
+  }
+
+  assert {
+    condition     = length(aws_flow_log.s3) == 0 && length(aws_iam_role.flow_log_s3) == 0
+    error_message = "With flow_log_destinations = [\"cloudwatch\"] (the default), no S3 flow log resources are created."
+  }
+}
+
+run "s3_flow_log_can_be_added_as_well_as_cloudwatch" {
+  command = plan
+
+  variables {
+    cidr                        = "10.0.0.0/16"
+    flow_log_destinations       = ["cloudwatch", "s3"]
+    flow_log_s3_destination_arn = "arn:aws:s3:::platform-vpc-flow-logs-222233334444-eu-central-1/test-vpc/"
+  }
+
+  assert {
+    condition     = length(aws_flow_log.s3) == 1
+    error_message = "s3 in flow_log_destinations must create the S3 flow log, alongside CloudWatch."
+  }
+
+  assert {
+    condition     = one(aws_flow_log.s3).log_destination == "arn:aws:s3:::platform-vpc-flow-logs-222233334444-eu-central-1/test-vpc/"
+    error_message = "The S3 flow log must use the given destination."
+  }
+}
+
+run "s3_only_flow_logs_skips_cloudwatch_entirely" {
+  command = plan
+
+  variables {
+    cidr                        = "10.0.0.0/16"
+    flow_log_destinations       = ["s3"]
+    flow_log_s3_destination_arn = "arn:aws:s3:::platform-vpc-flow-logs-222233334444-eu-central-1/test-vpc/"
+  }
+
+  assert {
+    condition     = length(aws_flow_log.s3) == 1
+    error_message = "The S3 flow log must still be created."
+  }
+}
+
+run "s3_destination_required_when_s3_is_selected" {
+  command = plan
+
+  variables {
+    cidr                  = "10.0.0.0/16"
+    flow_log_destinations = ["s3"]
+  }
+
+  expect_failures = [var.flow_log_destinations]
+}
+
+run "empty_flow_log_destinations_is_rejected" {
+  command = plan
+
+  variables {
+    cidr                  = "10.0.0.0/16"
+    flow_log_destinations = []
+  }
+
+  expect_failures = [var.flow_log_destinations]
+}
+
+run "public_subnets_are_not_excluded_from_account_bpa_by_default" {
+  command = plan
+
+  variables {
+    cidr = "10.0.0.0/16"
+  }
+
+  assert {
+    condition     = length(aws_vpc_block_public_access_exclusion.public_subnets) == 0
+    error_message = "exclude_public_subnets_from_account_bpa defaults to false: nothing is excluded."
+  }
+}
+
+run "public_subnets_can_be_excluded_from_account_bpa" {
+  command = plan
+
+  variables {
+    cidr                                    = "10.0.0.0/16"
+    exclude_public_subnets_from_account_bpa = true
+  }
+
+  assert {
+    condition     = length(aws_vpc_block_public_access_exclusion.public_subnets) == 1
+    error_message = "With exclude_public_subnets_from_account_bpa = true, this test's one public subnet must be excluded."
+  }
+
+  assert {
+    condition     = one(values(aws_vpc_block_public_access_exclusion.public_subnets)).internet_gateway_exclusion_mode == "allow-bidirectional"
+    error_message = "The exclusion mode must match account-baseline's block-bidirectional default."
+  }
+}

@@ -39,6 +39,11 @@ no NAT gateways here at all (regardless of `enable_nat_gateway`); pair it with `
 `egress_route_cidr = "0.0.0.0/0"` to send default-route traffic to `network/inspection-egress` in network-hub
 instead.
 
+
+## Flow logs and public access (PLAN 5.7)
+
+`flow_log_destinations` (default `["cloudwatch"]`): `"s3"` sends flow logs to `var.flow_log_s3_destination_arn` (security/log-archive's `bucket_names["vpc_flow_logs"]`, with a key prefix) as well as, or instead of, CloudWatch. `exclude_public_subnets_from_account_bpa` (default off) excludes this VPC's public subnets — never the private or database ones — from the account-wide VPC Block Public Access default that `governance/account-baseline` sets.
+
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -63,8 +68,11 @@ instead.
 
 | Name | Type |
 | ---- | ---- |
+| [aws_flow_log.s3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/flow_log) | resource |
+| [aws_iam_role.flow_log_s3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_ssm_parameter.database_subnets](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_parameter) | resource |
 | [aws_ssm_parameter.vpc_id](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_parameter) | resource |
+| [aws_vpc_block_public_access_exclusion.public_subnets](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_block_public_access_exclusion) | resource |
 
 ## Inputs
 
@@ -78,6 +86,9 @@ instead.
 | <a name="input_egress_mode"></a> [egress\_mode](#input\_egress\_mode) | "local-nat" (default): this VPC's own NAT gateways, controlled by enable\_nat\_gateway/single\_nat\_gateway,<br/>as before. "central" (PLAN 5.3): no NAT gateways here at all, regardless of enable\_nat\_gateway --<br/>0.0.0.0/0 goes to the transit gateway instead, through network/tgw-attachment's egress\_route\_cidr, and<br/>on to network/inspection-egress in network-hub. | `string` | `"local-nat"` | no |
 | <a name="input_enable_nat_gateway"></a> [enable\_nat\_gateway](#input\_enable\_nat\_gateway) | Should be true if you want to provision NAT Gateways for each of your private networks | `bool` | `true` | no |
 | <a name="input_env"></a> [env](#input\_env) | Target environment for naming and discovery contract (e.g. dev, prod) | `string` | `""` | no |
+| <a name="input_exclude_public_subnets_from_account_bpa"></a> [exclude\_public\_subnets\_from\_account\_bpa](#input\_exclude\_public\_subnets\_from\_account\_bpa) | Exclude this VPC's public subnets from the account-wide VPC Block Public Access default (governance/account-baseline), so they can front an internet-facing resource like an ALB. Off by default: the account default (blocked) applies. Never excludes private or database subnets. | `bool` | `false` | no |
+| <a name="input_flow_log_destinations"></a> [flow\_log\_destinations](#input\_flow\_log\_destinations) | Where VPC flow logs go (PLAN 5.7): "cloudwatch", "s3", or both ("as well as"). At least one is required. | `list(string)` | <pre>[<br/>  "cloudwatch"<br/>]</pre> | no |
+| <a name="input_flow_log_s3_destination_arn"></a> [flow\_log\_s3\_destination\_arn](#input\_flow\_log\_s3\_destination\_arn) | S3 destination ARN for flow logs (security/log-archive's bucket\_names["vpc\_flow\_logs"] output, with a key prefix, e.g. "arn:aws:s3:::<bucket>/<prefix>/"). Required when flow\_log\_destinations includes "s3". | `string` | `""` | no |
 | <a name="input_ipv4_ipam_pool_id"></a> [ipv4\_ipam\_pool\_id](#input\_ipv4\_ipam\_pool\_id) | IPAM pool to request the VPC's CIDR from (network/ipam's env\_pool\_ids output), instead of a literal cidr. Requires ipv4\_netmask\_length too. | `string` | `""` | no |
 | <a name="input_ipv4_netmask_length"></a> [ipv4\_netmask\_length](#input\_ipv4\_netmask\_length) | Netmask length to request from ipv4\_ipam\_pool\_id, e.g. 20 for a /20. Requires ipv4\_ipam\_pool\_id too. | `number` | `null` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name to be used on all resources as prefix | `string` | n/a | yes |

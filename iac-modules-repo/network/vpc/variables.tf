@@ -89,6 +89,33 @@ variable "egress_mode" {
   }
 }
 
+variable "flow_log_destinations" {
+  description = "Where VPC flow logs go (PLAN 5.7): \"cloudwatch\", \"s3\", or both (\"as well as\"). At least one is required."
+  type        = list(string)
+  default     = ["cloudwatch"]
+
+  validation {
+    condition = (
+      length(var.flow_log_destinations) > 0 &&
+      alltrue([for d in var.flow_log_destinations : contains(["cloudwatch", "s3"], d)]) &&
+      (!contains(var.flow_log_destinations, "s3") || var.flow_log_s3_destination_arn != "")
+    )
+    error_message = "flow_log_destinations must be a non-empty list of cloudwatch/s3, and flow_log_s3_destination_arn must be set when s3 is included."
+  }
+}
+
+variable "flow_log_s3_destination_arn" {
+  description = "S3 destination ARN for flow logs (security/log-archive's bucket_names[\"vpc_flow_logs\"] output, with a key prefix, e.g. \"arn:aws:s3:::<bucket>/<prefix>/\"). Required when flow_log_destinations includes \"s3\"."
+  type        = string
+  default     = ""
+}
+
+variable "exclude_public_subnets_from_account_bpa" {
+  description = "Exclude this VPC's public subnets from the account-wide VPC Block Public Access default (governance/account-baseline), so they can front an internet-facing resource like an ALB. Off by default: the account default (blocked) applies. Never excludes private or database subnets."
+  type        = bool
+  default     = false
+}
+
 variable "cluster_name" {
   description = "Name of the EKS cluster to tag subnets for"
   type        = string
