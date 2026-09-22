@@ -57,6 +57,22 @@ variable "publish_ssm_parameters" {
   default     = true
 }
 
+variable "security_remediation_lambda_role_arn" {
+  description = <<-EOT
+    ARN of the security/auto-remediation Lambda's execution role (PLAN 4.9), applied in security-tooling.
+    When set, creates a narrow security-remediation role in THIS account that only that Lambda may assume, to
+    revoke open SSH/RDP security group rules. Empty (the default) creates nothing: leave it empty until the
+    Lambda exists and security-tooling has a real account id.
+  EOT
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.security_remediation_lambda_role_arn == "" || can(regex("^arn:aws[a-zA-Z-]*:iam::[0-9]{12}:role/", var.security_remediation_lambda_role_arn))
+    error_message = "security_remediation_lambda_role_arn must be empty or an IAM role ARN."
+  }
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)

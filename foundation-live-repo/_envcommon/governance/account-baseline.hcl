@@ -17,6 +17,13 @@ locals {
 
   account_vars = read_terragrunt_config(find_in_parent_folders("account.hcl"))
   region_vars  = read_terragrunt_config(find_in_parent_folders("region.hcl"))
+
+  # security/auto-remediation's Lambda execution role (PLAN 4.9), by name, in the security-tooling account.
+  # Left "" (creates nothing, governance/account-baseline's default) until security-tooling has a real id:
+  # a role trusting a placeholder-account ARN would trust nobody real, and would need re-creating later anyway.
+  registry                         = read_terragrunt_config("${get_repo_root()}/foundation-live-repo/_config/accounts.hcl")
+  security_tooling_account_id      = local.registry.locals.accounts["security-tooling"].id
+  auto_remediation_lambda_role_arn = !startswith(local.security_tooling_account_id, "00000000") ? "arn:aws:iam::${local.security_tooling_account_id}:role/auto-remediate-open-ssh-lambda" : ""
 }
 
 inputs = {
@@ -24,6 +31,8 @@ inputs = {
   env           = local.account_vars.locals.env
   ou            = local.account_vars.locals.ou
   region        = local.region_vars.locals.aws_region
+
+  security_remediation_lambda_role_arn = local.auto_remediation_lambda_role_arn
 
   tags = {
     ManagedBy = "Terragrunt-Wrapper"

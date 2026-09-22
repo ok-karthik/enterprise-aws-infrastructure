@@ -27,3 +27,8 @@ output "developer_policy_name" {
   description = "Name of the customer-managed policy the Developer permission set attaches (it must exist in every assigned account)"
   value       = aws_iam_policy.developer.name
 }
+
+output "security_remediation_role_arn" {
+  description = "ARN of the security-remediation role, or null when security_remediation_lambda_role_arn is empty"
+  value       = try(aws_iam_role.security_remediation[0].arn, null)
+}

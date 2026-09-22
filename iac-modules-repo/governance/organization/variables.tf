@@ -113,21 +113,56 @@ variable "guardrail_target_ous" {
   default     = ["Policy-Staging"]
 }
 
-variable "allowed_regions" {
-  description = "Regions workloads may use. The region SCP denies every request to a region not in this list (global services are exempt)."
-  type        = list(string)
-  default     = ["eu-central-1"]
+variable "allowed_regions_by_ou" {
+  description = <<-EOT
+    Regions each OU may use (PLAN 4.6), keyed by OU name; matches _config/regions.hcl's allowed_regions_by_ou.
+    One region SCP per key, attached only to that OU: an OU with no entry (or an empty list) gets no region
+    SCP from this module at all. Starts empty by default so nothing widens past guardrail_target_ous without
+    a deliberate choice by the caller (the live envcommon passes only the OUs it wants tested).
+  EOT
+  type        = map(list(string))
+  default     = {}
 
   validation {
-    condition     = length(var.allowed_regions) > 0 && alltrue([for r in var.allowed_regions : can(regex("^[a-z]{2}(-[a-z]+)+-[0-9]$", r))])
-    error_message = "allowed_regions must be a non-empty list of region names such as \"eu-central-1\"."
+    condition = alltrue([
+      for ou, regions in var.allowed_regions_by_ou :
+      alltrue([for r in regions : can(regex("^[a-z]{2}(-[a-z]+)+-[0-9]$", r))])
+    ])
+    error_message = "Every region must look like \"eu-central-1\"."
   }
 }
 
 variable "additional_region_exempt_actions" {
-  description = "Extra IAM actions to exempt from the region SCP (added to the built-in global-service list), e.g. [\"ec2:DescribeRegions\"]."
+  description = "Extra IAM actions to exempt from every region SCP (added to the built-in global-service list), e.g. [\"ec2:DescribeRegions\"]."
   type        = list(string)
   default     = []
+}
+
+variable "break_glass_role_arn_pattern" {
+  description = <<-EOT
+    ARN pattern (StringLike) matching a BreakGlassAdmin session, used as an exception in the guardrails that
+    name one (deny_iam_user_creation, protect_platform_resources). Matches the Identity Center permission set
+    role naming that security/break-glass-alerts also matches (role_glob there).
+  EOT
+  type        = string
+  default     = "arn:*:sts::*:assumed-role/AWSReservedSSO_BreakGlassAdmin_*/*"
+
+  validation {
+    condition     = strcontains(var.break_glass_role_arn_pattern, "assumed-role")
+    error_message = "break_glass_role_arn_pattern must be an assumed-role ARN pattern (SCPs match principals by ARN, not by a Principal element)."
+  }
+}
+
+variable "enable_sandbox_guardrails" {
+  description = "Attach the Sandbox-only guardrails (deny large instance families, deny RI/Savings Plan purchases) to the Sandbox OU. Off by default: the Sandbox account is the owner's free-experimentation zone (learning-plan labs), turned on deliberately."
+  type        = bool
+  default     = false
+}
+
+variable "enable_suspended_deny_all" {
+  description = "Attach a deny-everything SCP to the Suspended OU. Safe by construction: the OU starts empty, so this has no effect until an account is actually moved there."
+  type        = bool
+  default     = true
 }
 
 variable "tags" {

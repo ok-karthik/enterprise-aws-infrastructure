@@ -31,7 +31,7 @@ locals {
       email              = "aws+log-archive@example.com" # TODO(owner): real root email
       create             = true
       monthly_budget_usd = 10    # TODO(owner): monthly budget in USD
-      ci                 = false # no live stack yet
+      ci                 = false # live folder exists (log archive, PLAN 4.1) but the id is still a placeholder
     }
     security-tooling = {
       id                 = "000000000002" # TODO(owner): real account ID

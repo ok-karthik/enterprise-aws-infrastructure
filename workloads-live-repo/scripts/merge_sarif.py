@@ -46,6 +46,13 @@ def merge(documents: list[dict]) -> dict:
             for rule in run.get("tool", {}).get("driver", {}).get("rules", []):
                 rules.setdefault(rule.get("id", ""), rule)
             for result in run.get("results", []):
+                # Drop suppressed findings (e.g. #checkov:skip).
+                # Checkov records inline suppressions in result["suppressions"]. If uploaded
+                # to GitHub Code Scanning, the code scanning bot creates noisy warnings on PR
+                # diffs for intentional architectural decisions. Only unsuppressed (real) violations
+                # should be surfaced to code scanning.
+                if result.get("suppressions"):
+                    continue
                 results.setdefault(result_key(result), result)
     if base_run is None:
         base_run = {"tool": {"driver": {"name": "Checkov"}}}

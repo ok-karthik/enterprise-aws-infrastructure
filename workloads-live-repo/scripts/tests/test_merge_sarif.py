@@ -43,6 +43,17 @@ class Merge(unittest.TestCase):
         self.assertEqual(merged["runs"][0]["results"], [])
         self.assertEqual(merged["version"], "2.1.0")
 
+    def test_suppressed_findings_are_dropped(self):
+        suppressed = result()
+        suppressed["suppressions"] = [{"kind": "inSource", "justification": "intentional skip"}]
+        unsuppressed = result(uri="plans/b/tfplan.json")
+        merged = ms.merge([doc([suppressed, unsuppressed])])
+        self.assertEqual(len(merged["runs"][0]["results"]), 1)
+        self.assertEqual(
+            merged["runs"][0]["results"][0]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"],
+            "plans/b/tfplan.json",
+        )
+
 
 class Cli(unittest.TestCase):
     def test_reads_a_directory_and_writes_one_file(self):
