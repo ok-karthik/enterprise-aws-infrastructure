@@ -132,6 +132,12 @@
       "package-name": "data-perimeter",
       "component": "data-perimeter",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/security/auto-remediation": {
+      "release-type": "terraform-module",
+      "package-name": "auto-remediation",
+      "component": "auto-remediation",
+      "tag-separator": "-"
     }
   }
 }

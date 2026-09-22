@@ -20,5 +20,6 @@
   "iac-modules-repo/security/org-cloudtrail": "1.0.0",
   "iac-modules-repo/security/threat-detection": "1.0.0",
   "iac-modules-repo/security/security-alerts": "1.0.0",
-  "iac-modules-repo/governance/data-perimeter": "1.0.0"
+  "iac-modules-repo/governance/data-perimeter": "1.0.0",
+  "iac-modules-repo/security/auto-remediation": "1.0.0"
 }
