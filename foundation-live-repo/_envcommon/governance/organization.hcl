@@ -16,20 +16,32 @@ locals {
   env      = local.env_vars.locals.env
 
   # Delegated administrators: service => the registry account that administers it. Left out until that
-  # account has a REAL id (registry placeholders are never registered).
+  # account has a REAL id (registry placeholders are never registered). security-tooling is the delegated
+  # administrator for access-analyzer (3.6) and for GuardDuty/Security Hub/Inspector v2/Macie (4.4,
+  # security/threat-detection assumes this registration already happened).
   registry = read_terragrunt_config("${get_repo_root()}/foundation-live-repo/_config/accounts.hcl")
   delegated_administrator_accounts = {
     "access-analyzer.amazonaws.com" = "security-tooling"
+    "guardduty.amazonaws.com"       = "security-tooling"
+    "securityhub.amazonaws.com"     = "security-tooling"
+    "inspector2.amazonaws.com"      = "security-tooling"
+    "macie.amazonaws.com"           = "security-tooling"
   }
   delegated_administrators = {
     for service, account in local.delegated_administrator_accounts : service => local.registry.locals.accounts[account].id
     if !startswith(local.registry.locals.accounts[account].id, "00000000")
   }
+
+  # Region allow-list per OU (PLAN 4.6), from _config/regions.hcl. Starts with ONLY the Policy-Staging entry,
+  # same "test first" reasoning as guardrail_target_ous below: widen by adding more of
+  # local.regions.locals.allowed_regions_by_ou's keys once Policy-Staging has been proven safe.
+  regions = read_terragrunt_config("${get_repo_root()}/foundation-live-repo/_config/regions.hcl")
 }
 
 inputs = {
-  # Region allow-list for the region SCP. Add a region here before workloads can use it.
-  allowed_regions = ["eu-central-1"]
+  allowed_regions_by_ou = {
+    "Policy-Staging" = local.regions.locals.allowed_regions_by_ou["Policy-Staging"]
+  }
 
   # The baseline SCPs attach to these OUs only. Start on Policy-Staging, test there, then widen
   # deliberately (for example ["Policy-Staging", "Sandbox", "NonProd"]). PLAN 4.6.

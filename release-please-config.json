@@ -102,6 +102,42 @@
       "package-name": "access-analyzer",
       "component": "access-analyzer",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/security/log-archive": {
+      "release-type": "terraform-module",
+      "package-name": "log-archive",
+      "component": "log-archive",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/security/org-cloudtrail": {
+      "release-type": "terraform-module",
+      "package-name": "org-cloudtrail",
+      "component": "org-cloudtrail",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/security/threat-detection": {
+      "release-type": "terraform-module",
+      "package-name": "threat-detection",
+      "component": "threat-detection",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/security/security-alerts": {
+      "release-type": "terraform-module",
+      "package-name": "security-alerts",
+      "component": "security-alerts",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/governance/data-perimeter": {
+      "release-type": "terraform-module",
+      "package-name": "data-perimeter",
+      "component": "data-perimeter",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/security/auto-remediation": {
+      "release-type": "terraform-module",
+      "package-name": "auto-remediation",
+      "component": "auto-remediation",
+      "tag-separator": "-"
     }
   }
 }

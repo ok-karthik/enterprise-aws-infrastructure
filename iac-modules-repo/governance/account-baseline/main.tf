@@ -444,6 +444,64 @@ locals {
   } : {}
 }
 
+# ------------------------------------------------------------------------------
+# 6. security-remediation (PLAN 4.9): a narrow role the auto-remediation Lambda in security-tooling assumes
+# to revoke open SSH/RDP security group rules in THIS account. Nothing here forwards the CloudTrail event
+# that triggers it: iac-modules-repo/security/auto-remediation's README explains why that has to be a
+# separate EventBridge rule (not built by this module) on this account's own default event bus.
+# ------------------------------------------------------------------------------
+resource "aws_iam_role" "security_remediation" {
+  count = var.security_remediation_lambda_role_arn != "" ? 1 : 0
+
+  name = "security-remediation"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "AllowAutoRemediationLambda"
+      Effect    = "Allow"
+      Principal = { AWS = var.security_remediation_lambda_role_arn }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = local.tags
+}
+
+resource "aws_iam_role_policy" "security_remediation" {
+  count = var.security_remediation_lambda_role_arn != "" ? 1 : 0
+
+  name = "revoke-open-management-ports"
+  role = aws_iam_role.security_remediation[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        # DescribeSecurityGroups has no resource-level permissions: AWS requires Resource = "*" for it.
+        Sid      = "DescribeSecurityGroups"
+        Effect   = "Allow"
+        Action   = "ec2:DescribeSecurityGroups"
+        Resource = "*"
+      },
+      {
+        Sid      = "RevokeOpenIngress"
+        Effect   = "Allow"
+        Action   = "ec2:RevokeSecurityGroupIngress"
+        Resource = "arn:${local.partition}:ec2:*:${local.account_id}:security-group/*"
+      },
+      {
+        # Can only ever set the one tag key the Lambda uses to mark what it touched.
+        Sid       = "TagRemediatedGroups"
+        Effect    = "Allow"
+        Action    = "ec2:CreateTags"
+        Resource  = "arn:${local.partition}:ec2:*:${local.account_id}:security-group/*"
+        Condition = { "ForAllValues:StringEquals" = { "aws:TagKeys" = ["remediated-by"] } }
+      },
+    ]
+  })
+}
+
 resource "aws_ssm_parameter" "discovery" {
   #checkov:skip=CKV2_AWS_34: "Platform discovery catalog parameter contains non-sensitive metadata"
   for_each = local.discovery_parameters

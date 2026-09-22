@@ -53,12 +53,13 @@ plan: ## Plan one workload account: make plan ENV=dev (folder workloads-live-rep
 	cd workloads-live-repo/workloads-$(ENV) && terragrunt run --all plan --non-interactive
 
 .PHONY: test
-test: ## Run OPA policy unit tests and module unit tests (no AWS credentials needed)
+test: ## Run OPA policy unit tests, module unit tests and Python unit tests (no AWS credentials needed)
 	conftest verify --policy policy-library-repo/terraform
 	@for d in iac-modules-repo/*/*/tests; do \
 		[ -d "$$d" ] || continue; \
 		m=$$(dirname "$$d"); echo "-> $$m"; \
 		(cd "$$m" && terraform init -backend=false -input=false >/dev/null && terraform test) || exit 1; \
+		ls "$$d"/test_*.py >/dev/null 2>&1 && (cd "$$m" && python3 -m unittest discover -s tests) || true; \
 	done
 
 .PHONY: docs
@@ -80,3 +81,9 @@ docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/identity/identity-center
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/break-glass-alerts
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/access-analyzer
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/log-archive
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/org-cloudtrail
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/threat-detection
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/security-alerts
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/governance/data-perimeter
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/auto-remediation

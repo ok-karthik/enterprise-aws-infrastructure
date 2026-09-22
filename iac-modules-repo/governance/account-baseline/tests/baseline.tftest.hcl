@@ -296,3 +296,45 @@ run "developer_policy_keeps_its_allows_and_only_adds_denies" {
     error_message = "The Allow statements must still be there."
   }
 }
+
+run "security_remediation_role_is_off_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(aws_iam_role.security_remediation) == 0 && length(aws_iam_role_policy.security_remediation) == 0
+    error_message = "No security-remediation role is created while security_remediation_lambda_role_arn is empty."
+  }
+
+  assert {
+    condition     = output.security_remediation_role_arn == null
+    error_message = "The output must be null when the role is off."
+  }
+}
+
+run "security_remediation_role_trusts_only_the_given_lambda" {
+  command = plan
+
+  variables {
+    security_remediation_lambda_role_arn = "arn:aws:iam::222233334444:role/auto-remediate-open-ssh-lambda"
+  }
+
+  assert {
+    condition     = jsondecode(one(aws_iam_role.security_remediation).assume_role_policy).Statement[0].Principal.AWS == "arn:aws:iam::222233334444:role/auto-remediate-open-ssh-lambda"
+    error_message = "The role must trust only the given Lambda execution role."
+  }
+
+  assert {
+    condition     = jsondecode(one(aws_iam_role_policy.security_remediation).policy).Statement[2].Condition["ForAllValues:StringEquals"]["aws:TagKeys"] == ["remediated-by"]
+    error_message = "The role can only ever set the remediated-by tag key."
+  }
+}
+
+run "bad_security_remediation_lambda_arn_is_rejected" {
+  command = plan
+
+  variables {
+    security_remediation_lambda_role_arn = "not-an-arn"
+  }
+
+  expect_failures = [var.security_remediation_lambda_role_arn]
+}

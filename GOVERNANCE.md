@@ -24,7 +24,18 @@ Mandatory tags are enforced at the Plan JSON level via OPA (Open Policy Agent). 
 
 ### Encryption
 - **At Rest**: KMS encryption is mandatory for all S3 buckets, RDS instances, and EBS volumes.
-- **In Transit**: TLS 1.2+ is enforced for all API endpoints.
+- **In Transit**: TLS 1.2+ is enforced for all API endpoints; the data-perimeter RCPs (below) deny any request over plain HTTP for the services they cover.
+
+### Organization guardrails (PLAN 4.6)
+- **SCPs** (`governance/organization`): deny root user actions, leaving the organization, disabling CloudTrail/Config/GuardDuty/Security Hub/Access Analyzer/Macie, creating IAM users or access keys (except break-glass), and creating an IAM role without the `platform-workload-boundary`; protect `platform-*`/`github-actions-*` roles, the GitHub OIDC provider and `tg-state-*` buckets (except StackSets and break-glass); require IMDSv2; one region allow-list SCP per OU. Sandbox gets its own opt-in guardrails (large instances, RI/Savings Plan purchases); Suspended gets a deny-all. **Every one of these defaults to Policy-Staging only** (or, for Sandbox/Suspended, to that OU alone): nothing widens without a deliberate change — test on throw-away accounts first.
+- **RCPs** (`governance/data-perimeter`): deny S3/KMS/SQS/Secrets Manager access from outside the organization, and require TLS. `sts` is a supported but not default-enabled service (see the module README before turning it on: it also covers the actions that create the org's first session).
+
+### Detection and response (PLAN 4.1, 4.2, 4.4, 4.5, 4.9)
+- **Log archive** (`security/log-archive`): Object Lock (COMPLIANCE, 400 days for CloudTrail/Config) S3 buckets in the `log-archive` account for every audit log type.
+- **Organization CloudTrail** (`security/org-cloudtrail`): one multi-region trail covering every account, delivering to the log archive plus its own CloudWatch Logs group.
+- **GuardDuty, Security Hub, Inspector v2, Macie** (`security/threat-detection`): auto-enabled organization-wide from `security-tooling`, the delegated administrator.
+- **Alerting** (`security/security-alerts`): EventBridge rules for GuardDuty/Security Hub findings, root sign-in and Organizations policy changes, each an encrypted SNS topic with email subscriptions.
+- **Auto-remediation** (`security/auto-remediation`): a Lambda removes an open `0.0.0.0/0`/`::/0` SSH/RDP security group rule within seconds of it being created (target < 30s, measured in `docs/runbooks/auto-remediation.md`).
 
 ## 🚦 Change Management (GitHub)
 
