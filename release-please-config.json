@@ -120,6 +120,12 @@
       "package-name": "tgw-attachment",
       "component": "tgw-attachment",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/network/inspection-egress": {
+      "release-type": "terraform-module",
+      "package-name": "inspection-egress",
+      "component": "inspection-egress",
+      "tag-separator": "-"
     }
   }
 }

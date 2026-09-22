@@ -79,3 +79,42 @@ run "ipam_pool_without_a_netmask_length_is_rejected" {
 
   expect_failures = [var.cidr]
 }
+
+run "egress_mode_central_disables_nat_gateways_even_if_requested" {
+  command = plan
+
+  variables {
+    cidr               = "10.0.0.0/16"
+    egress_mode        = "central"
+    enable_nat_gateway = true
+  }
+
+  assert {
+    condition     = length(module.vpc.natgw_ids) == 0
+    error_message = "egress_mode = central must create zero NAT gateways, regardless of enable_nat_gateway."
+  }
+}
+
+run "egress_mode_local_nat_keeps_the_existing_behaviour" {
+  command = plan
+
+  variables {
+    cidr = "10.0.0.0/16"
+  }
+
+  assert {
+    condition     = var.egress_mode == "local-nat"
+    error_message = "egress_mode must default to local-nat."
+  }
+}
+
+run "unknown_egress_mode_is_rejected" {
+  command = plan
+
+  variables {
+    cidr        = "10.0.0.0/16"
+    egress_mode = "something-else"
+  }
+
+  expect_failures = [var.egress_mode]
+}

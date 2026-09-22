@@ -38,7 +38,8 @@ module "vpc" {
 
   create_database_subnet_group = length(var.database_subnets) > 0
 
-  enable_nat_gateway = var.enable_nat_gateway
+  # egress_mode = "central" (PLAN 5.3) always wins: no NAT gateways here, whatever enable_nat_gateway says.
+  enable_nat_gateway = var.egress_mode == "local-nat" ? var.enable_nat_gateway : false
   single_nat_gateway = var.single_nat_gateway
 
   # --- AUTOMATION: EKS Subnet Tagging ---

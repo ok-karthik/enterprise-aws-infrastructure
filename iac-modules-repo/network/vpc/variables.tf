@@ -73,6 +73,22 @@ variable "single_nat_gateway" {
   default     = true
 }
 
+variable "egress_mode" {
+  description = <<-EOT
+    "local-nat" (default): this VPC's own NAT gateways, controlled by enable_nat_gateway/single_nat_gateway,
+    as before. "central" (PLAN 5.3): no NAT gateways here at all, regardless of enable_nat_gateway --
+    0.0.0.0/0 goes to the transit gateway instead, through network/tgw-attachment's egress_route_cidr, and
+    on to network/inspection-egress in network-hub.
+  EOT
+  type        = string
+  default     = "local-nat"
+
+  validation {
+    condition     = contains(["local-nat", "central"], var.egress_mode)
+    error_message = "egress_mode must be local-nat or central."
+  }
+}
+
 variable "cluster_name" {
   description = "Name of the EKS cluster to tag subnets for"
   type        = string
