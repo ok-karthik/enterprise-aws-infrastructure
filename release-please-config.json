@@ -114,6 +114,12 @@
       "package-name": "org-cloudtrail",
       "component": "org-cloudtrail",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/security/threat-detection": {
+      "release-type": "terraform-module",
+      "package-name": "threat-detection",
+      "component": "threat-detection",
+      "tag-separator": "-"
     }
   }
 }

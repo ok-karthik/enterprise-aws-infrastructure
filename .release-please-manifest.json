@@ -17,5 +17,6 @@
   "iac-modules-repo/security/break-glass-alerts": "1.1.0",
   "iac-modules-repo/security/access-analyzer": "1.1.0",
   "iac-modules-repo/security/log-archive": "1.0.0",
-  "iac-modules-repo/security/org-cloudtrail": "1.0.0"
+  "iac-modules-repo/security/org-cloudtrail": "1.0.0",
+  "iac-modules-repo/security/threat-detection": "1.0.0"
 }
