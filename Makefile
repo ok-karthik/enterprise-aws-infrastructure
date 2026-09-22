@@ -65,6 +65,8 @@ test: ## Run OPA policy unit tests and module unit tests (no AWS credentials nee
 docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/vpc
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/ipam
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/transit-gateway
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/tgw-attachment
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/compute/eks
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/data/postgres
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/storage/s3

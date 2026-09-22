@@ -108,6 +108,18 @@
       "package-name": "ipam",
       "component": "ipam",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/network/transit-gateway": {
+      "release-type": "terraform-module",
+      "package-name": "transit-gateway",
+      "component": "transit-gateway",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/network/tgw-attachment": {
+      "release-type": "terraform-module",
+      "package-name": "tgw-attachment",
+      "component": "tgw-attachment",
+      "tag-separator": "-"
     }
   }
 }
