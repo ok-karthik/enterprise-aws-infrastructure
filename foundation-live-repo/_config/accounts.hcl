@@ -52,13 +52,13 @@ locals {
       ci                 = false                     # no live stack yet
     }
     shared-services = {
-      id                 = "000000000004" # placeholder until needed
+      id                 = "000000000004" # TODO(owner): real account ID
       ou                 = "Infrastructure"
       env                = "global"
-      email              = "aws+shared@example.com"
-      create             = false
-      monthly_budget_usd = 30    # TODO(owner): monthly budget in USD
-      ci                 = false # placeholder
+      email              = "aws+shared@example.com" # TODO(owner): real root email
+      create             = true                     # PLAN 5.4/5.5 are now being built; live folder exists, id is still a placeholder
+      monthly_budget_usd = 30                       # TODO(owner): monthly budget in USD
+      ci                 = false                    # no live stack yet
     }
     workloads-dev = {
       id                 = "000000000005" # TODO(owner): the existing "Account A" workload account

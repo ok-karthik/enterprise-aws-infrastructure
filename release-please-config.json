@@ -126,6 +126,12 @@
       "package-name": "inspection-egress",
       "component": "inspection-egress",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/network/central-endpoints": {
+      "release-type": "terraform-module",
+      "package-name": "central-endpoints",
+      "component": "central-endpoints",
+      "tag-separator": "-"
     }
   }
 }
