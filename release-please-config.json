@@ -132,6 +132,12 @@
       "package-name": "central-endpoints",
       "component": "central-endpoints",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/network/dns": {
+      "release-type": "terraform-module",
+      "package-name": "dns",
+      "component": "dns",
+      "tag-separator": "-"
     }
   }
 }
