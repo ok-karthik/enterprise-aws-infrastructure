@@ -108,6 +108,12 @@
       "package-name": "log-archive",
       "component": "log-archive",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/security/org-cloudtrail": {
+      "release-type": "terraform-module",
+      "package-name": "org-cloudtrail",
+      "component": "org-cloudtrail",
+      "tag-separator": "-"
     }
   }
 }
