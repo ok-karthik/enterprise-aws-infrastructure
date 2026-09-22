@@ -915,41 +915,41 @@ has been applied there yet, so there is no state or resource to migrate. Until
 
 ## Phase 5 — Networking (hub and spoke)
 
-- [ ] **5.1 `network/ipam` module** (network-hub): an org-wide IPAM with a top-level pool,
+- [x] **5.1 `network/ipam` module** (network-hub): an org-wide IPAM with a top-level pool,
   regional pools, and env pools per region (prod / nonprod), shared through RAM with the
   Workloads OU. The `network/vpc` module gets `ipv4_ipam_pool_id` +
   `ipv4_netmask_length` as an alternative to `var.cidr` (keep `cidr` for backwards
   compatibility). Validate that exactly one of the two is set.
 
-- [ ] **5.2 `network/transit-gateway` module** (network-hub, per region): TGW with default
+- [x] **5.2 `network/transit-gateway` module** (network-hub, per region): TGW with default
   association and propagation **off**, and route tables `prod`, `nonprod`, `shared` and
   `inspection`. Share it through RAM with the Workloads and Infrastructure OUs. Add a
   cross-region peering attachment between `primary_region` and `secondary_region`. Spoke VPCs
   attach with a `network/tgw-attachment` module applied in the workload account (the
   acceptance side is in network-hub). Prod and nonprod can't route to each other.
 
-- [ ] **5.3 `network/inspection-egress` module** (network-hub, per region): a central egress
+- [x] **5.3 `network/inspection-egress` module** (network-hub, per region): a central egress
   VPC with NAT gateways (one per AZ) and AWS Network Firewall. The firewall policy has a
   stateful domain allow-list (a variable), Suricata rules, and alert + flow logs sent to
   log-archive. TGW appliance mode is on. Spoke VPCs lose their NAT gateways and send
   `0.0.0.0/0` to the TGW (a `vpc` module flag: `egress_mode = "local-nat" | "central"`).
   Document the cost comparison in `FINOPS.md`.
 
-- [ ] **5.4 `network/central-endpoints` module:** interface endpoints (ECR api/dkr, STS, SSM,
+- [x] **5.4 `network/central-endpoints` module:** interface endpoints (ECR api/dkr, STS, SSM,
   ssmmessages, ec2messages, logs, KMS, Secrets Manager, EKS) in a shared-endpoints VPC.
   Route 53 private hosted zones are associated with spoke VPCs so they resolve centrally.
   Gateway endpoints (S3, DynamoDB) stay in each VPC (they're free).
 
-- [ ] **5.5 `network/dns` module:** Route 53 Resolver inbound and outbound endpoints in
+- [x] **5.5 `network/dns` module:** Route 53 Resolver inbound and outbound endpoints in
   network-hub, forwarding rules for on-prem domains shared through RAM, and resolver query
   logging to log-archive. Public hosted zones stay in network-hub, with delegated subdomains
   per workload account.
 
-- [ ] **5.6 Hybrid connectivity (optional flags):** Site-to-Site VPN attached to the TGW, and
+- [x] **5.6 Hybrid connectivity (optional flags):** Site-to-Site VPN attached to the TGW, and
   a Direct Connect gateway association. Module and docs only; there's no real peer to
   connect to.
 
-- [ ] **5.7 VPC module hardening:** flow logs to the log-archive bucket (instead of, or as
+- [x] **5.7 VPC module hardening:** flow logs to the log-archive bucket (instead of, or as
   well as, CloudWatch), the default security group with no rules, and the VPC Block Public
   Access exclusion only for designated ingress subnets.
 
@@ -1623,3 +1623,86 @@ Everything goes under `docs/`.
     checking `compute/eks`'s IMDSv2 defaults before widening `require_imdsv2`; wiring
     `security_remediation_lambda_role_arn` and a per-account forwarding EventBridge rule once the Lambda is
     for real deployed; running the auto-remediation timing drill.
+
+- **2026-09-22 (Phase 5, branch `feat/p5-networking`, from `main` — PR #66 / feat/p4-security-baseline was
+  already merged into `main` by the time this started, so this branch has both)** — 5.1 through 5.7, one
+  commit each (5.6 folded into 5.2's commit: both attach to the same transit gateway, so one module).
+  network-hub and shared-services flipped to `create = true` in the account registry (still placeholder
+  ids): PLAN 5.x is what makes them "needed", matching log-archive/security-tooling's precedent.
+  - **5.1** `network/ipam`: a top-level pool, one regional pool per region, prod/nonprod env pools per
+    region; **only the env pools** are RAM-shared with the Workloads OU (not the wider pools), so a workload
+    account can only ever request from its own environment's slice. `network/vpc` gets
+    `ipv4_ipam_pool_id`/`ipv4_netmask_length` as an alternative to `cidr` (**breaking**: `cidr` is now
+    optional, a variable validation requires exactly one mode). **Found and fixed a real bug** while writing
+    the IPAM test: the default network ACL's "allow from inside the VPC" rule referenced `var.cidr` directly,
+    which is empty in IPAM mode (the real CIDR is only known after AWS allocates it at apply) — it now falls
+    back to the platform's whole IPAM address space (`10.0.0.0/8`) unless the caller supplies the tighter
+    range explicitly. Recreated `foundation-live-repo/_config/organization.hcl` on this branch (it only
+    existed on the by-then-unmerged `feat/p4-security-baseline`); harmless once both are on `main`.
+  - **5.2 (+ 5.6)** `network/transit-gateway`: default route association/propagation off, `prod`/`nonprod`/
+    `shared`/`inspection` route tables. The transit gateway **itself** (not a route table) is RAM-shared with
+    the Workloads and Infrastructure OUs. `accept_vpc_attachments` (explicit spoke acceptance, matching "the
+    acceptance side is in network-hub") **defaults to off and stays off through the transit gateway's first
+    apply**: on that apply the transit gateway does not exist yet, so a `for_each` built from a data source
+    that reads it back cannot resolve — a real Terraform limitation, confirmed while writing the test, not a
+    guess. Cross-region peering: this module applied once per region, coordinated through `var.peering.role`
+    (`requester` in the primary region, `accepter` in the secondary, wired by a Terragrunt `dependency` on
+    the other region's leaf). PLAN 5.6 (hybrid connectivity) folded in here rather than a separate module:
+    Site-to-Site VPN and a Direct Connect gateway association both attach to the *same* transit gateway; both
+    off by default, module and docs only, no real peer to connect to. New `network/tgw-attachment` (spoke
+    side, applied in a workload account): associates/propagates into exactly one route table (prod or
+    nonprod, never both), optional central-egress default route.
+  - **5.3** `network/inspection-egress`: three subnet tiers per AZ (tgw, firewall, public), NAT gateways one
+    per AZ, AWS Network Firewall with a **stateful domain allow-list** (`STRICT_ORDER` +
+    `drop_established`: anything not explicitly allowed is dropped once a connection is established, not a
+    deny-list). Transit gateway attachment with appliance mode on (a flow keeps using the same firewall
+    endpoint), into the "inspection" route table. Checkov: fixed properly (not skipped) — a KMS key for the
+    firewall's rule groups/policy/firewall, `delete_protection`, and the VPC's own flow logs. `network/vpc`
+    gets `egress_mode = "local-nat"` (default, unchanged) | `"central"` (no NAT gateways here at all,
+    regardless of `enable_nat_gateway`). `FINOPS.md` has the cost comparison and an approximate crossover
+    point (roughly 8–12 always-on spoke VPCs).
+  - **5.4** `network/central-endpoints` (shared-services): one interface endpoint per service (ECR api/dkr,
+    STS, SSM, SSM Messages, EC2 Messages, CloudWatch Logs, KMS, Secrets Manager, EKS), each with its **own**
+    private hosted zone (the endpoint's own private DNS only resolves inside its own VPC, so it is turned
+    off), shared with spoke accounts via `aws_route53_vpc_association_authorization` here — the spoke side
+    (`aws_route53_zone_association`, in the spoke's own account) is **not built**, a documented follow-up.
+    Gateway endpoints (S3, DynamoDB) are deliberately not included: they're free, and stay local to each VPC.
+  - **5.5** `network/dns` (network-hub): inbound/outbound Resolver endpoints, a `FORWARD` rule per
+    on-premises domain (RAM-shared with the Workloads OU, same pattern as 5.1/5.2), resolver query logging,
+    public hosted zones with an NS-delegated subdomain per workload account. Checkov: the VPC's own flow logs
+    fixed properly; **DNSSEC signing and public-zone query logging inline-skipped with a reason** — both need
+    a resource in `us-east-1` specifically (an AWS requirement unrelated to this module's own region), which
+    this pure module (no provider blocks) cannot create; a `us-east-1`-aliased-provider follow-up at the live
+    layer, not built here.
+  - **5.7** `network/vpc` + `governance/account-baseline`: `flow_log_destinations` (default `["cloudwatch"]`,
+    unchanged behaviour) can add `"s3"` as well as or instead of CloudWatch, to `security/log-archive`'s
+    `vpc_flow_logs` bucket. `exclude_public_subnets_from_account_bpa` (default off) excludes a VPC's own
+    public subnets from the new account-wide `aws_vpc_block_public_access_options` in `account-baseline`
+    (`block-bidirectional`, on by default). **The third 5.7 item (default security group with no rules) was
+    already done** before this phase (`manage_default_security_group` with empty ingress/egress) — confirmed,
+    not new work. The exclusion resource's `for_each` keys off the *configured* `var.public_subnets` index,
+    not the upstream module's real subnet ids (unknown until apply in the same plan as VPC creation — the
+    same class of limitation as 5.2's accepter, found the same way, by writing the test first).
+  - **Checked (offline, across all seven):** `terraform fmt`, `terraform validate`, `terraform test` for
+    every touched/new module (vpc 15, ipam 6, transit-gateway 14, tgw-attachment 6, inspection-egress 9,
+    central-endpoints 7, dns 9, account-baseline 20 — 86 runs total); Checkov with the repo config on every
+    touched/new module (0 failed everywhere; every skip has a stated, specific reason); `tflint` (found and
+    fixed two real unused-declaration warnings: a stray data source in `network/dns`, and `network/ipam`'s
+    `organization_id` was validated but never actually used anywhere — now tags every resource with it);
+    `conftest verify` (66); `IAC_MODULES_LOCAL=1 terragrunt hcl validate --inputs` on every new/changed live
+    leaf (network-hub × 2 regions, shared-services, management, workloads-dev/prod); the full repo-wide
+    Checkov run (`run-checkov.sh`, 0 failed); pre-commit hooks on every commit.
+  - **Not checked:** a real plan or apply anywhere (no AWS credentials used); the exact shape of
+    `aws_networkfirewall_firewall.firewall_status[...].sync_states[...].attachment[0].endpoint_id` and the
+    interface endpoint `dns_entry[0]` "is the regional one" assumption — both checked against the AWS
+    provider's own schema (not guessed), neither against a real deployment; whether the log-archive
+    `vpc_flow_logs` bucket policy really accepts Network Firewall's and the Resolver's S3/log deliveries (same
+    underlying `delivery.logs.amazonaws.com` service, not tested end to end); the toolbox image (no Docker
+    running here).
+  - **Left for the owner to decide, in the PR description:** the DNSSEC/query-logging `us-east-1` follow-up
+    (5.5); the spoke-side `aws_route53_zone_association` follow-up (5.4); when to flip a spoke's
+    `egress_mode` to `"central"` and whether the FINOPS.md crossover estimate holds for the real fleet size;
+    the CIDR sizes in `network/ipam`'s defaults and the three `172.16.0.0/20`-range VPC CIDRs picked for
+    network-hub/shared-services (sized for a small platform, not verified against real usage); the starting
+    `domain_allow_list` in `_envcommon/network/inspection-egress.hcl` (package/base-image registries only, a
+    real list needs the owner's actual outbound needs).
