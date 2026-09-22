@@ -2,8 +2,6 @@
 # forwarding rules for on-premises domains (shared with the Workloads OU through RAM), resolver query
 # logging, and public hosted zones with delegated subdomains per workload account.
 
-data "aws_partition" "current" {}
-
 locals {
   azs_by_index = { for i, az in var.azs : az => i }
   subnet_cidrs = [for i in range(length(var.azs)) : cidrsubnet(var.vpc_cidr, 4, i)]

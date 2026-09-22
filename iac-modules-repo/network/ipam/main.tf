@@ -8,6 +8,13 @@
 # share, so it does not belong in this module. Turn it on once (owner step, console or a single resource
 # elsewhere) before the first apply here.
 
+locals {
+  # var.organization_id is not an argument any resource here takes (RAM sharing to an OU ARN already scopes
+  # to that OU's organization); it is recorded as a tag instead, so the org this IPAM belongs to is visible
+  # on every resource, and the required, validated variable has a real use.
+  tags = merge({ OrganizationId = var.organization_id }, var.tags)
+}
+
 resource "aws_vpc_ipam" "this" {
   description        = "Platform-wide IPAM (PLAN 5.1)"
   enable_private_gua = false
@@ -19,7 +26,7 @@ resource "aws_vpc_ipam" "this" {
     }
   }
 
-  tags = var.tags
+  tags = local.tags
 }
 
 resource "aws_vpc_ipam_pool" "top_level" {
@@ -28,7 +35,7 @@ resource "aws_vpc_ipam_pool" "top_level" {
   ipam_scope_id  = aws_vpc_ipam.this.private_default_scope_id
   locale         = "None" # top-level pools are not tied to one region
 
-  tags = var.tags
+  tags = local.tags
 }
 
 resource "aws_vpc_ipam_pool_cidr" "top_level" {
@@ -45,7 +52,7 @@ resource "aws_vpc_ipam_pool" "regional" {
   locale              = each.value.locale
   source_ipam_pool_id = aws_vpc_ipam_pool.top_level.id
 
-  tags = var.tags
+  tags = local.tags
 }
 
 resource "aws_vpc_ipam_pool_cidr" "regional" {
@@ -80,7 +87,7 @@ resource "aws_vpc_ipam_pool" "env" {
   allocation_max_netmask_length     = 28
   allocation_min_netmask_length     = each.value.netmask_length
 
-  tags = var.tags
+  tags = local.tags
 }
 
 resource "aws_vpc_ipam_pool_cidr" "env" {
@@ -100,7 +107,7 @@ resource "aws_ram_resource_share" "pools" {
   name                      = "ipam-env-pools"
   allow_external_principals = false
 
-  tags = var.tags
+  tags = local.tags
 }
 
 resource "aws_ram_resource_association" "pools" {
