@@ -126,6 +126,12 @@
       "package-name": "security-alerts",
       "component": "security-alerts",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/governance/data-perimeter": {
+      "release-type": "terraform-module",
+      "package-name": "data-perimeter",
+      "component": "data-perimeter",
+      "tag-separator": "-"
     }
   }
 }

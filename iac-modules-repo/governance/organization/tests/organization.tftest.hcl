@@ -59,8 +59,18 @@ run "guardrails_start_on_policy_staging_only" {
   command = plan
 
   assert {
-    condition     = toset(keys(aws_organizations_policy_attachment.guardrails)) == toset(["deny_leave_org/Policy-Staging", "deny_disable_cloudtrail/Policy-Staging", "deny_unapproved_regions/Policy-Staging"])
-    error_message = "By default every guardrail attaches to Policy-Staging only."
+    condition     = toset([for k, v in aws_organizations_policy_attachment.guardrails : split("/", k)[1]]) == toset(["Policy-Staging"])
+    error_message = "By default every generic guardrail attaches to Policy-Staging only."
+  }
+
+  assert {
+    condition     = length(aws_organizations_policy_attachment.guardrails) == 8
+    error_message = "8 generic guardrails x 1 OU (Policy-Staging) = 8 attachments: deny_leave_org, deny_disable_cloudtrail, deny_root_user_actions, deny_disable_detection_services, deny_iam_user_creation, protect_platform_resources, require_imdsv2, deny_role_creation_without_boundary."
+  }
+
+  assert {
+    condition     = length(aws_organizations_policy.deny_unapproved_regions) == 0
+    error_message = "The per-OU region SCP starts empty (allowed_regions_by_ou defaults to {}): nothing attaches until a caller opts an OU in."
   }
 }
 
@@ -72,40 +82,185 @@ run "guardrails_can_be_widened" {
   }
 
   assert {
-    condition     = length(aws_organizations_policy_attachment.guardrails) == 6
-    error_message = "3 guardrails x 2 OUs = 6 attachments."
+    condition     = length(aws_organizations_policy_attachment.guardrails) == 16
+    error_message = "8 generic guardrails x 2 OUs = 16 attachments."
   }
 }
 
-run "region_scp_uses_allowed_regions" {
+run "region_scp_is_per_ou_and_only_for_ous_with_a_non_empty_list" {
   command = plan
 
   variables {
-    allowed_regions = ["eu-central-1", "eu-west-1"]
+    allowed_regions_by_ou = {
+      "Policy-Staging" = ["eu-central-1"]
+      "Prod"           = ["eu-central-1", "eu-west-1"]
+      "Suspended"      = []
+    }
   }
 
   assert {
-    condition     = jsondecode(aws_organizations_policy.deny_unapproved_regions.content).Statement[0].Condition.StringNotEquals["aws:RequestedRegion"] == ["eu-central-1", "eu-west-1"]
-    error_message = "SCP must deny every region outside var.allowed_regions."
+    condition     = toset(keys(aws_organizations_policy.deny_unapproved_regions)) == toset(["Policy-Staging", "Prod"])
+    error_message = "Suspended has an empty list and must get no region SCP; every other listed OU gets its own."
+  }
+
+  assert {
+    condition     = jsondecode(aws_organizations_policy.deny_unapproved_regions["Prod"].content).Statement[0].Condition.StringNotEquals["aws:RequestedRegion"] == ["eu-central-1", "eu-west-1"]
+    error_message = "Each OU's SCP must deny every region outside its own list."
+  }
+
+  assert {
+    condition     = toset(keys(aws_organizations_policy_attachment.deny_unapproved_regions)) == toset(["Policy-Staging", "Prod"])
+    error_message = "Each listed OU must get exactly one region SCP attachment, keyed by that OU's own name."
   }
 
   assert {
     condition = alltrue([
       for a in ["budgets:*", "ce:*", "globalaccelerator:*", "health:*", "trustedadvisor:*", "waf:*", "shield:*", "account:*", "billing:*", "pricing:*", "route53domains:*", "iam:*", "organizations:*", "route53:*", "cloudfront:*", "support:*", "sts:*"] :
-      contains(jsondecode(aws_organizations_policy.deny_unapproved_regions.content).Statement[0].NotAction, a)
+      contains(jsondecode(aws_organizations_policy.deny_unapproved_regions["Prod"].content).Statement[0].NotAction, a)
     ])
-    error_message = "Global services must stay exempt from the region SCP."
+    error_message = "Global services must stay exempt from every region SCP."
   }
 }
 
-run "empty_region_list_is_rejected" {
+run "sandbox_guardrails_are_off_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(aws_organizations_policy.sandbox_guardrails) == 0 && length(aws_organizations_policy_attachment.sandbox_guardrails) == 0
+    error_message = "enable_sandbox_guardrails defaults to false."
+  }
+
+  assert {
+    condition     = output.sandbox_guardrails_policy_id == null
+    error_message = "The output must be null when the guardrails are off."
+  }
+}
+
+run "sandbox_guardrails_deny_large_instances_and_reservation_purchases" {
+  # apply, not plan: aws_organizations_policy_attachment.target_id is Optional+Computed, so the mock
+  # provider leaves it unknown at plan time even though the config sets it explicitly.
+  command = apply
+
+  variables {
+    enable_sandbox_guardrails = true
+  }
+
+  assert {
+    condition     = one(aws_organizations_policy_attachment.sandbox_guardrails).target_id == aws_organizations_organizational_unit.top["Sandbox"].id
+    error_message = "The Sandbox guardrails must attach only to the Sandbox OU."
+  }
+
+  assert {
+    condition     = contains(jsondecode(one(aws_organizations_policy.sandbox_guardrails).content).Statement[0].Condition.StringLike["ec2:InstanceType"], "*.8xlarge")
+    error_message = "Large instance families (8xlarge and up) must be denied."
+  }
+
+  assert {
+    condition     = contains(jsondecode(one(aws_organizations_policy.sandbox_guardrails).content).Statement[1].Action, "ec2:PurchaseReservedInstancesOffering") && contains(jsondecode(one(aws_organizations_policy.sandbox_guardrails).content).Statement[1].Action, "savingsplans:CreateSavingsPlan")
+    error_message = "Reserved Instance and Savings Plan purchases must be denied."
+  }
+}
+
+run "suspended_deny_all_is_on_by_default_and_scoped_to_suspended_only" {
+  # apply, not plan: same Optional+Computed target_id reason as above.
+  command = apply
+
+  assert {
+    condition     = length(aws_organizations_policy.suspended_deny_all) == 1
+    error_message = "enable_suspended_deny_all defaults to true."
+  }
+
+  assert {
+    condition     = one(aws_organizations_policy_attachment.suspended_deny_all).target_id == aws_organizations_organizational_unit.top["Suspended"].id
+    error_message = "The deny-all SCP must attach only to the Suspended OU."
+  }
+
+  assert {
+    condition     = jsondecode(one(aws_organizations_policy.suspended_deny_all).content).Statement[0] == { Sid = "DenyEverything", Effect = "Deny", Action = "*", Resource = "*" }
+    error_message = "The Suspended OU policy must deny every action on every resource, with no exception."
+  }
+}
+
+run "deny_iam_user_creation_exempts_only_break_glass" {
+  command = plan
+
+  assert {
+    condition     = jsondecode(aws_organizations_policy.deny_iam_user_creation.content).Statement[0].Condition.StringNotLike["aws:PrincipalArn"] == ["arn:*:sts::*:assumed-role/AWSReservedSSO_BreakGlassAdmin_*/*"]
+    error_message = "Only a BreakGlassAdmin session may create IAM users, login profiles or access keys."
+  }
+
+  assert {
+    condition     = toset(jsondecode(aws_organizations_policy.deny_iam_user_creation.content).Statement[0].Action) == toset(["iam:CreateUser", "iam:CreateLoginProfile", "iam:UpdateLoginProfile", "iam:CreateAccessKey"])
+    error_message = "The IAM-user guardrail must cover users, login profiles and access keys."
+  }
+}
+
+run "protect_platform_resources_exempts_stacksets_and_break_glass" {
+  command = plan
+
+  assert {
+    condition = alltrue([
+      for s in jsondecode(aws_organizations_policy.protect_platform_resources.content).Statement :
+      toset(s.Condition.StringNotLike["aws:PrincipalArn"]) == toset([
+        "arn:*:sts::*:assumed-role/AWSServiceRoleForCloudFormationStackSetsOrgMember/*",
+        "arn:*:sts::*:assumed-role/AWSReservedSSO_BreakGlassAdmin_*/*",
+      ])
+    ])
+    error_message = "Every statement must exempt exactly the StackSets service-linked role and BreakGlassAdmin, and no one else."
+  }
+
+  assert {
+    condition     = contains(jsondecode(aws_organizations_policy.protect_platform_resources.content).Statement[0].Resource, "arn:*:iam::*:role/platform-*") && contains(jsondecode(aws_organizations_policy.protect_platform_resources.content).Statement[0].Resource, "arn:*:iam::*:role/github-actions-*")
+    error_message = "Both platform-* and github-actions-* roles must be protected."
+  }
+
+  assert {
+    condition     = jsondecode(aws_organizations_policy.protect_platform_resources.content).Statement[1].Resource == "arn:*:iam::*:oidc-provider/token.actions.githubusercontent.com"
+    error_message = "The GitHub OIDC provider must be protected."
+  }
+
+  assert {
+    condition     = jsondecode(aws_organizations_policy.protect_platform_resources.content).Statement[2].Resource == "arn:*:s3:::tg-state-*"
+    error_message = "The tg-state-* buckets must be protected."
+  }
+}
+
+run "require_imdsv2_denies_run_instances_without_it" {
+  command = plan
+
+  assert {
+    # checkov:skip=CKV_SECRET_6: not a secret, an IAM condition key/value pair (false positive on this string's entropy)
+    condition     = jsondecode(aws_organizations_policy.require_imdsv2.content).Statement[0].Condition.StringNotEquals["ec2:MetadataHttpTokens"] == "required"
+    error_message = "ec2:RunInstances must be denied unless IMDSv2 is required."
+  }
+}
+
+run "deny_role_creation_without_boundary_matches_the_account_baseline_boundary_name" {
+  command = plan
+
+  assert {
+    condition     = jsondecode(aws_organizations_policy.deny_role_creation_without_boundary.content).Statement[0].Condition.StringNotEquals["iam:PermissionsBoundary"] == "arn:*:iam::*:policy/platform-workload-boundary"
+    error_message = "The boundary name here must match account-baseline's boundary_name exactly (platform-workload-boundary), or a real role creation would not be recognized as compliant."
+  }
+}
+
+run "deny_root_user_matches_the_literal_root_arn_not_a_break_glass_session" {
+  command = plan
+
+  assert {
+    condition     = jsondecode(aws_organizations_policy.deny_root_user_actions.content).Statement[0].Condition.StringLike["aws:PrincipalArn"] == "arn:*:iam::*:root"
+    error_message = "Root must be matched by the classic :root ARN, which sts:AssumeRoot sessions do not use (docs/ROOT_ACCESS.md)."
+  }
+}
+
+run "custom_break_glass_pattern_must_be_an_assumed_role_arn" {
   command = plan
 
   variables {
-    allowed_regions = []
+    break_glass_role_arn_pattern = "arn:aws:iam::123456789012:role/SomeRole"
   }
 
-  expect_failures = [var.allowed_regions]
+  expect_failures = [var.break_glass_role_arn_pattern]
 }
 
 run "parent_must_be_a_top_level_ou" {
