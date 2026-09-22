@@ -12,5 +12,6 @@ locals {
     identity_center     = "identity-center-v1.0.0"
     break_glass_alerts  = "break-glass-alerts-v1.0.0"
     org_cloudtrail      = "org-cloudtrail-v1.0.0"
+    security_alerts     = "security-alerts-v1.0.0"
   }
 }

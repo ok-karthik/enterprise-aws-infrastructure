@@ -83,3 +83,4 @@ docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/log-archive
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/org-cloudtrail
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/threat-detection
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/security-alerts

@@ -120,6 +120,12 @@
       "package-name": "threat-detection",
       "component": "threat-detection",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/security/security-alerts": {
+      "release-type": "terraform-module",
+      "package-name": "security-alerts",
+      "component": "security-alerts",
+      "tag-separator": "-"
     }
   }
 }
