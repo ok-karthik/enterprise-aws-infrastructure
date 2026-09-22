@@ -43,13 +43,13 @@ locals {
       ci                 = false # no live stack yet
     }
     network-hub = {
-      id                 = "000000000003" # placeholder until needed (PLAN 5.x)
+      id                 = "000000000003" # TODO(owner): real account ID
       ou                 = "Infrastructure"
       env                = "global"
-      email              = "aws+network@example.com"
-      create             = false
-      monthly_budget_usd = 50    # TODO(owner): monthly budget in USD
-      ci                 = false # placeholder
+      email              = "aws+network@example.com" # TODO(owner): real root email
+      create             = true                      # PLAN 5.x is now being built; live folder exists, id is still a placeholder
+      monthly_budget_usd = 50                        # TODO(owner): monthly budget in USD
+      ci                 = false                     # no live stack yet
     }
     shared-services = {
       id                 = "000000000004" # placeholder until needed

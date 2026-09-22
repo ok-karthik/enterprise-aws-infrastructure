@@ -102,6 +102,12 @@
       "package-name": "access-analyzer",
       "component": "access-analyzer",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/network/ipam": {
+      "release-type": "terraform-module",
+      "package-name": "ipam",
+      "component": "ipam",
+      "tag-separator": "-"
     }
   }
 }
