@@ -26,6 +26,7 @@ env:
   # Needed until every module has a release tag at the iac-modules-repo path (PLAN 1.4), and later for
   # PRs that change iac-modules-repo/** so module changes are tested before release.
   IAC_MODULES_LOCAL: '1'
+  TG_LOG_FORMAT: 'bare'
 
 jobs:
   # ─────────────────────────────────────────────────────────────
@@ -142,5 +143,5 @@ jobs:
           aws_role_arn: ${{ matrix.apply_role_arn }}
 
       - name: "Terragrunt Apply"
-        run: terragrunt run --all apply --non-interactive -auto-approve
+        run: terragrunt run --all apply --non-interactive -auto-approve --log-format bare
         working-directory: ${{ matrix.working_directory }}

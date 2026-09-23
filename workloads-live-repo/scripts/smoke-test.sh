@@ -82,8 +82,8 @@ if [ ! -d "$ACCOUNT_DIR" ]; then
 fi
 cd "$ACCOUNT_DIR"
 # We run init first to ensure local caches are updated with any new module versions from Renovate
-terragrunt run --all init --non-interactive
-if terragrunt run --all validate --non-interactive; then
+terragrunt run --all init --non-interactive --log-format bare
+if terragrunt run --all validate --non-interactive --log-format bare; then
     echo -e "${GREEN}✅ Dependency graph and variables are valid.${NC}"
 else
     echo -e "${RED}❌ Validation failed in $ACCOUNT_DIR_NAME.${NC}"

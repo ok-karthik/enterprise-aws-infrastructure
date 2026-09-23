@@ -107,11 +107,11 @@ make image-scan     # build the toolbox image and Trivy-scan it (needs Docker)
 conftest test --policy policy-library-repo/terraform <plan.json>   # policy runs against plan JSON, not HCL
 
 # Plan/apply a single environment stack (uses run --all across the dependency graph)
-cd workloads-live-repo/workloads-dev && terragrunt run --all plan --non-interactive
-cd workloads-live-repo/workloads-dev && terragrunt run --all apply --non-interactive -auto-approve
+cd workloads-live-repo/workloads/nonprod/workloads-dev && terragrunt run --all plan --non-interactive --log-format bare
+cd workloads-live-repo/workloads/nonprod/workloads-dev && terragrunt run --all apply --non-interactive -auto-approve --log-format bare
 
 # Plan/apply one module only
-cd workloads-live-repo/workloads-dev/eu-central-1/compute/eks && terragrunt plan
+cd workloads-live-repo/workloads/nonprod/workloads-dev/eu-central-1/compute/eks && terragrunt plan --log-format bare
 
 # Scaffold a new module manually
 ./workloads-live-repo/scripts/generate-module.sh <category/module-name> [env] [region]

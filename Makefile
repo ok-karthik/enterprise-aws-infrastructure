@@ -49,8 +49,8 @@ image-scan: ## Build the toolbox image and scan it with Trivy (needs Docker), li
 		image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 infrastructure-toolchain:scan
 
 .PHONY: plan
-plan: ## Plan one workload account: make plan ENV=dev (folder workloads-live-repo/workloads-<ENV>)
-	cd workloads-live-repo/workloads-$(ENV) && terragrunt run --all plan --non-interactive
+plan: ## Plan one workload account: make plan ENV=nonprod/workloads-dev
+	cd workloads-live-repo/workloads/$(ENV) && terragrunt run --all plan --non-interactive --log-format bare
 
 .PHONY: test
 test: ## Run OPA policy unit tests, module unit tests and Python unit tests (no AWS credentials needed)
