@@ -175,8 +175,12 @@ locals {
 # guardrail_target_ous. Each OU only gets its own policy, attached only to itself: a mistake in one OU's list
 # can never widen or narrow another OU's regions. An OU with no entry (or an empty list) in
 # var.allowed_regions_by_ou gets no region policy at all (nothing is denied on its behalf here).
+locals {
+  region_policy_ous = { for ou, regions in var.allowed_regions_by_ou : ou => regions if length(regions) > 0 }
+}
+
 resource "aws_organizations_policy" "deny_unapproved_regions" {
-  for_each = { for ou, regions in var.allowed_regions_by_ou : ou => regions if length(regions) > 0 }
+  for_each = local.region_policy_ous
 
   name        = "deny-unapproved-regions-${lower(replace(each.key, " ", "-"))}"
   description = "Data residency control for the ${each.key} OU: deny requests to any region outside ${jsonencode(each.value)}, except global services"
@@ -200,9 +204,9 @@ resource "aws_organizations_policy" "deny_unapproved_regions" {
 }
 
 resource "aws_organizations_policy_attachment" "deny_unapproved_regions" {
-  for_each = aws_organizations_policy.deny_unapproved_regions
+  for_each = local.region_policy_ous
 
-  policy_id = each.value.id
+  policy_id = aws_organizations_policy.deny_unapproved_regions[each.key].id
   target_id = local.organizational_unit_ids[each.key]
 }
 
