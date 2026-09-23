@@ -1,7 +1,8 @@
 # Facts about the AWS Organization that stacks in several accounts need. One place, so no leaf hardcodes them.
 locals {
   # TODO(owner): real organization id (o-xxxxxxxxxx; console > AWS Organizations, or `aws organizations describe-organization`).
-  # Modules that take it (security/log-archive) refuse the 0000 placeholder at plan time.
+  # Modules that take it (security/log-archive, security/org-cloudtrail, governance/data-perimeter,
+  # network/ipam, ...) refuse the 0000 placeholder at plan time.
   organization_id = "o-0000000000"
 
   # TODO(owner): after the first apply of the log-archive leaf, paste its `kms_key_arn` output here. The organization

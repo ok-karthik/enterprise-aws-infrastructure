@@ -16,6 +16,7 @@ env:
   # Needed until every module has a release tag at the iac-modules-repo path (PLAN 1.4), and later for
   # PRs that change iac-modules-repo/** so module changes are tested before release.
   IAC_MODULES_LOCAL: '1'
+  TG_LOG_FORMAT: 'bare'
 
 jobs:
   # Which accounts to check: generated from the account registry (see terragrunt.yml).
@@ -69,7 +70,7 @@ jobs:
         # -detailed-exitcode returns 2 if there are changes (drift)
         run: |
           set +e
-          terragrunt run --all plan --non-interactive -- -detailed-exitcode 2>&1 | tee /tmp/drift-plan.txt
+          terragrunt run --all plan --non-interactive --log-format bare -- -detailed-exitcode 2>&1 | tee /tmp/drift-plan.txt
           exitcode=${PIPESTATUS[0]}
           set -e
 

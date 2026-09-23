@@ -37,6 +37,10 @@ Mandatory tags are enforced at the Plan JSON level via OPA (Open Policy Agent). 
 - **Alerting** (`security/security-alerts`): EventBridge rules for GuardDuty/Security Hub findings, root sign-in and Organizations policy changes, each an encrypted SNS topic with email subscriptions.
 - **Auto-remediation** (`security/auto-remediation`): a Lambda removes an open `0.0.0.0/0`/`::/0` SSH/RDP security group rule within seconds of it being created (target < 30s, measured in `docs/runbooks/auto-remediation.md`).
 
+### Network architecture (PLAN 5.1–5.7)
+
+Hub and spoke, hosted in `network-hub` and `shared-services` (both regional, primary + secondary): IP addressing from a shared `network/ipam` (no hardcoded CIDRs), one Transit Gateway per region with prod/nonprod route tables kept apart, a central `network/inspection-egress` VPC (AWS Network Firewall behind a **domain allow-list**, not a deny-list — anything not explicitly allowed is dropped) for spokes that opt into `egress_mode = "central"`, shared VPC interface endpoints (`network/central-endpoints`) so every spoke does not pay for and manage its own, and centralized DNS (`network/dns`) for on-premises forwarding and delegated public subdomains. `network/vpc`'s own hardening: flow logs (CloudWatch and/or S3), a no-rules default security group, a deny-outside-the-VPC default NACL, and per-VPC opt-out from the account-wide VPC Block Public Access default (`governance/account-baseline`, on everywhere else).
+
 ## 🚦 Change Management (GitHub)
 
 ### 🛡️ Recommended GitHub Branch Protection Rules

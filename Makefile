@@ -49,8 +49,8 @@ image-scan: ## Build the toolbox image and scan it with Trivy (needs Docker), li
 		image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 infrastructure-toolchain:scan
 
 .PHONY: plan
-plan: ## Plan one workload account: make plan ENV=dev (folder workloads-live-repo/workloads-<ENV>)
-	cd workloads-live-repo/workloads-$(ENV) && terragrunt run --all plan --non-interactive
+plan: ## Plan one workload account: make plan ENV=nonprod/workloads-dev
+	cd workloads-live-repo/workloads/$(ENV) && terragrunt run --all plan --non-interactive --log-format bare
 
 .PHONY: test
 test: ## Run OPA policy unit tests, module unit tests and Python unit tests (no AWS credentials needed)
@@ -65,6 +65,12 @@ test: ## Run OPA policy unit tests, module unit tests and Python unit tests (no 
 .PHONY: docs
 docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/vpc
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/ipam
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/transit-gateway
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/tgw-attachment
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/inspection-egress
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/central-endpoints
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/dns
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/compute/eks
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/data/postgres
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/storage/s3

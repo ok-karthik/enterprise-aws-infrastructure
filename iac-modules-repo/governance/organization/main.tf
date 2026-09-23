@@ -175,8 +175,12 @@ locals {
 # guardrail_target_ous. Each OU only gets its own policy, attached only to itself: a mistake in one OU's list
 # can never widen or narrow another OU's regions. An OU with no entry (or an empty list) in
 # var.allowed_regions_by_ou gets no region policy at all (nothing is denied on its behalf here).
+locals {
+  region_policy_ous = { for ou, regions in var.allowed_regions_by_ou : ou => regions if length(regions) > 0 }
+}
+
 resource "aws_organizations_policy" "deny_unapproved_regions" {
-  for_each = { for ou, regions in var.allowed_regions_by_ou : ou => regions if length(regions) > 0 }
+  for_each = local.region_policy_ous
 
   name        = "deny-unapproved-regions-${lower(replace(each.key, " ", "-"))}"
   description = "Data residency control for the ${each.key} OU: deny requests to any region outside ${jsonencode(each.value)}, except global services"
@@ -200,9 +204,9 @@ resource "aws_organizations_policy" "deny_unapproved_regions" {
 }
 
 resource "aws_organizations_policy_attachment" "deny_unapproved_regions" {
-  for_each = aws_organizations_policy.deny_unapproved_regions
+  for_each = local.region_policy_ous
 
-  policy_id = each.value.id
+  policy_id = aws_organizations_policy.deny_unapproved_regions[each.key].id
   target_id = local.organizational_unit_ids[each.key]
 }
 
@@ -368,17 +372,12 @@ resource "aws_organizations_policy" "require_imdsv2" {
   depends_on = [aws_organizations_organization.this]
 }
 
+# Architectural note: This SCP is the backstop for identities that are NOT under platform-workload-boundary.
+# Known gap (same as account-baseline): a CreateRole call that omits iam:PermissionsBoundary entirely
+# does not match StringNotEquals; account-baseline's Developer policy requires the boundary to be set.
 resource "aws_organizations_policy" "deny_role_creation_without_boundary" {
   name        = "deny-role-creation-without-boundary"
-  description = <<-EOT
-    Deny creating an IAM role that does not carry the platform-workload-boundary permissions boundary (the
-    same condition account-baseline's own workload boundary already enforces for roles created under it,
-    see DenyRoleWithoutThisBoundary in iac-modules-repo/governance/account-baseline). This SCP is the backstop
-    for identities that are NOT under that boundary at all. Known gap, same one the account-baseline version
-    has: a CreateRole call that omits iam:PermissionsBoundary entirely does not match StringNotEquals, so it
-    is not denied by this condition alone; account-baseline's Developer policy is what actually requires the
-    boundary to be set for the identities it applies to.
-  EOT
+  description = "Deny creating an IAM role without the platform-workload-boundary permissions boundary (backstop for identities not already under that boundary)"
   type        = "SERVICE_CONTROL_POLICY"
 
   content = jsonencode({

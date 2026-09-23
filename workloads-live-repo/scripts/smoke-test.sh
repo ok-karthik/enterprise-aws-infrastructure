@@ -13,7 +13,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
-ACCOUNT_DIR="${1:-workloads-live-repo/workloads-dev}"
+ACCOUNT_DIR="${1:-workloads-live-repo/workloads/nonprod/workloads-dev}"
 ACCOUNT_DIR_NAME=$(basename "$ACCOUNT_DIR")
 
 # Always run from the repository root, whatever directory the script is called from.
@@ -82,8 +82,8 @@ if [ ! -d "$ACCOUNT_DIR" ]; then
 fi
 cd "$ACCOUNT_DIR"
 # We run init first to ensure local caches are updated with any new module versions from Renovate
-terragrunt run --all init --non-interactive
-if terragrunt run --all validate --non-interactive; then
+terragrunt run --all init --non-interactive --log-format bare
+if terragrunt run --all validate --non-interactive --log-format bare; then
     echo -e "${GREEN}✅ Dependency graph and variables are valid.${NC}"
 else
     echo -e "${RED}❌ Validation failed in $ACCOUNT_DIR_NAME.${NC}"
