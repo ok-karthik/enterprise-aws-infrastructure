@@ -372,17 +372,12 @@ resource "aws_organizations_policy" "require_imdsv2" {
   depends_on = [aws_organizations_organization.this]
 }
 
+# Architectural note: This SCP is the backstop for identities that are NOT under platform-workload-boundary.
+# Known gap (same as account-baseline): a CreateRole call that omits iam:PermissionsBoundary entirely
+# does not match StringNotEquals; account-baseline's Developer policy requires the boundary to be set.
 resource "aws_organizations_policy" "deny_role_creation_without_boundary" {
   name        = "deny-role-creation-without-boundary"
-  description = <<-EOT
-    Deny creating an IAM role that does not carry the platform-workload-boundary permissions boundary (the
-    same condition account-baseline's own workload boundary already enforces for roles created under it,
-    see DenyRoleWithoutThisBoundary in iac-modules-repo/governance/account-baseline). This SCP is the backstop
-    for identities that are NOT under that boundary at all. Known gap, same one the account-baseline version
-    has: a CreateRole call that omits iam:PermissionsBoundary entirely does not match StringNotEquals, so it
-    is not denied by this condition alone; account-baseline's Developer policy is what actually requires the
-    boundary to be set for the identities it applies to.
-  EOT
+  description = "Deny creating an IAM role without the platform-workload-boundary permissions boundary (backstop for identities not already under that boundary)"
   type        = "SERVICE_CONTROL_POLICY"
 
   content = jsonencode({
