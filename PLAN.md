@@ -953,6 +953,12 @@ has been applied there yet, so there is no state or resource to migrate. Until
   well as, CloudWatch), the default security group with no rules, and the VPC Block Public
   Access exclusion only for designated ingress subnets.
 
+- [x] **5.8 Live repository OU-alignment & DX refactoring:** Reorganized `foundation-live-repo` and
+  `workloads-live-repo` to mirror the AWS Organizations OU tree directly (`foundation-live-repo/security/{log-archive, security-tooling}`,
+  `foundation-live-repo/infrastructure/{network-hub, shared-services}`, and `workloads-live-repo/workloads/{nonprod/workloads-dev, prod/workloads-prod}`).
+  Updated `generate_account_matrix.py` with OU-aware directory lookup, updated `smoke-test.sh`, added unit tests,
+  and aligned module version tags in `foundation-live-repo/management/env.hcl`.
+
 ---
 
 ## Phase 6 — Edge security and WAF
@@ -1706,3 +1712,13 @@ Everything goes under `docs/`.
     network-hub/shared-services (sized for a small platform, not verified against real usage); the starting
     `domain_allow_list` in `_envcommon/network/inspection-egress.hcl` (package/base-image registries only, a
     real list needs the owner's actual outbound needs).
+
+- **2026-09-23 (Phase 5 follow-up / DX refactoring, branch `feat/p5-networking`)** — Reorganized live repositories to mirror the AWS Organization OU tree directly:
+  - `foundation-live-repo`: grouped accounts under `security/` (`log-archive`, `security-tooling`) and `infrastructure/` (`network-hub`, `shared-services`), keeping `management` at the root.
+  - `workloads-live-repo`: grouped accounts under `workloads/nonprod/workloads-dev` and `workloads/prod/workloads-prod`.
+  - Updated `workloads-live-repo/scripts/generate_account_matrix.py` with `find_account_dir()` to resolve OU-nested account paths seamlessly with backwards compatibility.
+  - Added unit test `test_working_directory_resolves_ou_nested_folders` in `test_generate_account_matrix.py` (all 11 unit tests passing).
+  - Updated `workloads-live-repo/scripts/smoke-test.sh` default account path to `workloads/nonprod/workloads-dev`.
+  - Updated `foundation-live-repo/management/env.hcl` module versions to point to released git tags (`organization-v2.1.0`, `bootstrap-stacksets-v2.1.0`, etc.).
+  - Verified `check-account-registry.sh` passes cleanly (`✅ Every account.hcl matches the registry`).
+  - Removed accidental orphaned `console,` scratch directory.

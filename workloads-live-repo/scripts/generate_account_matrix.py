@@ -59,6 +59,29 @@ def github_environment(name: str, fields: dict[str, str]) -> str:
     return env  # dev | staging | prod
 
 
+OU_FOLDER = {
+    "Security": "security",
+    "Infrastructure": "infrastructure",
+    "NonProd": "workloads/nonprod",
+    "Prod": "workloads/prod",
+    "Root": "",
+}
+
+
+def find_account_dir(root: Path, name: str, ou: str) -> Path | None:
+    """Find the live folder for an account, checking both OU-grouped and flat paths."""
+    ou_sub = OU_FOLDER.get(ou, "")
+    for repo in LIVE_REPOS:
+        if ou_sub:
+            candidate = root / repo / ou_sub / name
+            if candidate.is_dir():
+                return candidate
+        candidate = root / repo / name
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
 def build_matrix(registry_text: str, root: Path = REPO_ROOT) -> tuple[list[dict], list[str]]:
     """Return (matrix entries in apply order, notices for the accounts that were skipped)."""
     entries: list[dict] = []
@@ -73,10 +96,11 @@ def build_matrix(registry_text: str, root: Path = REPO_ROOT) -> tuple[list[dict]
         if account_id.startswith("00000000"):
             notices.append(f"{name}: skipped, {account_id} is still a placeholder id (fill in the real account id in {REGISTRY})")
             continue
-        repo = next((r for r in LIVE_REPOS if (root / r / name).is_dir()), None)
-        if repo is None:
-            notices.append(f"{name}: skipped, no live folder ({' or '.join(f'{r}/{name}' for r in LIVE_REPOS)})")
+        account_dir = find_account_dir(root, name, fields.get("ou", ""))
+        if account_dir is None:
+            notices.append(f"{name}: skipped, no live folder found ({' or '.join(f'{r}/{name}' for r in LIVE_REPOS)})")
             continue
+        rel_working_dir = account_dir.relative_to(root).as_posix()
         environment = github_environment(name, fields)
         entries.append(
             {
@@ -84,7 +108,7 @@ def build_matrix(registry_text: str, root: Path = REPO_ROOT) -> tuple[list[dict]
                 "account_id": account_id,
                 "env": fields.get("env", ""),
                 "github_environment": environment,
-                "working_directory": f"{repo}/{name}",
+                "working_directory": rel_working_dir,
                 "plan_role_arn": f"arn:aws:iam::{account_id}:role/github-actions-plan",
                 "apply_role_arn": f"arn:aws:iam::{account_id}:role/github-actions-apply",
             }

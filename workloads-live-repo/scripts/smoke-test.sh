@@ -13,7 +13,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
-ACCOUNT_DIR="${1:-workloads-live-repo/workloads-dev}"
+ACCOUNT_DIR="${1:-workloads-live-repo/workloads/nonprod/workloads-dev}"
 ACCOUNT_DIR_NAME=$(basename "$ACCOUNT_DIR")
 
 # Always run from the repository root, whatever directory the script is called from.
