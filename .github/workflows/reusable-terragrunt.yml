@@ -24,6 +24,7 @@ env:
   # Needed until every module has a release tag at the iac-modules-repo path (PLAN 1.4), and later for
   # PRs that change iac-modules-repo/** so module changes are tested before release.
   IAC_MODULES_LOCAL: '1'
+  TG_LOG_FORMAT: 'bare'
 
 permissions:
   id-token: write
@@ -58,7 +59,7 @@ jobs:
       - name: "Terragrunt Plan"
         run: |
           # 1. Generate binary plans
-          terragrunt run --all plan --non-interactive -no-color -- -out=tfplan.bin
+          terragrunt run --all plan --non-interactive -no-color --log-format bare -- -out=tfplan.bin
 
           # 2. Convert to JSON (searching inside .terragrunt-cache)
           echo "🔍 Converting binary plans to JSON..."

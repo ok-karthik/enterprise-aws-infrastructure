@@ -338,3 +338,25 @@ run "bad_security_remediation_lambda_arn_is_rejected" {
 
   expect_failures = [var.security_remediation_lambda_role_arn]
 }
+
+run "vpc_block_public_access_is_on_by_default" {
+  command = plan
+
+  assert {
+    condition     = one(aws_vpc_block_public_access_options.this).internet_gateway_block_mode == "block-bidirectional"
+    error_message = "Internet gateway traffic must be blocked account-wide by default (PLAN 5.7)."
+  }
+}
+
+run "vpc_block_public_access_can_be_switched_off" {
+  command = plan
+
+  variables {
+    enable_vpc_block_public_access = false
+  }
+
+  assert {
+    condition     = length(aws_vpc_block_public_access_options.this) == 0
+    error_message = "enable_vpc_block_public_access = false must create nothing."
+  }
+}

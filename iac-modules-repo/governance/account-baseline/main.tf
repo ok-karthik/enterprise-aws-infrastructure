@@ -62,6 +62,15 @@ resource "aws_ec2_instance_metadata_defaults" "this" {
   http_endpoint = "enabled"
 }
 
+# VPC Block Public Access (PLAN 5.7): blocks internet gateway traffic account-wide by default. A subnet
+# that genuinely needs it (an ALB's public subnet, say) is excluded explicitly, one subnet at a time, in
+# network/vpc (var.exclude_public_subnets_from_account_bpa) -- never by weakening this account-wide default.
+resource "aws_vpc_block_public_access_options" "this" {
+  count = var.enable_vpc_block_public_access ? 1 : 0
+
+  internet_gateway_block_mode = "block-bidirectional"
+}
+
 # ------------------------------------------------------------------------------
 # 3. KMS keys per data class (rotation on)
 # ------------------------------------------------------------------------------

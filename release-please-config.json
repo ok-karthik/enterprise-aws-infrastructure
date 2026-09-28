@@ -138,6 +138,42 @@
       "package-name": "auto-remediation",
       "component": "auto-remediation",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/network/ipam": {
+      "release-type": "terraform-module",
+      "package-name": "ipam",
+      "component": "ipam",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/network/transit-gateway": {
+      "release-type": "terraform-module",
+      "package-name": "transit-gateway",
+      "component": "transit-gateway",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/network/tgw-attachment": {
+      "release-type": "terraform-module",
+      "package-name": "tgw-attachment",
+      "component": "tgw-attachment",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/network/inspection-egress": {
+      "release-type": "terraform-module",
+      "package-name": "inspection-egress",
+      "component": "inspection-egress",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/network/central-endpoints": {
+      "release-type": "terraform-module",
+      "package-name": "central-endpoints",
+      "component": "central-endpoints",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/network/dns": {
+      "release-type": "terraform-module",
+      "package-name": "dns",
+      "component": "dns",
+      "tag-separator": "-"
     }
   }
 }

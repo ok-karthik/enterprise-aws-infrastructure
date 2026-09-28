@@ -73,6 +73,12 @@ variable "security_remediation_lambda_role_arn" {
   }
 }
 
+variable "enable_vpc_block_public_access" {
+  description = "Block internet gateway traffic account-wide by default (PLAN 5.7). A VPC that genuinely needs a public subnet excludes it explicitly (network/vpc's exclude_public_subnets_from_account_bpa), never by turning this off."
+  type        = bool
+  default     = true
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)

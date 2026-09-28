@@ -113,6 +113,17 @@ class BuildMatrix(unittest.TestCase):
         self.assertEqual(wd["management"], "foundation-live-repo/management")
         self.assertEqual(wd["workloads-dev"], "workloads-live-repo/workloads-dev")
 
+    def test_working_directory_resolves_ou_nested_folders(self):
+        root = make_root(
+            "foundation-live-repo/management",
+            "foundation-live-repo/security/log-archive",
+            "workloads-live-repo/workloads/nonprod/workloads-dev",
+        )
+        entries, _ = gam.build_matrix(REGISTRY, root)
+        wd = {e["account"]: e["working_directory"] for e in entries}
+        self.assertEqual(wd["log-archive"], "foundation-live-repo/security/log-archive")
+        self.assertEqual(wd["workloads-dev"], "workloads-live-repo/workloads/nonprod/workloads-dev")
+
     def test_ci_false_is_not_run_and_not_reported(self):
         self.assertNotIn("workloads-staging", [e["account"] for e in self.entries])
         self.assertFalse(any("workloads-staging" in n for n in self.notices))

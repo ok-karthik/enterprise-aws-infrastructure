@@ -27,6 +27,7 @@ env:
   # Needed until every module has a release tag at the iac-modules-repo path (PLAN 1.4), and later for
   # PRs that change iac-modules-repo/** so module changes are tested before release.
   IAC_MODULES_LOCAL: '1'
+  TG_LOG_FORMAT: 'bare'
 
 jobs:
   discover:
@@ -81,5 +82,5 @@ jobs:
       - name: Terragrunt Destroy (Sequential)
         run: |
           # Terragrunt 1.x uses 'run --all' and '--non-interactive'
-          terragrunt run --all destroy --non-interactive -auto-approve
+          terragrunt run --all destroy --non-interactive -auto-approve --log-format bare
         working-directory: ${{ needs.discover.outputs.working_directory }}
