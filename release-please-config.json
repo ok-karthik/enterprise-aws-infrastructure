@@ -210,6 +210,12 @@
       "package-name": "backup",
       "component": "backup",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/network/route53-failover": {
+      "release-type": "terraform-module",
+      "package-name": "route53-failover",
+      "component": "route53-failover",
+      "tag-separator": "-"
     }
   }
 }
