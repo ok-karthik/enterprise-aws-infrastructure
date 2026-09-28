@@ -93,3 +93,7 @@ docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/security-alerts
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/governance/data-perimeter
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/auto-remediation
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/edge/cloudfront
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/firewall-manager
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/waf-logging
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/shield-advanced
