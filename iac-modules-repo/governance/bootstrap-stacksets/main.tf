@@ -19,6 +19,8 @@ resource "aws_cloudformation_stack_set" "this" {
     GitHubRepo            = var.github_repo
     GitHubEnvironment     = each.value.github_environment
     NoncurrentVersionDays = tostring(var.noncurrent_version_days)
+    # PLAN 7.2: "" = no replication. The template skips replication in the replica region itself.
+    ReplicaRegion = var.secondary_region
     # Fixed, never a variable: member accounts must never be allowed to manage Organizations.
     # The permissions boundary then denies organizations:* and account:* there.
     AllowOrganizationsAdmin = "false"
@@ -45,18 +47,32 @@ resource "aws_cloudformation_stack_set" "this" {
   }
 }
 
-resource "aws_cloudformation_stack_set_instance" "this" {
-  for_each = var.stack_sets
+locals {
+  # One instance per StackSet per region: the primary region, plus the secondary region when it is set.
+  instance_regions = compact([var.region, var.secondary_region])
+  instances = {
+    for pair in setproduct(keys(var.stack_sets), local.instance_regions) :
+    "${pair[0]}/${pair[1]}" => { stack_set = pair[0], region = pair[1] }
+  }
+}
 
-  stack_set_name            = aws_cloudformation_stack_set.this[each.key].name
+resource "aws_cloudformation_stack_set_instance" "this" {
+  for_each = local.instances
+
+  stack_set_name            = aws_cloudformation_stack_set.this[each.value.stack_set].name
   call_as                   = "SELF"
-  stack_set_instance_region = var.region
+  stack_set_instance_region = each.value.region
+
+  # The secondary region goes first: its state bucket is the replication destination of the primary's.
+  operation_preferences {
+    region_order = compact([var.secondary_region, var.region])
+  }
 
   # Never delete a member account's stack (and with it the roles CI depends on) because
   # this instance was removed from Terraform.
   retain_stack = true
 
   deployment_targets {
-    organizational_unit_ids = each.value.organizational_unit_ids
+    organizational_unit_ids = var.stack_sets[each.value.stack_set].organizational_unit_ids
   }
 }

@@ -166,5 +166,36 @@ class CiRoles(unittest.TestCase):
             self.assertNotIn("Export", output, f"an export would lock {name}")
 
 
+class StateReplication(unittest.TestCase):
+    """PLAN 7.2: optional one-way copy of the state bucket to the secondary region."""
+
+    def test_replication_is_off_unless_a_replica_arn_is_given(self):
+        template = load()
+        self.assertEqual(template["Parameters"]["ReplicaRegion"]["Default"], "")
+        self.assertEqual(template["Resources"]["StateReplicationRole"]["Condition"], "ReplicateState")
+        config = template["Resources"]["StateBucket"]["Properties"]["ReplicationConfiguration"]
+        self.assertEqual(config["!If"][0], "ReplicateState")
+        self.assertEqual(config["!If"][2], {"!Ref": "AWS::NoValue"})
+
+    def test_deletes_are_not_replicated_and_the_role_is_scoped(self):
+        template = load()
+        rule = template["Resources"]["StateBucket"]["Properties"]["ReplicationConfiguration"]["!If"][1]["Rules"][0]
+        self.assertEqual(rule["DeleteMarkerReplication"]["Status"], "Disabled", "the replica must survive a mistaken delete")
+        role = template["Resources"]["StateReplicationRole"]["Properties"]
+        text = json.dumps(role["Policies"])
+        self.assertNotIn('"*"', text.replace('"/*"', ""), "no wildcard resource or action on the replication role")
+        self.assertNotIn("s3:*", text)
+        self.assertNotIn("!GetAtt", text, "using the bucket name (not GetAtt) avoids a circular dependency")
+
+    def test_the_replica_regions_stack_creates_only_the_bucket_side(self):
+        """Global IAM (OIDC provider, boundary, CI roles) must not be created a second time in the replica region."""
+        template = load()
+        for name in ["GitHubOidcProvider", "ApplyBoundary", "PlanRole", "ApplyRole"]:
+            self.assertEqual(template["Resources"][name].get("Condition"), "CreateGlobalResources", name)
+        for name in ["PlanRoleArn", "ApplyRoleArn", "OidcProviderArn"]:
+            self.assertEqual(template["Outputs"][name].get("Condition"), "CreateGlobalResources", name)
+        self.assertNotIn("Condition", template["Resources"]["StateBucket"], "the bucket exists in every region")
+
+
 if __name__ == "__main__":
     unittest.main()

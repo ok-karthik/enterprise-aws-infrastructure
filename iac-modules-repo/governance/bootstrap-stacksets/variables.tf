@@ -70,9 +70,25 @@ variable "noncurrent_version_days" {
 }
 
 variable "region" {
-  description = "Region the stack instances are deployed to. Primary region only: the state bucket and roles are regional/global and the secondary region comes later."
+  description = "Primary region the stack instances are deployed to."
   type        = string
   default     = "eu-central-1"
+}
+
+variable "secondary_region" {
+  description = <<-EOT
+    Optional (PLAN 7.2): a second region to deploy the stacks to. Each account then also gets a state bucket
+    there, and the primary bucket replicates every state file to it (one way). "" = primary region only.
+    The template creates only the state bucket in that region (the OIDC provider and CI roles are global IAM
+    and come from the primary region's stack).
+  EOT
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.secondary_region == "" || (can(regex("^[a-z]{2}(-[a-z]+)+-[0-9]$", var.secondary_region)) && var.secondary_region != var.region)
+    error_message = "secondary_region must be empty or a region name different from region."
+  }
 }
 
 variable "tags" {

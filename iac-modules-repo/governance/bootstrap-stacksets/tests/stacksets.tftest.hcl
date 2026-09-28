@@ -125,3 +125,40 @@ run "placeholder_ou_is_rejected" {
 
   expect_failures = [var.stack_sets]
 }
+
+run "primary_region_only_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(aws_cloudformation_stack_set_instance.this) == 2 && alltrue([for _, s in aws_cloudformation_stack_set.this : s.parameters["ReplicaRegion"] == ""])
+    error_message = "Without secondary_region there is one instance per StackSet and replication is off."
+  }
+}
+
+run "secondary_region_adds_an_instance_and_turns_replication_on" {
+  command = plan
+
+  variables {
+    secondary_region = "eu-west-1"
+  }
+
+  assert {
+    condition     = length(aws_cloudformation_stack_set_instance.this) == 4 && contains(keys(aws_cloudformation_stack_set_instance.this), "bootstrap-prod/eu-west-1")
+    error_message = "secondary_region adds one instance per StackSet in that region."
+  }
+
+  assert {
+    condition     = alltrue([for _, s in aws_cloudformation_stack_set.this : s.parameters["ReplicaRegion"] == "eu-west-1"])
+    error_message = "The StackSets must pass the replica region to the template."
+  }
+}
+
+run "secondary_region_must_differ_from_primary" {
+  command = plan
+
+  variables {
+    secondary_region = "eu-central-1"
+  }
+
+  expect_failures = [var.secondary_region]
+}
