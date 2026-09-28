@@ -84,7 +84,8 @@ the offers.
 | 4 | 3.1, 3.2, 3.6 | Identity Center + permission sets (learning-plan Sprint 1) |
 | 5 | 4.1, 4.2, 4.4, 4.5, 4.6 (SCPs + RCPs only), 4.9 | Guardrails + detection + auto-remediation (learning-plan Sprint 2) |
 | 6 | 10.1–10.4 | ADRs, architecture diagram, system-design walkthrough, stories |
-| later | Phases 5–9, rest of 3/4 | Deeper interview topics; mostly 🔴 plan-only because of cost |
+| 7 | 11.4, 11.6 | Two cheap docs (agent autonomy levels, org adoption playbook) with high interview value |
+| later | Phases 5–9, rest of 3/4, rest of 11 | Deeper interview topics; mostly 🔴 plan-only because of cost |
 
 **Target: orders 1–6 done by Sunday 2026-09-27.** See the day-by-day schedule below.
 
@@ -963,7 +964,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
 
 ## Phase 6 — Edge security and WAF
 
-- [ ] **6.1 `security/firewall-manager` module** (security-tooling as FMS admin, which needs
+- [x] **6.1 `security/firewall-manager` module** (security-tooling as FMS admin, which needs
   delegation from management): WAFv2 policies applied automatically to all ALBs, API
   Gateways and CloudFront distributions in chosen OUs. The baseline rule groups are AWS
   Managed Common, KnownBadInputs, Amazon IP reputation, Anonymous IP list, Bot Control
@@ -971,15 +972,15 @@ has been applied there yet, so there is no state or resource to migrate. Until
   covers FMS security-group policies (audit for overly open SGs) and Network Firewall
   policies when Phase 5.3 is present.
 
-- [ ] **6.2 WAF logging:** WAF logs → Firehose (`aws-waf-logs-*`) → log-archive S3, with
+- [x] **6.2 WAF logging:** WAF logs → Firehose (`aws-waf-logs-*`) → log-archive S3, with
   redaction of the `authorization` and `cookie` fields.
 
-- [ ] **6.3 `edge/cloudfront` module** (a capability module for tenants too): Origin Access
+- [x] **6.3 `edge/cloudfront` module** (a capability module for tenants too): Origin Access
   Control for S3 origins, minimum `TLSv1.2_2021`, an ACM cert (in us-east-1 through a provider
   alias the caller passes in), standard-logging to log-archive, a WAF web ACL association and
   a response-headers policy (HSTS, CSP placeholder).
 
-- [ ] **6.4 Shield Advanced** (optional flag, prod OU only): subscription, protections on
+- [x] **6.4 Shield Advanced** (optional flag, prod OU only): subscription, protections on
   CloudFront/ALB/Route 53 zones, and proactive engagement contacts as variables. Put the cost
   warning in `FINOPS.md`.
 
@@ -1153,6 +1154,7 @@ Everything goes under `docs/`.
   10. Terragrunt vs plain Terraform/OpenTofu. Terragrunt appears in ~2% of ads and Terraform
       in ~49%, so write down why Terragrunt is still worth it here, and keep modules usable
       from plain Terraform.
+  11. Terraform MCP server for the agents: use it or not, and on what terms (11.3)
 - [ ] **10.2 Architecture diagram**: one diagram (Mermaid in `docs/ARCHITECTURE.md`, plus an
   exported PNG for the README) showing OUs → accounts → CI identity chain → log and finding
   flows → network hub. It goes at the top of `README.md`.
@@ -1185,6 +1187,150 @@ Everything goes under `docs/`.
 - [ ] **10.7 The single-account → multi-account migration as a story** (migration is in ~15%
   of ads): record what 2.2's state-key migration actually took (units moved, downtime, what
   went wrong) in `docs/migrations/2026-single-to-multi-account.md`.
+
+---
+
+## Phase 11 — Agentic IaC workflows and org adoption
+
+The IaC agent, the healer and ChatOps already exist (Phases A–D). This phase makes them safe to
+work next to a human (a fast local check, hard limits, written autonomy levels), measures whether
+they help, and writes down how to roll the same setup out to other teams. Nothing here touches
+AWS, so there is no 🟢/🟡/🔴 cost.
+
+**Conflicts with the repo today** (found while writing this phase, 2026-09-28). Fix or decide
+these before 11.2 and 11.4:
+- **`main` is not protected.** `gh api …/branches/main/protection` returns 404, and there are no
+  rulesets. `docs/CICD.md` and `GOVERNANCE.md` describe required checks that GitHub doesn't
+  enforce. **Owner:** protect `main` (PR required, the per-account checks required, no bypass).
+- **The healer can push to `main`, and it never stops.** `healer_runner.py` pushes to
+  `workflow_run.head_branch` without checking the branch name, so a failed run on `main` gets a
+  direct commit to `main`. That breaks the first standing guardrail. It has no attempt limit
+  either. **Model:** refuse `main` and any branch without an open PR, and cap commits per PR
+  (same N as 11.2).
+- **The C1 MCP client probably never reaches the MCP server.** `mcp_client.py` sends
+  `tools/call` without the MCP `initialize` step and without `Accept: text/event-stream`, and asks
+  for tools named `get_provider_doc` / `search_registry`. The HashiCorp server's documented tools
+  are `search_providers`, `get_provider_details`, `get_latest_provider_version` and so on. So the
+  agent most likely always uses its GitHub raw-docs fallback. 11.3 checks this.
+- `trivy config` still runs in pre-commit and `make security` (8.9 step 5 is open). 11.1 leaves
+  it out.
+
+- [ ] **11.1 One command to check one module locally.** `make verify-module
+  MODULE=<category/name>` runs these checks on one module in `iac-modules-repo`, with no AWS
+  credentials: `terraform fmt -check`, `init -backend=false`, `validate`, `tflint`, Checkov through
+  `workloads-live-repo/scripts/run-checkov.sh` (the CI settings, per 8.9), `terraform test` (the
+  existing `mock_provider` tests), and `conftest` against `policy-library-repo/terraform/` on a
+  plan JSON.
+  - **How to get a plan JSON without credentials.** Option (a): an `examples/basic/` root per
+    module, planned with a provider that skips the credential, account-ID and metadata checks,
+    with fake keys. Option (b): `terraform test` assertions with `mock_provider`. **Pick (a).**
+    `terraform test` gives pass/fail results, not a plan JSON, so conftest has nothing to read,
+    and copying the Rego rules into test assertions would drift from `policy-library-repo`.
+    (a) gives a real `tfplan.json` with `tags_all` filled from `default_tags`, which is what
+    `require_tags` checks, and the example doubles as usage docs.
+  - **Limits of (a).** A module whose data sources call AWS (for example `aws_caller_identity`)
+    can't be planned offline. Pass that value in as a variable in the example, or report the
+    conftest step as `SKIPPED (needs credentials)`. Never a silent pass. Put the fake keys in env
+    vars set by the `make` target, not in HCL, or Checkov reports a hard-coded key. The "no
+    `provider` blocks" guardrail covers the module folder, not `examples/`.
+  - **Check first:** `.checkov.yaml` has a `directory:` list. Confirm that `-d <module>` narrows
+    the scan to the module instead of adding to that list.
+  - **Output for agents:** one line per failure, `<tool> <check-id> <file>:<line>`, plus the same
+    as JSON and a non-zero exit code. No full logs, so an agent can loop on it cheaply.
+  *Done when:* a module broken on purpose (for example an S3 bucket with public access turned on)
+  fails `make verify-module` locally with the same check ID CI reports, and a clean module passes
+  with no AWS credentials in the environment.
+
+- [ ] **11.2 Hooks and hard limits for local coding agents.** Write the rules once, tool-neutral,
+  in `.agents/AGENTS.md`. Add a committed `.claude/settings.json` as one implementation of them.
+  - **After every edit:** run 11.1 for the module that was touched and give the short summary
+    back to the agent.
+  - **Before every command, block:** `terraform` / `terragrunt` `apply`, `destroy`, `run --all`,
+    `state rm`, `state mv`, also inside `cd x && …` chains and through `make`.
+  - **Before every edit, block:** `.checkov.yaml`, `.trivyignore` and `policy-library-repo/`.
+    They decide what "passing" means, so only a human edits them.
+  - **Attempt limit:** after N failed 11.1 runs on the same module (start with N = 3), stop and
+    hand over to a human with the last summary.
+  - Hooks run on a laptop and can be switched off. They save time; they are not the control.
+    The controls are CODEOWNERS on those paths and branch protection (see the conflicts above).
+  - **Tests** in `.agents/tests/`: every blocked command and path is blocked, with extra flags
+    too; `plan`, `validate` and `fmt` are allowed; the counter stops at N.
+  *Done when:* the tests pass, and in a real session the agent's `terragrunt apply` is refused and
+  a broken edit gets the 11.1 summary back.
+
+- [ ] **11.3 Terraform MCP server: use it or not.**
+  1. **Model: report what C1 connects to today.** `mcp_client.py` posts to `MCP_TERRAFORM_URL`
+     (default `http://localhost:8080/mcp`). That is `hashicorp/terraform-mcp-server:1.2.0` from
+     `.agents/mcp/docker-compose.yml` when it runs. `iac_agent.py` falls back to GitHub raw docs
+     when it doesn't. Run it once against the pinned server and write down which path is really
+     used.
+  2. **Model: evaluate it for read-only use** (provider docs, provider and module version
+     lookups). From HashiCorp's README and reference, checked 2026-09-28: latest is `v1.3.0`
+     (2026-08-26); tools can be limited with `--toolsets` / `--tools`; `ENABLE_TF_OPERATIONS`
+     is `false` by default; `TFE_TOKEN` is only for HCP Terraform / Terraform Enterprise. The
+     docs disagree on whether the `registry` toolset is on by default, so set it explicitly.
+     HashiCorp says not to use it with untrusted MCP clients or LLMs. Check the docs again when
+     you do the task.
+  3. **Terms if used:** a pinned tag (or digest), `--toolsets=registry` or an explicit `--tools`
+     list, no `TFE_TOKEN`, bound to `127.0.0.1` (the compose file publishes `8080` on all
+     interfaces today), trusted clients only.
+  4. **Terragrunt:** no Terragrunt-docs server from Gruntwork was found. The Gruntwork MCP server
+     is hosted and needs a paid IaC Library account. The compose file's
+     `olofdevopsninja/terragrunt-mcp-server:latest` is a one-person community image on `latest`.
+     Default: use neither.
+  **Owner:** ADR 11 in the 10.1 list, in your own words.
+  *Done when:* ADR 11 says use / don't use and why, and the compose file and `mcp_client.py`
+  match it.
+
+- [ ] **11.4 Autonomy levels for this repo.** `docs/AGENT_AUTONOMY.md`: one row per agent (IaC
+  generation agent, pipeline healer, drift `/reconcile`, ChatOps `/generate`, local coding agents
+  from 11.2). For each: its level per environment, what it may do there, and the control that
+  enforces it.
+  - Levels: **L0 Explain** (reads and answers) · **L1 Propose** (a diff or PR; a human merges) ·
+    **L2 Validate** (also runs the checks and fixes its own diff on its own branch) · **L3 Apply
+    non-prod** · **L4 Remediate prod**.
+  - **Say it plainly: today every agent is L1–L2. None is L3 or L4, and none may apply.**
+  - Each control cell names something that exists: an IAM role (no agent gets
+    `github-actions-apply`), a GitHub Environment, branch protection, CODEOWNERS, an 11.2 hook, a
+    workflow `permissions:` block.
+  - List the gaps honestly: the healer pushes commits to someone else's PR branch. Until the
+    conflicts above are fixed, it can also push to `main`, and branch protection is off.
+  - Moving an agent up a level needs its 11.5 numbers, an ADR and an owner sign-off.
+  *Done when:* every agent in `.agents/AGENTS.md` §8 has a row, every control cell points at a
+  file or setting that exists, and every gap links to a task.
+
+- [ ] **11.5 Measure AI changes.** Label every agent-created PR `ai-generated` (add `--label` to
+  `gh pr create` in `chatops_generator.yml`; the healer pushes commits, not PRs, so it adds the
+  label to the PR it pushed to). Extend 9.4 to split its numbers by that label: change failure
+  rate, rework (follow-up fixes or reverts within 7 days), time to first review and to merge.
+  Add cost per verified change: LLM tokens (partly in `.agents/metrics/runs.jsonl` already) + CI
+  minutes + review time, divided by the agent changes that passed CI and were merged.
+  Report per team, never per person (see 11.6, works council). Needs 9.4 first.
+  *Done when:* the weekly 9.4 summary shows agent and human PRs side by side, with sample sizes.
+
+- [ ] **11.6 Org adoption playbook.** `docs/AGENTIC_ADOPTION.md`: how to take these workflows from
+  one repo to teams and then the whole organisation. **Model writes a draft; the owner rewrites it
+  in their own words** (the Phase 10 writing rule). Until then the file starts with
+  "Model-written draft, not yet reviewed". Sections:
+  1. **Why adoption fails:** tool first, problem second; trust lost after one incident; security
+     and legal asked too late; reviewers become the bottleneck; no owner; no numbers.
+  2. **Rollout in phases:** guardrails first (11.2, 11.4) → one pilot team with read-only use
+     cases for 6–8 weeks → a paved road run as a platform product (shared `AGENTS.md`, hooks,
+     approved MCP servers from 11.3, golden-path templates) → champions and enablement →
+     governance.
+  3. **Roles:** agent owner, platform team, security, champions.
+  4. **Metrics per phase** (from 11.5).
+  5. **Governance for Germany/EU:** works council (Betriebsrat) co-determination for tools that
+     can monitor performance (§87(1) no. 6 BetrVG), which covers 11.5; GDPR and which code and
+     logs may go to which LLM provider (processing agreement, region, retention); the EU AI Act
+     AI-literacy duty (Art. 4); an audit trail of agent actions for ISO 27001, NIS2 and DORA.
+  6. **A 30-60-90 day plan.**
+  *Done when:* the owner has rewritten it and can give the two-minute version out loud.
+
+- [ ] **11.7 Interview story card.** **Owner.** Half a page in `docs/stories/agentic-iac.md`: the
+  problem, what I built (verification ladder, guardrails, self-healing CI), what broke or
+  surprised me (the conflicts above are candidates), and the adoption playbook in 60 seconds.
+  *Done when:* it fits on half a page and you can say it in two minutes.
 
 ---
 
@@ -1722,3 +1868,11 @@ Everything goes under `docs/`.
   - Updated `foundation-live-repo/management/env.hcl` module versions to point to released git tags (`organization-v2.1.0`, `bootstrap-stacksets-v2.1.0`, etc.).
   - Verified `check-account-registry.sh` passes cleanly (`✅ Every account.hcl matches the registry`).
   - Removed accidental orphaned `console,` scratch directory.
+
+- **2026-09-28 (plan text only, branch `docs/p11-agentic-workflows`)** — Added Phase 11 (agentic IaC
+  workflows and org adoption), ADR 11 in the 10.1 list, and Priority track order 7 (11.4, 11.6); the rest
+  of Phase 11 is "later". No code changed and no AWS command was run. Reading the repo for it turned up four
+  conflicts, now listed at the top of Phase 11: `main` has no branch protection or ruleset; the healer can
+  push to `main` and has no attempt limit; the C1 MCP client most likely never reaches the Terraform MCP
+  server; `trivy config` is still in pre-commit. Terraform MCP facts come from HashiCorp's README and
+  reference page, read the same day.
