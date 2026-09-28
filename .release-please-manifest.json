@@ -27,5 +27,9 @@
   "iac-modules-repo/network/tgw-attachment": "1.0.0",
   "iac-modules-repo/network/inspection-egress": "1.0.0",
   "iac-modules-repo/network/central-endpoints": "1.0.0",
-  "iac-modules-repo/network/dns": "1.0.0"
+  "iac-modules-repo/network/dns": "1.0.0",
+  "iac-modules-repo/security/firewall-manager": "1.0.0",
+  "iac-modules-repo/security/waf-logging": "1.0.0",
+  "iac-modules-repo/edge/cloudfront": "1.0.0",
+  "iac-modules-repo/security/shield-advanced": "1.0.0"
 }

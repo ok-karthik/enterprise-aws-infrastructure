@@ -39,6 +39,42 @@ Non-production environments follow a surgical lifecycle:
 ## 🏷️ Cost Allocation
 100% of resources are tagged with `Project` and `Environment`. This allows for granular reporting in **AWS Cost Explorer** using Tag-Based Cost Allocation.
 
+## 🛡️ Shield Advanced (PLAN 6.4)
+
+> ⚠️ **AWS Shield Advanced costs $3,000/month per AWS Organization** (not per account).
+> The subscription auto-renews annually and covers all accounts in the organization once
+> enabled from any single account.
+
+| Item | Approximate monthly cost |
+|---|---|
+| Subscription (org-wide) | $3,000 flat |
+| Data Transfer Out (DDoS protection) | $0.050/GB (first 100 TB) |
+| Application Layer DDoS Mitigation | Included in subscription |
+
+**When to enable:** only when the business case justifies the $36,000/year base cost —
+typically when potential DDoS impact exceeds that amount (customer-facing SaaS, financial
+services, regulated industries). The `security/shield-advanced` module is **disabled by
+default** (`enabled = false`); the prod leaf can opt in.
+
+**What you get:** automatic layer-3/4 DDoS mitigation, application-layer DDoS
+auto-remediation (WAF rate-based rules created by Shield), proactive engagement with the
+AWS Shield Response Team (SRT), cost protection (credits for scaling costs caused by
+DDoS), and advanced metrics/reporting.
+
+## 🔥 Firewall Manager (PLAN 6.1)
+
+| Item | Approximate monthly cost |
+|---|---|
+| FMS WAFv2 policy (per region, per account) | $100 per policy + web ACL charges |
+| WAFv2 web ACL (per ACL) | $5/month |
+| WAFv2 rule (per rule) | $1/month |
+| WAFv2 request pricing | $0.60 per million requests |
+| Bot Control (if enabled) | $10/month + $1 per million requests |
+| SG audit policy | $100 per policy per region |
+
+Start in **audit mode** (`remediation_enabled = false`) and review findings before
+enabling auto-remediation.
+
 ## 🚀 Future Roadmap
 - **Automated "Shutdown at Night"**: Implementation of instance scheduling for `dev` environments.
 - **Karpenter Integration**: Replacing Cluster Autoscaler with Karpenter for more aggressive rightsizing of Kubernetes nodes.
