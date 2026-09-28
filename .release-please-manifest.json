@@ -31,5 +31,7 @@
   "iac-modules-repo/security/firewall-manager": "1.0.0",
   "iac-modules-repo/security/waf-logging": "1.0.0",
   "iac-modules-repo/edge/cloudfront": "1.0.0",
-  "iac-modules-repo/security/shield-advanced": "1.0.0"
+  "iac-modules-repo/security/shield-advanced": "1.0.0",
+  "iac-modules-repo/data/aurora-postgres": "1.0.0",
+  "iac-modules-repo/data/backup": "1.0.0"
 }

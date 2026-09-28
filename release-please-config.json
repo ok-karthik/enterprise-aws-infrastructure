@@ -198,6 +198,18 @@
       "package-name": "shield-advanced",
       "component": "shield-advanced",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/data/aurora-postgres": {
+      "release-type": "terraform-module",
+      "package-name": "aurora-postgres",
+      "component": "aurora-postgres",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/data/backup": {
+      "release-type": "terraform-module",
+      "package-name": "backup",
+      "component": "backup",
+      "tag-separator": "-"
     }
   }
 }
