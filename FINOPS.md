@@ -75,6 +75,24 @@ DDoS), and advanced metrics/reporting.
 Start in **audit mode** (`remediation_enabled = false`) and review findings before
 enabling auto-remediation.
 
+## 🌍 Multi-region DR (PLAN 7)
+
+Warm standby costs money even when nothing has failed. Prices are list prices from memory; **check them with
+Infracost or the AWS pricing calculator before applying** and put the real numbers here.
+
+| Item | Why it costs | Notes |
+|---|---|---|
+| Aurora Global Database secondary | A full second cluster (at least one `db.r*` instance) plus cross-region replication traffic | Usually the biggest DR line. `data/postgres` (single RDS) is far cheaper but has no second region |
+| EKS in `eu-west-1` | Control plane is billed per hour even with zero nodes (about $0.10/h per cluster) | The node group is at 0; NAT and endpoints in that VPC add up if enabled |
+| S3 replication | Storage in both regions + per-request + inter-region transfer | Off unless `replication_destination_bucket_arn` is set |
+| AWS Backup copies | Recovery-point storage in a second region + transfer | Shorten `copy_retention_days` for non-prod |
+| Route 53 health checks | Small per-check monthly fee | Cheap. 10-second interval costs more than 30-second |
+| Route 53 ARC | Per cluster, per hour (a few thousand dollars a year) | Not in the modules. Only worth it for prod where a false failover is expensive |
+| State bucket replication | Negligible (state files are tiny) | |
+
+**Rule of thumb:** DR roughly doubles the cost of the data tier and adds a fixed cost for the second cluster. Turn
+it on for prod only, and write the number next to the RTO you bought with it.
+
 ## 🚀 Future Roadmap
 - **Automated "Shutdown at Night"**: Implementation of instance scheduling for `dev` environments.
 - **Karpenter Integration**: Replacing Cluster Autoscaler with Karpenter for more aggressive rightsizing of Kubernetes nodes.
