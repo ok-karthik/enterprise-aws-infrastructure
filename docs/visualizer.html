@@ -621,6 +621,10 @@ workloads-live-repo/infrastructure/network-hub/eu-central-1/network/transit-gate
   </main>
 
   <script>
+    // State Variables
+    let currentView = 'multi-account';
+    let simInterval = null;
+
     // System Data Models for all 5 Architecture Views
     const viewsData = {
       'multi-account': {
@@ -1013,7 +1017,7 @@ workloads-live-repo/infrastructure/network-hub/eu-central-1/network/transit-gate
               <rect x="380" y="110" width="240" height="280" rx="12" fill="#0C1A2E" stroke="#38BDF8" stroke-width="2"/>
               <text x="400" y="140" fill="#38BDF8" font-size="14" font-weight="700">AWS SSM Parameter Store</text>
               <text x="400" y="165" fill="#94A3B8" font-size="11">Standard Catalog Schema:</text>
-              <text x="400" y="195" fill="#E2E8F0" font-size="11" font-family="monospace">/platform/${env}/${region}/</text>
+              <text x="400" y="195" fill="#E2E8F0" font-size="11" font-family="monospace">/platform/\${env}/\${region}/</text>
               <text x="400" y="215" fill="#A7F3D0" font-size="10" font-family="monospace">├─ vpc/id</text>
               <text x="400" y="235" fill="#A7F3D0" font-size="10" font-family="monospace">├─ vpc/database_subnets</text>
               <text x="400" y="255" fill="#A7F3D0" font-size="10" font-family="monospace">├─ eks/cluster_name</text>
@@ -1262,8 +1266,6 @@ workloads-live-repo/infrastructure/network-hub/eu-central-1/network/transit-gate
     };
 
     // View Switching Logic
-    let currentView = 'multi-account';
-
     function initView(viewKey) {
       currentView = viewKey;
       const data = viewsData[viewKey];
@@ -1343,7 +1345,6 @@ workloads-live-repo/infrastructure/network-hub/eu-central-1/network/transit-gate
     });
 
     // Workflow Simulation Flow
-    let simInterval = null;
     function runSimulation() {
       const simBar = document.getElementById('simBar');
       const stepText = document.getElementById('simStepText');
@@ -1393,9 +1394,10 @@ workloads-live-repo/infrastructure/network-hub/eu-central-1/network/transit-gate
 
       if (simInterval) clearInterval(simInterval);
 
-      simInterval = setInterval(() => {
+      function executeStep() {
         if (currentStep >= steps.length) {
           clearInterval(simInterval);
+          simInterval = null;
           stepText.textContent = "Simulation Complete: Flow Verified Clean.";
           stepCounter.textContent = "Finished";
           setTimeout(() => { simBar.style.display = 'none'; }, 4000);
@@ -1407,11 +1409,19 @@ workloads-live-repo/infrastructure/network-hub/eu-central-1/network/transit-gate
         stepCounter.textContent = `Step ${currentStep + 1} of ${steps.length}`;
         selectNode(step.node);
         currentStep++;
-      }, 2500);
+      }
+
+      // Run initial step immediately, then advance every 2.5s
+      executeStep();
+      simInterval = setInterval(executeStep, 2500);
     }
 
     // Initialize default view
-    initView('multi-account');
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => initView('multi-account'));
+    } else {
+      initView('multi-account');
+    }
   </script>
 </body>
 </html>
