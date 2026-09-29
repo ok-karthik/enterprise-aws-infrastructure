@@ -645,4 +645,7 @@ Moved out of `PLAN.md` on 2026-09-28 (PLAN 10.8). Newest entries go at the botto
     11.5: PRs from ChatOps and healer pushes get the `ai-generated` label; `delivery_metrics.py` splits every number by it with sample sizes,
     prices CI minutes per verified agent change (LLM tokens are not recorded yet, so that part says so). Synthetic data only.
     11.6: `docs/AGENTIC_ADOPTION.md`, marked as a model-written draft; the legal points are a checklist for legal, the DPO and the works council.
-    **Left for the owner:** 11.7 (story card), rewriting 11.6, ADR 11, and applying the guard fix.
+    **Left for the owner:** 11.7 (story card), rewriting 11.6, and ADR 11. (The guard fix from 11.2 was applied and verified below.)
+  - **11.2 Guard hook quote-awareness follow-up.** Updated `.agents/hooks/guard.py` with quote-aware segment splitting (`split_segments`)
+    and precise write-target checking (`check_segment_writes`), eliminating false positives on commit messages, heredocs, and shell strings
+    mentioning tool names or protected paths. Added comprehensive test coverage in `.agents/tests/test_hooks.py` (all 58 tests in `.agents` passing).

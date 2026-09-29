@@ -47,9 +47,89 @@ WRITE_HINTS = re.compile(r"(\bsed\s+-i|\btee\b|\bmv\b|\brm\b|\bcp\b|\bgit\s+(che
 # pre-bash
 # ---------------------------------------------------------------------------
 def split_segments(command: str) -> list[str]:
-    """Split on ; && || | & newlines and (), `, $( so that `cd x && terraform apply` is two commands."""
-    normalized = re.sub(r"(\$\(|`|&&|\|\||[;|&\n()])", "\n", command)
-    return [s.strip() for s in normalized.split("\n") if s.strip()]
+    """Split on ; && || | & newlines and (), `, $( outside quotes so that `cd x && terraform apply` is two commands,
+    while strings containing separators inside quotes or heredocs remain intact."""
+    segments = []
+    current: list[str] = []
+    in_single = False
+    in_double = False
+    escaped = False
+    heredoc_delim: Optional[str] = None
+    lines = command.splitlines(keepends=True)
+
+    for line in lines:
+        if heredoc_delim is not None:
+            if line.strip() == heredoc_delim:
+                heredoc_delim = None
+            continue
+
+        m = re.search(r"<<-?\s*['\"]?([A-Za-z0-9_]+)['\"]?", line)
+        if m:
+            heredoc_delim = m.group(1)
+
+        i = 0
+        n = len(line)
+        while i < n:
+            c = line[i]
+            if escaped:
+                current.append(c)
+                escaped = False
+                i += 1
+                continue
+            if c == "\\" and not in_single:
+                escaped = True
+                current.append(c)
+                i += 1
+                continue
+            if c == "'" and not in_double:
+                in_single = not in_single
+                current.append(c)
+                i += 1
+                continue
+            if c == '"' and not in_single:
+                in_double = not in_double
+                current.append(c)
+                i += 1
+                continue
+
+            if not in_single:
+                if c == "`":
+                    seg = "".join(current).strip()
+                    if seg:
+                        segments.append(seg)
+                    current = []
+                    i += 1
+                    continue
+                if line[i:i + 2] == "$(":
+                    seg = "".join(current).strip()
+                    if seg:
+                        segments.append(seg)
+                    current = []
+                    i += 2
+                    continue
+
+            if not in_single and not in_double:
+                if line[i:i + 2] in ("&&", "||"):
+                    seg = "".join(current).strip()
+                    if seg:
+                        segments.append(seg)
+                    current = []
+                    i += 2
+                    continue
+                if c in (";", "|", "&", "\n", "(", ")"):
+                    seg = "".join(current).strip()
+                    if seg:
+                        segments.append(seg)
+                    current = []
+                    i += 1
+                    continue
+            current.append(c)
+            i += 1
+
+    seg = "".join(current).strip()
+    if seg:
+        segments.append(seg)
+    return segments
 
 
 def tokens_of(segment: str) -> list[str]:
@@ -96,10 +176,50 @@ def blocked_tool_call(words: list[str]) -> Optional[str]:
     return None
 
 
+def check_segment_writes(segment: str) -> Optional[str]:
+    """Detect whether a segment writes to a protected file via redirects or file-modifying tools."""
+    for m in re.finditer(r"(?:>>?|1>|2>|&>)\s*([^\s;|&<>()]+)", segment):
+        target = m.group(1).strip("'\"")
+        if not target.startswith("&") and is_protected(target):
+            return f"the command writes to {target}, which only a human edits"
+
+    tokens = tokens_of(segment)
+    words = command_words(tokens)
+    if not words:
+        return None
+
+    head = os.path.basename(words[0])
+    if head in ("rm", "mv", "cp", "truncate", "tee"):
+        for arg in words[1:]:
+            if not arg.startswith("-") and is_protected(arg):
+                return f"the command writes to {arg}, which only a human edits"
+
+    elif head in ("sed", "perl"):
+        if any(w.startswith("-i") or w == "-i" for w in words[1:]):
+            for arg in words[1:]:
+                if not arg.startswith("-") and not (arg.startswith("s/") or arg.startswith("s|")) and is_protected(arg):
+                    return f"the command writes to {arg}, which only a human edits"
+
+    elif head == "git":
+        subcmd = next((w for w in words[1:] if not w.startswith("-")), None)
+        if subcmd in ("checkout", "restore", "rm", "mv"):
+            for arg in words[2:]:
+                if not arg.startswith("-") and arg != "--" and is_protected(arg):
+                    return f"the command writes to {arg}, which only a human edits"
+
+    elif head in ("python", "python3"):
+        for token in re.split(r"[\s'\"=<>]+", segment):
+            if is_protected(token) and any(w in segment for w in ("write", "open")):
+                return f"the command writes to {token}, which only a human edits"
+    return None
+
+
 def check_command(command: str, depth: int = 0) -> Optional[str]:
     if depth > 3:
         return None
     for segment in split_segments(command):
+        if (reason := check_segment_writes(segment)):
+            return reason
         words = command_words(tokens_of(segment))
         if not words:
             continue
@@ -110,7 +230,8 @@ def check_command(command: str, depth: int = 0) -> Optional[str]:
         elif head == "make":
             targets = [w for w in words[1:] if not w.startswith("-") and "=" not in w]
             if any(re.search(r"(apply|destroy|deploy|bootstrap)", t) for t in targets):
-                return f"`make {' '.join(targets)}` looks like an apply target"
+                t_str = " ".join(targets)
+                return f"`make {t_str}` looks like an apply target"
         elif head in SHELLS:
             # bash -c 'terraform apply', eval "terragrunt destroy": look inside the string
             for arg in words[1:]:
@@ -120,17 +241,13 @@ def check_command(command: str, depth: int = 0) -> Optional[str]:
             if (reason := check_command(" ".join(words[1:]), depth + 1)):
                 return reason
         # A tool word hidden after other words (`echo x | sudo -E terraform apply`) is covered by the segment split.
-    if (reason := writes_protected_file(command)):
-        return reason
     return None
 
 
 def writes_protected_file(command: str) -> Optional[str]:
-    if not WRITE_HINTS.search(command):
-        return None
-    for token in re.split(r"[\s'\"=<>]+", command):
-        if is_protected(token):
-            return f"the command writes to {token}, which only a human edits"
+    for segment in split_segments(command):
+        if (reason := check_segment_writes(segment)):
+            return reason
     return None
 
 

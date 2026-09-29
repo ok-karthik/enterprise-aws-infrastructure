@@ -118,6 +118,12 @@ class AllowedCommands(unittest.TestCase):
             "python3 workloads-live-repo/scripts/verify_module.py storage/s3",
             "ls",
             "",
+            'git commit -m "feat: make apply safer"',
+            'git commit -m "docs: cd x && terraform apply"',
+            "git commit -m 'docs: add blue-green runbook\n\nmake apply is covered in section 3'",
+            'echo "cd x && terraform apply"',
+            "cat << 'EOF' > scratch/notes.md\nHere is a note about policy-library-repo/terraform/require_tags.rego\nmake apply is noted\nEOF",
+            "echo 'reference to .checkov.yaml' > scratch/notes.md",
         ]:
             self.assertEqual(bash(command), 0, command)
 
@@ -146,7 +152,17 @@ class ProtectedFiles(unittest.TestCase):
             self.assertEqual(self.edit(path), 0, path)
 
     def test_shell_writes_to_protected_files_are_blocked(self):
-        for command in ["sed -i '' 's/a/b/' .checkov.yaml", "echo x >> .checkov.yaml", "rm policy-library-repo/terraform/require_tags.rego", "git checkout -- .checkov.yaml"]:
+        for command in [
+            "sed -i '' 's/a/b/' .checkov.yaml",
+            "echo x >> .checkov.yaml",
+            "rm policy-library-repo/terraform/require_tags.rego",
+            "git checkout -- .checkov.yaml",
+            "cp foo.yaml .checkov.yaml",
+            "mv foo.yaml .checkov.yaml",
+            "truncate -s 0 .checkov.yaml",
+            "cat << 'EOF' > .checkov.yaml\nchecks\nEOF",
+            "python3 -c \"open('.checkov.yaml', 'w').write('')\"",
+        ]:
             self.assertEqual(bash(command), 2, command)
         self.assertEqual(bash("cat .checkov.yaml"), 0)
         self.assertEqual(bash("git diff -- policy-library-repo"), 0)

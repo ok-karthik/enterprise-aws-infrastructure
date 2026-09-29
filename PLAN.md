@@ -1241,7 +1241,7 @@ these before 11.2 and 11.4:
   fails `make verify-module` locally with the same check ID CI reports, and a clean module passes
   with no AWS credentials in the environment.
 
-- [~] **11.2 Hooks and hard limits for local coding agents.** Write the rules once, tool-neutral,
+- [x] **11.2 Hooks and hard limits for local coding agents.** Write the rules once, tool-neutral,
   in `.agents/AGENTS.md`. Add a committed `.claude/settings.json` as one implementation of them.
   - **After every edit:** run 11.1 for the module that was touched and give the short summary
     back to the agent.
