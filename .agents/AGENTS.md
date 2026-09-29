@@ -13,7 +13,7 @@ A directory ending in `-repo` is a separate Git repository in a real company (se
 
 *   `/iac-modules-repo/`: Custom reusable Terraform modules, versioned per module (`<module>-vX.Y.Z`). Pure `.tf`, no environment specifics, no provider blocks.
 *   `/foundation-live-repo/`: The landing zone: `_global/` (organization, bootstrap StackSets; management account), `_envcommon/governance/` blueprints, its own `root.hcl`, and `_bootstrap/`. Security + cloud-infra approve changes.
-*   `/workloads-live-repo/`: Platform stacks in workload accounts: `dev/`, `prod/`, `_envcommon/{compute,data,network}/`, its own `root.hcl`, and `scripts/` (smoke test, module generator). The platform team approves changes.
+*   `/workloads-live-repo/`: Platform stacks in workload accounts: `workloads/nonprod/workloads-dev/`, `workloads/prod/workloads-prod/`, `_envcommon/{compute,data,network}/`, its own `root.hcl`, and `scripts/` (smoke test, module generator). The platform team approves changes.
 *   `/foundation-live-repo/_bootstrap/` (inside the foundation repo): Day-0 **CloudFormation** stack `platform-bootstrap` (`cloudformation/account-bootstrap.yaml`: S3 state bucket, GitHub OIDC provider, `github-actions-plan` / `github-actions-apply` roles + permissions boundary) and the `bootstrap.sh` that deploys it. Run once by a human in the management account; member accounts get it through StackSets (PLAN 2.0b). Terragrunt never creates the state bucket: **no command may pass `--backend-bootstrap`**.
 *   `/policy-library-repo/terraform/`: Rego-based OPA compliance rules enforced against Terraform plan JSON.
 *   `/.agents/`: Catalog, prompts, eval fixtures, SRE policies, and scripts for autonomous agents.
@@ -37,7 +37,7 @@ git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//iac-module
 | `iac-modules-repo/identity/workload-iam` | `iam` | `workload-iam-v1.0.0` | Documented interface stub for workload pod identity / IRSA role vending |
 
 ### 2. Platform Foundation Modules (Internal to this Repository)
-Applied and maintained directly by this platform via Terragrunt environments (`workloads-live-repo/{dev,prod}/...` and `foundation-live-repo/management/_global/`):
+Applied and maintained directly by this platform via Terragrunt environments (`workloads-live-repo/workloads/{nonprod,prod}/<account>/...` and `foundation-live-repo/management/_global/`):
 
 | Module Path | Scope | Release Tag | Purpose |
 |---|---|---|---|
@@ -137,7 +137,7 @@ The core pattern is **strict separation of "blueprint" from "live config"**, kep
    - `<account>/env.hcl` — `env` (same as account.hcl), `cluster_name`, cost-scaling knobs (`min_size`, `desired_size`, `enable_nat_gateway`) and `module_versions` (the release tag of each `iac-modules-repo` module this environment uses; `_envcommon` builds `terraform.source` from it, or from the checkout when `IAC_MODULES_LOCAL` is set — see `docs/CICD.md`)
    - `<account>/<region|_global>/region.hcl` — `aws_region` (must be in `_config/regions.hcl`)
 
-5. **`workloads-live-repo/<account>/<region>/<category>/<module>/terragrunt.hcl`** (`<account>` = `workloads-dev`, `workloads-prod`, ...; the management account is `foundation-live-repo/management/_global/...`) — the leaf. Includes `root` + the matching `_envcommon` file (`expose = true`) and only overrides env-specific values (e.g. dev EKS shrinks `min_size`/`max_size`/`desired_size`).
+5. **`workloads-live-repo/workloads/<nonprod|prod>/<account>/<region>/<category>/<module>/terragrunt.hcl`** (`<account>` = `workloads-dev`, `workloads-prod`, ...; the management account is `foundation-live-repo/management/_global/...`) — the leaf. Includes `root` + the matching `_envcommon` file (`expose = true`) and only overrides env-specific values (e.g. dev EKS shrinks `min_size`/`max_size`/`desired_size`).
 
 `path_relative_to_include()` drives naming everywhere (state key, `Service` tag, env detection), so **directory layout is load-bearing** — the `<account>/<region|_global>/<category>/<module>` shape is a contract, not a convention. `env` comes from `account.hcl` (`dev`/`staging`/`prod`/`global`), not from the folder name, and regions must be in `_config/regions.hcl` (enforced by `smoke-test.sh`). There is no `assume_role`: CI uses OIDC directly into the target account.
 

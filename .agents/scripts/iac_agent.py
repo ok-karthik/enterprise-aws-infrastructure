@@ -42,9 +42,15 @@ AUDITOR_PROMPT_PATH = BASE_DIR / "prompts" / "auditor.md"
 GENERATE_MODULE_SCRIPT = REPO_ROOT / "workloads-live-repo" / "scripts" / "generate-module.sh"
 
 
-def live_env_dir(env: str) -> Path:
-    """Account folder for an environment in the account-first layout: workloads-live-repo/workloads-<env>."""
-    return REPO_ROOT / "workloads-live-repo" / f"workloads-{env}"
+def live_env_dir(env: str, root: Optional[Path] = None) -> Path:
+    """Account folder for an environment in the OU-grouped layout:
+    workloads-live-repo/workloads/<nonprod|prod>/workloads-<env>.
+
+    Falls back to workloads-live-repo/workloads-<env> (the older flat layout) when no such folder exists, so a
+    request for an environment without an account yet still gets a sensible path in the error message."""
+    base = (root or REPO_ROOT) / "workloads-live-repo"
+    matches = sorted((base / "workloads").glob(f"*/workloads-{env}"))
+    return matches[0] if matches else base / f"workloads-{env}"
 
 CATALOG_PATH = BASE_DIR / "catalog" / "golden-paths.yaml"
 CATALOG_TEMPLATES_DIR = BASE_DIR / "catalog" / "templates"

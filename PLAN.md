@@ -1005,7 +1005,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
 
 ## Phase 8 — Pipeline at scale (includes the old Phases E and F)
 
-- [ ] **8.1 Terragrunt Stacks.** Look at `terragrunt.stack.hcl` for `account-baseline` and the
+- [x] **8.1 Terragrunt Stacks.** Look at `terragrunt.stack.hcl` for `account-baseline` and the
   standard workload stack (vpc + eks + discovery). The aim is to cut boilerplate in the leaf
   folders. Write down the decision (use it or not, and why) in an ADR.
 - [ ] **8.2 Orchestrator: Digger (old Phase E) vs Atlantis vs Spacelift/env0.** *Low priority:
@@ -1022,23 +1022,23 @@ has been applied there yet, so there is no state or resource to migrate. Until
   - Hook the existing gates (tflint, trivy, checkov, conftest, infracost) into Digger's
     workflow steps.
   - Update `.agents/scripts/healer_runner.py` to read logs from failed Digger runs.
-- [ ] **8.3 Lock contention (old Phase F).** Add `-lock-timeout=5m` to plan and apply in CI
+- [x] **8.3 Lock contention (old Phase F).** Add `-lock-timeout=5m` to plan and apply in CI
   (`extra_arguments` in `root.hcl` for plan, apply and destroy). The account-first layout
   already splits state by account, region and component, so an app PR won't block on
   network state.
-- [ ] **8.4 Safe replacements (old Phase F).** Add `create_before_destroy` wherever it's safe
+- [x] **8.4 Safe replacements (old Phase F).** Add `create_before_destroy` wherever it's safe
   (launch templates, security groups created with `name_prefix`, ACM certs, IAM policies
   attached to roles). Write `docs/runbooks/blue-green-infra.md` for changes that can't be
   done in place (VPC CIDR, EKS major version upgrade, TGW changes): build the new one next to
   the old one, cut traffic over, then remove the old one.
-- [ ] **8.5 Plan only what changed.** PR plans run only for units affected by the diff
+- [x] **8.5 Plan only what changed.** PR plans run only for units affected by the diff
   (Terragrunt's queue filtering, or Digger's project detection), with a full run on a
   schedule.
-- [ ] **8.6 Apply exactly what was reviewed.** The apply job uses the saved `tfplan.bin`
+- [x] **8.6 Apply exactly what was reviewed.** The apply job uses the saved `tfplan.bin`
   artifact from the approved plan run (checking a checksum) instead of planning again.
-- [ ] **8.7 Drift detection per account and region**, not per env: the matrix comes from the
+- [x] **8.7 Drift detection per account and region**, not per env: the matrix comes from the
   registry, with one GitHub Issue per account/region.
-- [ ] **8.8 Keep the IaC agent in sync:** update `.agents/prompts/*.md`, the catalog
+- [x] **8.8 Keep the IaC agent in sync:** update `.agents/prompts/*.md`, the catalog
   templates, the eval fixtures and the tests for the new paths and the account-first layout.
   `python3 .agents/scripts/iac_agent_eval.py` and `python3 -m unittest discover -s .agents/tests`
   must pass.
@@ -1086,7 +1086,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   *Done when:* a finding that fails CI also fails `pre-commit run --all-files` locally; each
   class of finding is reported by exactly one tool; and no gate is soft-fail.
 
-- [ ] **8.10 Split the policy rules between Checkov and Rego, with one catalog.**
+- [x] **8.10 Split the policy rules between Checkov and Rego, with one catalog.**
   - **The rule:** if Checkov has a built-in check for it, use Checkov. Write Rego only for rules
     about *this* organization (tag keys, role names, account/OU rules, allowed modules).
     A PR that adds a Rego rule has to say why Checkov can't do it.

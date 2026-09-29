@@ -18,6 +18,27 @@ from mcp_client import MCPClient  # noqa: E402
 import iac_agent_metrics  # noqa: E402
 
 
+class TestLiveEnvDir(unittest.TestCase):
+    """The account-first layout is workloads-live-repo/workloads/<nonprod|prod>/workloads-<env> (PLAN 8.8)."""
+
+    def test_resolves_ou_grouped_account_folders(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "workloads-live-repo/workloads/nonprod/workloads-dev").mkdir(parents=True)
+            (root / "workloads-live-repo/workloads/prod/workloads-prod").mkdir(parents=True)
+            self.assertEqual(iac_agent.live_env_dir("dev", root), root / "workloads-live-repo/workloads/nonprod/workloads-dev")
+            self.assertEqual(iac_agent.live_env_dir("prod", root), root / "workloads-live-repo/workloads/prod/workloads-prod")
+
+    def test_unknown_environment_falls_back_to_the_flat_path(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.assertEqual(iac_agent.live_env_dir("staging", root), root / "workloads-live-repo/workloads-staging")
+
+    def test_real_repo_dev_and_prod_exist(self):
+        self.assertTrue(iac_agent.live_env_dir("dev").is_dir(), iac_agent.live_env_dir("dev"))
+        self.assertTrue(iac_agent.live_env_dir("prod").is_dir(), iac_agent.live_env_dir("prod"))
+
+
 class TestIaCPlatformAgent(unittest.TestCase):
     def setUp(self):
         self.catalog = iac_agent.load_catalog()

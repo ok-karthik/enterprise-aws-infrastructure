@@ -10,9 +10,11 @@ loop by an orchestrator script — assume your output is applied automatically, 
   by `root.hcl`).
 - Shared blueprints live in `/workloads-live-repo/_envcommon/<category>/<name>.hcl` — set
   `terraform.source`, any `dependency` blocks (with `mock_outputs` for plan-time), and default `inputs`.
-- Leaf configs live in `/workloads-live-repo/<env>/<region>/<category>/<name>/terragrunt.hcl` and should
-  only override env-specific values (e.g. dev shrinking `min_size`/`max_size`).
-- Every resource must end up carrying `Service`, `Environment`, `Project` tags in `tags_all` — normally
+- Leaf configs live in `/workloads-live-repo/workloads/<nonprod|prod>/<account>/<region>/<category>/<name>/terragrunt.hcl`
+  (for example `workloads/nonprod/workloads-dev/eu-central-1/compute/eks/`) and should only override
+  env-specific values (e.g. dev shrinking `min_size`/`max_size`). Each account folder has `account.hcl` and
+  `env.hcl`; each region folder has `region.hcl`. The account and region are chosen by the folder, never in the leaf.
+- Every resource must end up carrying `Service`, `Environment`, `Project`, `Owner` and `DataClassification` tags in `tags_all` — normally
   satisfied automatically via `default_tags` from `root.hcl`, so you usually don't need explicit `tags`
   blocks unless the resource type doesn't inherit provider default tags.
 - Never use legacy instance families (`t2.`, `m3.`, `m4.`, `c3.`, `c4.`) — blocked by

@@ -550,3 +550,25 @@ Moved out of `PLAN.md` on 2026-09-28 (PLAN 10.8). Newest entries go at the botto
     when ready, then deploy the secondary region's stack first; fill real account IDs; run the first game day.
   - **10.8 (done early, so later entries land here).** The Execution log moved from `PLAN.md` to `docs/EXECUTION_LOG.md`;
     rule 8 and the link were updated. `PLAN.md` went from ~1,880 to ~1,360 lines.
+  - **Phase 8.** 8.1: evaluated Terragrunt Stacks by running `stack generate` offline (Terragrunt 1.1.1); decision is *not
+    yet*, in `docs/adr/0012-terragrunt-stacks.md` (model-written, owner to confirm). 8.3: `-lock-timeout=5m` in both
+    `root.hcl` (checked with `terragrunt render` that it merges with the envcommon `terraform` block). 8.4: the security
+    groups in dns, central-endpoints, data/postgres and aurora-postgres now use `name_prefix` + `create_before_destroy`
+    (found: my own aurora SG had `create_before_destroy` with a fixed name, which would fail on replacement; fixed). IAM
+    policies and the DB subnet groups were left alone on purpose (fixed names, and the boundary policy is protected by
+    name). CloudFront has no ACM resource (the cert is an input). New `docs/runbooks/blue-green-infra.md`. 8.5: PR plans
+    cover only affected units (`plan_scope.py`, tested); shared code or any non-PR run plans everything. 8.6: the plan job
+    saves binary plans with `--out-dir` plus a SHA256SUMS manifest (push to main only, 1 day); the apply job downloads,
+    verifies and applies exactly those, with no fallback to a fresh plan. 8.7: `generate_account_matrix.py --per-region`;
+    drift detection now runs and opens one issue per account/region. 8.8: **found** `live_env_dir()` in `iac_agent.py` and
+    `generate-module.sh` still used the pre-OU layout (`workloads-live-repo/workloads-<env>`); both fixed and tested, and the
+    prompts and `AGENTS.md` paths and required tags updated. 8.10 (partly): `policy-library-repo/POLICIES.md` (one catalog)
+    and a CI check that fails when a Rego rule is not listed (tested).
+    **Not done, on purpose:** 8.9 step 5 (removing `trivy config`) and the removal of the Rego rules that duplicate Checkov
+    (8.10): an automated control blocked the first as a CI-gate removal, so both are left for the owner to decide. 8.2 (Digger)
+    is not built: the plan marks it low priority and the ADR is the owner's. The Rego `exceptions` data file is not built.
+    **Not checked:** none of the workflow changes ran on GitHub (no actionlint available; YAML parses). The `--out-dir` /
+    `--json-out-dir` / `--filter=[origin/<base>...HEAD]` flags were read from `terragrunt run --help` (1.1.1), but the
+    toolbox image pins Terragrunt 1.0.3, and I could not confirm the flags exist there or the file names `--json-out-dir`
+    writes (the workflow globs `*.json` for that reason). **First PR and first main run must be watched.** The Checkov IDs in
+    `POLICIES.md` are from memory and marked unverified.
