@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quality Flywheel & 3-Tier Feedback Loops Architecture</title>
+  <style>
+    :root {
+      --bg-base: #080C14;
+      --bg-surface: #0E1626;
+      --bg-elevated: #162032;
+      --border-subtle: #1E293B;
+      --border-strong: #334155;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --accent-purple: #A855F7;
+      --accent-cyan: #38BDF8;
+      --accent-emerald: #10B981;
+      --accent-amber: #F59E0B;
+      --accent-rose: #F43F5E;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      max-width: 1100px;
+      width: 100%;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
+    p { color: var(--text-muted); font-size: 0.95rem; margin-top: 0.4rem; max-width: 800px; }
+    .badge {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .canvas-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 1100px;
+      width: 100%;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+    }
+    svg { width: 100%; height: auto; min-height: 600px; }
+    .node rect { transition: all 0.2s ease; cursor: pointer; }
+    .node:hover rect {
+      stroke: var(--accent-cyan) !important;
+      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4));
+    }
+    .flow-line {
+      fill: none;
+      stroke-width: 2;
+      stroke-dasharray: 6, 6;
+      animation: dash 25s linear infinite;
+    }
+    @keyframes dash { from { stroke-dashoffset: 500; } to { stroke-dashoffset: 0; } }
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+      max-width: 1100px;
+      width: 100%;
+    }
+    .info-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .info-card h3 {
+      font-size: 1.05rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .info-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .code-box {
+      background: #060A10;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 0.6rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #E2E8F0;
+      margin-top: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <span class="badge">QUALITY FLYWHEEL & SRE RELIABILITY</span>
+      <h1>3-Tier Feedback Loops Architecture</h1>
+      <p>
+        The platform enforces concentric quality rings: Inner loop (instant local validation and hook ceilings), Middle loop (CI plan scoping, governance gates, and autonomous healing), and Outer loop (production drift detection and SLO error budget controls).
+      </p>
+    </div>
+    <div>
+      <a href="../visualizer.html" style="color: var(--accent-cyan); text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+        ← Back to Visualizer Portal
+      </a>
+    </div>
+  </header>
+
+  <div class="canvas-card">
+    <svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg">
+      <!-- Outer Loop Boundary -->
+      <rect x="20" y="30" width="960" height="560" rx="18" fill="rgba(16, 185, 129, 0.03)" stroke="#10B981" stroke-width="1.5" stroke-dasharray="8,6"/>
+      <text x="50" y="65" fill="#10B981" font-size="14" font-weight="800">OUTER LOOP: PRODUCTION SRE & CONTINUOUS COMPLIANCE (Continuous Feedback)</text>
+
+      <!-- Middle Loop Boundary -->
+      <rect x="60" y="95" width="880" height="340" rx="14" fill="rgba(56, 189, 248, 0.04)" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="6,4"/>
+      <text x="85" y="128" fill="#38BDF8" font-size="13" font-weight="700">MIDDLE LOOP: CI/CD PIPELINE & AUTOMATED REMEDIATION (Minutes Feedback)</text>
+
+      <!-- Inner Loop Boundary -->
+      <rect x="90" y="160" width="820" height="140" rx="12" fill="rgba(168, 85, 247, 0.06)" stroke="#A855F7" stroke-width="2"/>
+      <text x="115" y="190" fill="#A855F7" font-size="12" font-weight="700">INNER LOOP: LOCAL LAPTOP & AGENT GUARDRAILS (Seconds Feedback)</text>
+
+      <!-- Inner Loop Components -->
+      <g class="node">
+        <rect x="115" y="210" width="240" height="70" rx="8" fill="#162032" stroke="#A855F7" stroke-width="1"/>
+        <text x="135" y="235" fill="#F8FAFC" font-size="12" font-weight="600">1. Local Edit & Guard Hook</text>
+        <text x="135" y="255" fill="#94A3B8" font-size="10">guard.py pre-edit blocks policy tampering</text>
+      </g>
+
+      <g class="node">
+        <rect x="380" y="210" width="240" height="70" rx="8" fill="#162032" stroke="#38BDF8" stroke-width="1"/>
+        <text x="400" y="235" fill="#38BDF8" font-size="12" font-weight="600">2. Offline make verify-module</text>
+        <text x="400" y="255" fill="#94A3B8" font-size="10">fmt, init, validate, tflint, test, conftest</text>
+      </g>
+
+      <g class="node">
+        <rect x="645" y="210" width="240" height="70" rx="8" fill="#162032" stroke="#F43F5E" stroke-width="1"/>
+        <text x="665" y="235" fill="#FDA4AF" font-size="12" font-weight="600">3. 3-Attempt Retry Ceiling</text>
+        <text x="665" y="255" fill="#94A3B8" font-size="10">Stops agent loops & hands over to human</text>
+      </g>
+
+      <!-- Middle Loop Components -->
+      <g class="node">
+        <rect x="90" y="325" width="260" height="85" rx="8" fill="#162032" stroke="#38BDF8" stroke-width="1.2"/>
+        <text x="110" y="352" fill="#38BDF8" font-size="13" font-weight="600">PR Plan Scoping & Matrix</text>
+        <text x="110" y="372" fill="#94A3B8" font-size="10">plan_scope.py inspects git diff</text>
+        <text x="110" y="388" fill="#A7F3D0" font-size="10">Parallel jobs via generate_account_matrix</text>
+      </g>
+
+      <g class="node">
+        <rect x="380" y="325" width="240" height="85" rx="8" fill="#1E0E1A" stroke="#F43F5E" stroke-width="2"/>
+        <text x="400" y="352" fill="#F43F5E" font-size="13" font-weight="600">Autonomous Healer Loop</text>
+        <text x="400" y="372" fill="#FDA4AF" font-size="10">CI Failure → healer_runner.py</text>
+        <text x="400" y="388" fill="#FDA4AF" font-size="10">Max 3 automated commits to PR</text>
+      </g>
+
+      <g class="node">
+        <rect x="650" y="325" width="260" height="85" rx="8" fill="#064E3B" stroke="#10B981" stroke-width="1.5"/>
+        <text x="670" y="352" fill="#ECFDF5" font-size="13" font-weight="600">Saved Binary Apply</text>
+        <text x="670" y="372" fill="#A7F3D0" font-size="10">SHA256SUMS verified plan</text>
+        <text x="670" y="388" fill="#A7F3D0" font-size="10">Executed by github-actions-apply on main</text>
+      </g>
+
+      <!-- Outer Loop Components -->
+      <g class="node">
+        <rect x="90" y="465" width="260" height="90" rx="8" fill="#162032" stroke="#F59E0B" stroke-width="1.5"/>
+        <text x="110" y="492" fill="#F59E0B" font-size="13" font-weight="600">Nightly Drift Detection</text>
+        <text x="110" y="512" fill="#94A3B8" font-size="10">Runs per account and region</text>
+        <text x="110" y="528" fill="#FCD34D" font-size="10">Automated GitHub Issue + ChatOps prompt</text>
+      </g>
+
+      <g class="node">
+        <rect x="380" y="465" width="240" height="90" rx="8" fill="#162032" stroke="#10B981" stroke-width="1.5"/>
+        <text x="400" y="492" fill="#10B981" font-size="13" font-weight="600">SLO & Error Budget Gate</text>
+        <text x="400" y="512" fill="#94A3B8" font-size="10">platform_slo.json measured state</text>
+        <text x="400" y="528" fill="#A7F3D0" font-size="10">Blocks AI changes if error budget spent</text>
+      </g>
+
+      <g class="node">
+        <rect x="650" y="465" width="260" height="90" rx="8" fill="#162032" stroke="#818CF8" stroke-width="1.5"/>
+        <text x="670" y="492" fill="#818CF8" font-size="13" font-weight="600">Central OAM & Alarms</text>
+        <text x="670" y="512" fill="#94A3B8" font-size="10">CloudWatch telemetry sink</text>
+        <text x="670" y="528" fill="#818CF8" font-size="10">Guardrail signals for root/SCP/KMS edits</text>
+      </g>
+
+      <!-- Connecting arrows -->
+      <path d="M 355 245 L 380 245" class="flow-line" stroke="#A855F7"/>
+      <path d="M 620 245 L 645 245" class="flow-line" stroke="#38BDF8"/>
+      <path d="M 350 365 L 380 365" class="flow-line" stroke="#F43F5E"/>
+      <path d="M 620 365 L 650 365" class="flow-line" stroke="#10B981"/>
+    </svg>
+  </div>
+
+  <div class="details-grid">
+    <div class="info-card">
+      <h3 style="color: var(--accent-purple);">⚡ The Inner Loop (Local Laptop)</h3>
+      <p>
+        Developers and AI coding agents get immediate feedback within 10–15 seconds via <code>make verify-module MODULE=&lt;category/name&gt;</code> without requiring AWS credentials or network calls. Destructive commands are blocked client-side by <code>guard.py</code>.
+      </p>
+      <div class="code-box">
+make verify-module MODULE=storage/s3
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 style="color: var(--accent-cyan);">🛡️ The Middle Loop (CI Pull Request)</h3>
+      <p>
+        GitHub Actions restricts execution to modified stacks using <code>plan_scope.py</code>. Plan JSON files undergo Checkov and OPA/Conftest security validation. If transient failures occur, <code>healer_runner.py</code> attempts automated remediation up to a hard 3-commit ceiling.
+      </p>
+      <div class="code-box">
+python3 workloads-live-repo/scripts/plan_scope.py
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 style="color: var(--accent-emerald);">📈 The Outer Loop (Production SRE)</h3>
+      <p>
+        The platform measures live health via CloudWatch Observability Access Manager (OAM), Cost and Usage Reports (CUR 2.0), and <code>platform_slo.json</code>. If the change failure rate breaches SLO limits, agent autonomy is automatically dialed back.
+      </p>
+      <div class="code-box">
+docs/SLO.md & .agents/metrics/platform_slo.json
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

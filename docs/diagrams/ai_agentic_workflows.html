@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agentic Workflows & SRE Operations Architecture</title>
+  <style>
+    :root {
+      --bg-base: #080C14;
+      --bg-surface: #0E1626;
+      --bg-elevated: #162032;
+      --border-subtle: #1E293B;
+      --border-strong: #334155;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --accent-purple: #A855F7;
+      --accent-cyan: #38BDF8;
+      --accent-emerald: #10B981;
+      --accent-amber: #F59E0B;
+      --accent-rose: #F43F5E;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      max-width: 1100px;
+      width: 100%;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
+    p { color: var(--text-muted); font-size: 0.95rem; margin-top: 0.4rem; max-width: 800px; }
+    .badge {
+      background: rgba(168, 85, 247, 0.15);
+      color: var(--accent-purple);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .canvas-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 1100px;
+      width: 100%;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+    }
+    svg { width: 100%; height: auto; min-height: 600px; }
+    .node rect { transition: all 0.2s ease; cursor: pointer; }
+    .node:hover rect {
+      stroke: var(--accent-cyan) !important;
+      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4));
+    }
+    .flow-line {
+      fill: none;
+      stroke-width: 2;
+      stroke-dasharray: 6, 6;
+      animation: dash 25s linear infinite;
+    }
+    @keyframes dash { from { stroke-dashoffset: 500; } to { stroke-dashoffset: 0; } }
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+      max-width: 1100px;
+      width: 100%;
+    }
+    .info-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .info-card h3 {
+      font-size: 1.05rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .info-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .code-box {
+      background: #060A10;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 0.6rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #E2E8F0;
+      margin-top: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <span class="badge">AGENTIC SRE & PLATFORM GOVERNANCE</span>
+      <h1>AI Agentic Workflows Architecture</h1>
+      <p>
+        Autonomous coding agents operate within deterministic boundary layers: local quote-aware safety hooks (`guard.py`), collaborator-gated ChatOps scaffolding, and autonomous CI/CD healers with hard retry ceilings.
+      </p>
+    </div>
+    <div>
+      <a href="../visualizer.html" style="color: var(--accent-cyan); text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+        ← Back to Visualizer Portal
+      </a>
+    </div>
+  </header>
+
+  <div class="canvas-card">
+    <svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg">
+      <!-- Zone 1: Developer Laptop -->
+      <rect x="20" y="40" width="300" height="540" rx="14" fill="#0C1424" stroke="#A855F7" stroke-width="1.5"/>
+      <text x="40" y="75" fill="#A855F7" font-size="13" font-weight="700">1. DEVELOPER WORKSTATION</text>
+
+      <g class="node">
+        <rect x="40" y="100" width="260" height="90" rx="8" fill="#162032" stroke="#C084FC" stroke-width="1.5"/>
+        <text x="60" y="130" fill="#F8FAFC" font-size="13" font-weight="700">Local AI Agent</text>
+        <text x="60" y="150" fill="#94A3B8" font-size="11">Claude Code / Antigravity / CLI</text>
+        <text x="60" y="168" fill="#C084FC" font-size="10">Pair programming & module edits</text>
+      </g>
+
+      <g class="node">
+        <rect x="40" y="210" width="260" height="150" rx="8" fill="#061A14" stroke="#10B981" stroke-width="2"/>
+        <text x="60" y="235" fill="#10B981" font-size="13" font-weight="700">.agents/hooks/guard.py</text>
+        <text x="60" y="258" fill="#A7F3D0" font-size="10">● pre-bash: Blocks apply/destroy/state</text>
+        <text x="60" y="276" fill="#A7F3D0" font-size="10">● pre-edit: Blocks .checkov & policies</text>
+        <text x="60" y="294" fill="#A7F3D0" font-size="10">● post-edit: Runs verify-module</text>
+        <text x="60" y="312" fill="#F43F5E" font-size="10">● 3-Attempt Failure Handover Limit</text>
+        <text x="60" y="330" fill="#94A3B8" font-size="10">Quote-aware shell parser</text>
+      </g>
+
+      <g class="node">
+        <rect x="40" y="380" width="260" height="120" rx="8" fill="#162032" stroke="#38BDF8" stroke-width="1.5"/>
+        <text x="60" y="405" fill="#38BDF8" font-size="13" font-weight="700">make verify-module</text>
+        <text x="60" y="428" fill="#94A3B8" font-size="10">7-Gate Offline Verification Suite:</text>
+        <text x="60" y="446" fill="#94A3B8" font-size="10">fmt → init → validate → tflint →</text>
+        <text x="60" y="462" fill="#94A3B8" font-size="10">checkov → test → conftest plan</text>
+        <text x="60" y="482" fill="#38BDF8" font-size="10">Zero AWS credentials required</text>
+      </g>
+
+      <!-- Zone 2: GitHub Actions CI/CD -->
+      <rect x="350" y="40" width="310" height="540" rx="14" fill="#0C1424" stroke="#38BDF8" stroke-width="1.5"/>
+      <text x="370" y="75" fill="#38BDF8" font-size="13" font-weight="700">2. GITHUB ACTIONS CI/CD</text>
+
+      <g class="node">
+        <rect x="370" y="100" width="270" height="90" rx="8" fill="#162032" stroke="#38BDF8" stroke-width="1.5"/>
+        <text x="390" y="130" fill="#38BDF8" font-size="13" font-weight="700">plan_scope.py</text>
+        <text x="390" y="152" fill="#94A3B8" font-size="11">PR Plan Scoping Algorithm</text>
+        <text x="390" y="170" fill="#A7F3D0" font-size="10">Limits plans to changed units only</text>
+      </g>
+
+      <g class="node">
+        <rect x="370" y="210" width="270" height="140" rx="8" fill="#162032" stroke="#818CF8" stroke-width="1.5"/>
+        <text x="390" y="235" fill="#818CF8" font-size="13" font-weight="700">Governance & Safety Gates</text>
+        <text x="390" y="258" fill="#94A3B8" font-size="10">1. Static Analysis (4 roots fmt)</text>
+        <text x="390" y="276" fill="#94A3B8" font-size="10">2. Checkov (HCL + Plan JSON)</text>
+        <text x="390" y="294" fill="#94A3B8" font-size="10">3. OPA/Rego Custom Organization Rules</text>
+        <text x="390" y="312" fill="#94A3B8" font-size="10">4. Infracost Cost Delta Breakdown</text>
+        <text x="390" y="332" fill="#FCD34D" font-size="10">Blocks PR merge on any violation</text>
+      </g>
+
+      <g class="node">
+        <rect x="370" y="370" width="270" height="150" rx="8" fill="#1E0E1A" stroke="#F43F5E" stroke-width="2"/>
+        <text x="390" y="398" fill="#F43F5E" font-size="13" font-weight="700">healer_runner.py (Autonomous)</text>
+        <text x="390" y="420" fill="#FDA4AF" font-size="10">● Triggered by failed workflow</text>
+        <text x="390" y="438" fill="#FDA4AF" font-size="10">● Refuses main branch (PR branches only)</text>
+        <text x="390" y="456" fill="#FDA4AF" font-size="10">● Max 3 retry commits per PR</text>
+        <text x="390" y="474" fill="#FDA4AF" font-size="10">● Refuses protected policy files</text>
+        <text x="390" y="494" fill="#FDA4AF" font-size="10">● Restores .agents/ before pushing</text>
+      </g>
+
+      <!-- Zone 3: ChatOps & Human Gates -->
+      <rect x="685" y="40" width="295" height="540" rx="14" fill="#0C1424" stroke="#F59E0B" stroke-width="1.5"/>
+      <text x="705" y="75" fill="#F59E0B" font-size="13" font-weight="700">3. CHATOPS & PRODUCTION SRE</text>
+
+      <g class="node">
+        <rect x="705" y="100" width="255" height="120" rx="8" fill="#162032" stroke="#F59E0B" stroke-width="1.5"/>
+        <text x="725" y="130" fill="#F59E0B" font-size="13" font-weight="700">ChatOps Generator</text>
+        <text x="725" y="152" fill="#94A3B8" font-size="10">/generate category/name</text>
+        <text x="725" y="170" fill="#94A3B8" font-size="10">/reconcile account</text>
+        <text x="725" y="190" fill="#FCD34D" font-size="10">Permission Gated: Collaborator Only</text>
+        <text x="725" y="206" fill="#FCD34D" font-size="10">Labels PRs with 'ai-generated'</text>
+      </g>
+
+      <g class="node">
+        <rect x="705" y="240" width="255" height="140" rx="8" fill="#162032" stroke="#10B981" stroke-width="1.5"/>
+        <text x="725" y="268" fill="#10B981" font-size="13" font-weight="700">docs/AGENT_AUTONOMY.md</text>
+        <text x="725" y="292" fill="#94A3B8" font-size="10">Tier 1 (Dev): Autonomous Scaffolding</text>
+        <text x="725" y="310" fill="#94A3B8" font-size="10">Tier 2 (Staging): Plan & Gate Check</text>
+        <text x="725" y="328" fill="#94A3B8" font-size="10">Tier 3 (Prod): Strict Human Approval</text>
+        <text x="725" y="350" fill="#A7F3D0" font-size="10">No agent holds AWS apply credentials</text>
+      </g>
+
+      <g class="node">
+        <rect x="705" y="400" width="255" height="120" rx="8" fill="#162032" stroke="#38BDF8" stroke-width="1.5"/>
+        <text x="725" y="428" fill="#38BDF8" font-size="13" font-weight="700">delivery_metrics.py</text>
+        <text x="725" y="452" fill="#94A3B8" font-size="10">DORA Metrics Generator</text>
+        <text x="725" y="470" fill="#94A3B8" font-size="10">Splits Lead Time, CFR & MTTR</text>
+        <text x="725" y="490" fill="#38BDF8" font-size="10">ai-generated vs Human PRs</text>
+      </g>
+
+      <!-- Connecting Lines -->
+      <path d="M 300 145 L 370 145" class="flow-line" stroke="#A855F7"/>
+      <path d="M 505 350 L 505 370" class="flow-line" stroke="#F43F5E"/>
+      <path d="M 640 445 L 705 445" class="flow-line" stroke="#38BDF8"/>
+    </svg>
+  </div>
+
+  <div class="details-grid">
+    <div class="info-card">
+      <h3 style="color: var(--accent-emerald);">🛡️ Local Pre-Bash & Pre-Edit Guardrails</h3>
+      <p>
+        The <code>.agents/hooks/guard.py</code> hook intercepts all commands run by AI agents before execution. Destructive verbs (<code>apply</code>, <code>destroy</code>, <code>import</code>, <code>state rm/mv</code>) and protected files defining compliance (<code>.checkov.yaml</code>, <code>policy-library-repo/</code>) are blocked instantly with exit code 2.
+      </p>
+      <div class="code-box">
+python3 .agents/hooks/guard.py pre-bash
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 style="color: var(--accent-rose);">🔄 Autonomous Healer Retry Limits</h3>
+      <p>
+        The autonomous pipeline healer automatically analyzes CI failures and attempts fixes. Under <code>healer_guards.py</code>, it refuses to touch the <code>main</code> branch, requires an active PR, enforces a strict 3-commit maximum ceiling, and restores <code>.agents/</code> before committing.
+      </p>
+      <div class="code-box">
+.agents/scripts/healer_guards.py
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 style="color: var(--accent-cyan);">📊 Measurable DORA & AI Impact</h3>
+      <p>
+        All PRs generated by ChatOps and the pipeline healer receive the <code>ai-generated</code> label. <code>delivery_metrics.py</code> parses repository metadata to measure change failure rates, deployment frequency, and lead times with sample-size confidence intervals.
+      </p>
+      <div class="code-box">
+python3 .agents/scripts/delivery_metrics.py
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

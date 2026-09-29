@@ -17,6 +17,15 @@ which builds the in-cluster and tenant side on top of the accounts, roles and di
 
 ## The design in one picture
 
+> [!TIP]
+> **Interactive Architecture Visualizer & Diagrams**:
+> Explore interactive diagrams, simulation flows, and component contracts in the **[`docs/visualizer.html`](docs/visualizer.html)** portal or browse standalone views in [`docs/diagrams/`](docs/diagrams/):
+> - [🏢 Multi-Account AWS & Active-Passive DR](docs/diagrams/multi_account_aws_infra.html)
+> - [🤖 AI Agentic Workflows Architecture](docs/diagrams/ai_agentic_workflows.html)
+> - [🔄 3-Tier Feedback Loops & Quality Flywheel](docs/diagrams/feedback_loops_quality_flywheel.html)
+> - [🔌 IDP Integration & Discovery Contract](docs/diagrams/idp_integration.html)
+> - [🛡️ CI/CD Pipeline & Policy Gates](docs/diagrams/ci_cd_policy_gates.html)
+
 ```mermaid
 flowchart TB
     GH["GitHub Actions<br/>(OIDC, no static keys)"]

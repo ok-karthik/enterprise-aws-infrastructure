@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enterprise AWS Platform & AI Agentic Architecture Explorer</title>
+  <style>
+    :root {
+      --bg-base: #080C14;
+      --bg-surface: #0E1626;
+      --bg-elevated: #162032;
+      --bg-card: rgba(22, 32, 50, 0.75);
+      --border-subtle: #1E293B;
+      --border-strong: #334155;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --text-dim: #64748B;
+      --accent-cyan: #38BDF8;
+      --accent-indigo: #818CF8;
+      --accent-emerald: #10B981;
+      --accent-amber: #F59E0B;
+      --accent-rose: #F43F5E;
+      --accent-purple: #A855F7;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+      --shadow-glow: 0 0 25px rgba(56, 189, 248, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Header & Navigation */
+    header {
+      background: rgba(14, 22, 38, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #0F172A;
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, #FFF, #94A3B8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-subtitle {
+      font-size: 0.78rem;
+      color: var(--accent-cyan);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* View Tabs */
+    .tab-group {
+      display: flex;
+      background: var(--bg-surface);
+      padding: 0.3rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      gap: 0.25rem;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(129, 140, 248, 0.2));
+      color: var(--accent-cyan);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-action {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+      padding: 0.5rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-action:hover {
+      border-color: var(--accent-cyan);
+      background: #1C273C;
+      transform: translateY(-1px);
+    }
+
+    .btn-action.primary {
+      background: linear-gradient(135deg, var(--accent-cyan), #2563EB);
+      color: #0B0F19;
+      border: none;
+      font-weight: 700;
+    }
+
+    .btn-action.primary:hover {
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .diagram-workspace {
+      flex: 1;
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .view-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 1rem;
+    }
+
+    .view-title-block h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .view-title-block p {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+      max-width: 900px;
+    }
+
+    .view-stats {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .stat-badge {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 0.5rem 0.85rem;
+      border-radius: 8px;
+      text-align: right;
+    }
+
+    .stat-badge .stat-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+    }
+
+    .stat-badge .stat-label {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    /* Interactive Canvas Area */
+    .canvas-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 1.5rem;
+      min-height: 680px;
+      position: relative;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .canvas-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .legend {
+      display: flex;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* SVG Diagram Styling */
+    svg.interactive-diagram {
+      width: 100%;
+      height: 100%;
+      min-height: 600px;
+    }
+
+    .node {
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .node rect, .node circle, .node polygon {
+      transition: all 0.25s ease;
+    }
+
+    .node:hover rect {
+      stroke: var(--accent-cyan) !important;
+      stroke-width: 2.5px !important;
+      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4));
+    }
+
+    .node.active rect {
+      stroke: var(--accent-emerald) !important;
+      stroke-width: 3px !important;
+      filter: drop-shadow(0 0 14px rgba(16, 185, 129, 0.5));
+    }
+
+    .flow-line {
+      fill: none;
+      stroke-width: 2;
+      stroke-dasharray: 6, 6;
+      animation: dashAnimation 30s linear infinite;
+    }
+
+    @keyframes dashAnimation {
+      from { stroke-dashoffset: 500; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* Right Inspector Drawer */
+    .inspector-drawer {
+      width: 440px;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border-subtle);
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      overflow-y: auto;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 1rem;
+    }
+
+    .drawer-tag {
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .drawer-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-top: 0.4rem;
+      letter-spacing: -0.02em;
+    }
+
+    .drawer-desc {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .meta-box {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .meta-label {
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .meta-val {
+      color: var(--text-main);
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+
+    .code-snippet {
+      background: #060A10;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.9rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: #E2E8F0;
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+
+    .guardrail-card {
+      background: rgba(16, 185, 129, 0.06);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+
+    .guardrail-card.alert {
+      background: rgba(244, 63, 94, 0.06);
+      border-color: rgba(244, 63, 94, 0.25);
+    }
+
+    .guardrail-card h4 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--accent-emerald);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .guardrail-card.alert h4 {
+      color: var(--accent-rose);
+    }
+
+    .guardrail-card p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Simulator Overlay */
+    .sim-bar {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .sim-status {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.88rem;
+    }
+
+    .sim-pulse {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      main {
+        flex-direction: column;
+      }
+      .inspector-drawer {
+        width: 100%;
+        max-height: 400px;
+        border-left: none;
+        border-top: 1px solid var(--border-subtle);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">AWS</div>
+      <div>
+        <div class="brand-title">Enterprise Infrastructure Platform</div>
+        <div class="brand-subtitle">Architecture & Agentic Workflow Visualizer</div>
+      </div>
+    </div>
+
+    <!-- View Tabs -->
+    <div class="tab-group" id="viewTabs">
+      <button class="tab-btn active" data-view="multi-account">
+        <span>🏢</span> Multi-Account & DR
+      </button>
+      <button class="tab-btn" data-view="agentic-workflows">
+        <span>🤖</span> AI Agent Workflows
+      </button>
+      <button class="tab-btn" data-view="quality-flywheel">
+        <span>🔄</span> Feedback Loops
+      </button>
+      <button class="tab-btn" data-view="idp-integration">
+        <span>🔌</span> IDP & Discovery
+      </button>
+      <button class="tab-btn" data-view="ci-cd-governance">
+        <span>🛡️</span> CI/CD & Policy Gates
+      </button>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-action primary" id="simulateBtn" onclick="runSimulation()">
+        <span>▶</span> Simulate Flow
+      </button>
+      <a href="ARCHITECTURE.md" class="btn-action" style="text-decoration: none;">
+        <span>📄</span> Docs
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main>
+    <!-- Left Diagram Workspace -->
+    <section class="diagram-workspace">
+      <div class="view-header">
+        <div class="view-title-block">
+          <h1 id="viewTitle">Multi-Account AWS Architecture & Active-Passive DR</h1>
+          <p id="viewDescription">
+            Hub-and-spoke multi-account topology configured via Terragrunt inheritance, AWS Organizations OU tree, central inspection firewall, central interface endpoints, and cross-region warm standby disaster recovery.
+          </p>
+        </div>
+        <div class="view-stats" id="viewStats">
+          <!-- Dynamic Stats -->
+        </div>
+      </div>
+
+      <!-- Canvas Area -->
+      <div class="canvas-container">
+        <div class="canvas-controls">
+          <div class="legend" id="diagramLegend">
+            <!-- Dynamic Legend -->
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-dim);">
+            Click any component node to inspect contracts, code, and guardrails
+          </div>
+        </div>
+
+        <!-- Dynamic SVG Diagram Canvas -->
+        <div id="svgCanvasWrapper" style="flex: 1; display: flex; align-items: center; justify-content: center;">
+          <!-- Injected SVG -->
+        </div>
+
+        <!-- Simulation Progress Status -->
+        <div class="sim-bar" id="simBar" style="display: none;">
+          <div class="sim-status">
+            <div class="sim-pulse"></div>
+            <span id="simStepText" style="font-weight: 600;">Simulation Active: Evaluating Flow...</span>
+          </div>
+          <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-cyan);" id="simStepCounter">
+            Step 1 of 5
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Inspector Drawer -->
+    <aside class="inspector-drawer" id="inspectorDrawer">
+      <div class="drawer-header">
+        <div>
+          <span class="drawer-tag" id="drawerBadge" style="background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan);">
+            AWS ACCOUNT
+          </span>
+          <h2 class="drawer-title" id="drawerTitle">network-hub</h2>
+        </div>
+      </div>
+
+      <p class="drawer-desc" id="drawerDesc">
+        Central networking hub in Infrastructure OU managing organization-wide IPAM pools, hub-and-spoke Transit Gateway, central egress NAT gateways with AWS Network Firewall, and shared Route 53 Resolver endpoints.
+      </p>
+
+      <div class="meta-box" id="drawerMeta">
+        <div class="meta-row">
+          <span class="meta-label">OU Placement:</span>
+          <span class="meta-val">Infrastructure</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Primary Module:</span>
+          <span class="meta-val">network/transit-gateway</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Deploy Method:</span>
+          <span class="meta-val">Zero-Key OIDC Role</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Target Region(s):</span>
+          <span class="meta-val">eu-central-1, eu-west-1</span>
+        </div>
+      </div>
+
+      <div class="guardrail-card" id="drawerGuardrail">
+        <h4><span>🛡️</span> Architectural Guardrail</h4>
+        <p id="drawerGuardrailText">
+          Default route association and propagation are disabled. Workload spoke VPCs are associated with exactly one environment route table (prod or nonprod, never both) to prevent lateral tenant movement.
+        </p>
+      </div>
+
+      <div>
+        <h4 style="font-size: 0.85rem; font-weight: 600; color: var(--text-dim); margin-bottom: 0.5rem; text-transform: uppercase;">
+          File Blueprint & Config
+        </h4>
+        <div class="code-snippet" id="drawerCode">
+workloads-live-repo/infrastructure/network-hub/eu-central-1/network/transit-gateway/terragrunt.hcl
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    // System Data Models for all 5 Architecture Views
+    const viewsData = {
+      'multi-account': {
+        title: "Multi-Account AWS Architecture & Active-Passive DR",
+        description: "Organizational structure mirroring AWS best practices: Security, Infrastructure, and Workloads OUs connected via Hub-and-Spoke Transit Gateway with an active-passive disaster recovery warm standby in eu-west-1.",
+        stats: [
+          { val: "6", label: "Managed Accounts" },
+          { val: "2", label: "Active Regions" },
+          { val: "RTO < 2h", label: "Target Recovery" }
+        ],
+        legend: [
+          { color: "var(--accent-cyan)", label: "Management & Core" },
+          { color: "var(--accent-indigo)", label: "Security & Observability" },
+          { color: "var(--accent-emerald)", label: "Workload Stacks (Active)" },
+          { color: "var(--accent-amber)", label: "Secondary DR (Warm Standby)" },
+          { color: "var(--accent-rose)", label: "Inspection Firewall" }
+        ],
+        svg: `
+          <svg class="interactive-diagram" viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gradMgmt" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#1E293B"/>
+                <stop offset="100%" stop-color="#0F172A"/>
+              </linearGradient>
+              <linearGradient id="gradHub" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0284C7" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#0369A1" stop-opacity="0.1"/>
+              </linearGradient>
+              <linearGradient id="gradProd" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#10B981" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#047857" stop-opacity="0.08"/>
+              </linearGradient>
+              <linearGradient id="gradDR" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#B45309" stop-opacity="0.08"/>
+              </linearGradient>
+            </defs>
+
+            <!-- AWS Organization Boundary -->
+            <rect x="20" y="20" width="960" height="580" rx="16" fill="rgba(15, 23, 42, 0.4)" stroke="#1E293B" stroke-width="1.5"/>
+            <text x="45" y="50" fill="#94A3B8" font-size="12" font-weight="700" letter-spacing="0.05em">AWS ORGANIZATION (ROOT)</text>
+
+            <!-- Management Account -->
+            <g class="node" id="node-management" onclick="selectNode('management')">
+              <rect x="50" y="70" width="260" height="110" rx="12" fill="url(#gradMgmt)" stroke="#38BDF8" stroke-width="1.5"/>
+              <text x="70" y="100" fill="#38BDF8" font-size="14" font-weight="700">management (Root)</text>
+              <text x="70" y="122" fill="#94A3B8" font-size="11">IAM Identity Center (SSO)</text>
+              <text x="70" y="138" fill="#94A3B8" font-size="11">Service Catalog & CloudTrail Trail</text>
+              <text x="70" y="154" fill="#94A3B8" font-size="11">Day-0 CloudFormation StackSets</text>
+            </g>
+
+            <!-- Security OU -->
+            <rect x="50" y="200" width="260" height="240" rx="12" fill="rgba(30, 41, 59, 0.4)" stroke="#334155" stroke-dasharray="4,4"/>
+            <text x="65" y="222" fill="#818CF8" font-size="12" font-weight="700">SECURITY OU</text>
+
+            <g class="node" id="node-log-archive" onclick="selectNode('log-archive')">
+              <rect x="65" y="235" width="230" height="85" rx="8" fill="#162032" stroke="#475569" stroke-width="1"/>
+              <text x="80" y="260" fill="#E2E8F0" font-size="13" font-weight="600">log-archive</text>
+              <text x="80" y="280" fill="#94A3B8" font-size="11">Object Lock COMPLIANCE S3</text>
+              <text x="80" y="296" fill="#94A3B8" font-size="11">VPC Flow, ALB & Trail Central Store</text>
+            </g>
+
+            <g class="node" id="node-security-tooling" onclick="selectNode('security-tooling')">
+              <rect x="65" y="335" width="230" height="90" rx="8" fill="#162032" stroke="#475569" stroke-width="1"/>
+              <text x="80" y="360" fill="#E2E8F0" font-size="13" font-weight="600">security-tooling</text>
+              <text x="80" y="380" fill="#94A3B8" font-size="11">Security Hub Aggregator</text>
+              <text x="80" y="396" fill="#94A3B8" font-size="11">GuardDuty Admin & Inspector</text>
+              <text x="80" y="412" fill="#94A3B8" font-size="11">Auto-Remediation Lambda (SSH/RDP)</text>
+            </g>
+
+            <!-- Observability Account -->
+            <g class="node" id="node-observability" onclick="selectNode('observability')">
+              <rect x="50" y="460" width="260" height="110" rx="12" fill="#162032" stroke="#818CF8" stroke-width="1.2"/>
+              <text x="70" y="490" fill="#818CF8" font-size="14" font-weight="700">observability</text>
+              <text x="70" y="512" fill="#94A3B8" font-size="11">CloudWatch OAM Sink</text>
+              <text x="70" y="528" fill="#94A3B8" font-size="11">Managed Prometheus Workspace</text>
+              <text x="70" y="544" fill="#94A3B8" font-size="11">Central SLO & Guardrail Dashboard</text>
+            </g>
+
+            <!-- Infrastructure OU: Central Network Hub -->
+            <g class="node" id="node-network-hub" onclick="selectNode('network-hub')">
+              <rect x="340" y="70" width="300" height="250" rx="14" fill="url(#gradHub)" stroke="#38BDF8" stroke-width="2"/>
+              <text x="360" y="100" fill="#38BDF8" font-size="15" font-weight="700">network-hub (Transit Gateway)</text>
+              <rect x="360" y="115" width="260" height="60" rx="8" fill="#0B132B" stroke="#0284C7"/>
+              <text x="375" y="138" fill="#E2E8F0" font-size="12" font-weight="600">AWS Network Firewall (Egress)</text>
+              <text x="375" y="156" fill="#38BDF8" font-size="10">STRICT_ORDER Domain Drop Allow-list</text>
+
+              <text x="360" y="195" fill="#94A3B8" font-size="11">• RAM-Shared Transit Gateway</text>
+              <text x="360" y="212" fill="#94A3B8" font-size="11">• Separate Prod / NonProd Route Tables</text>
+              <text x="360" y="229" fill="#94A3B8" font-size="11">• Route 53 Resolver Inbound/Outbound</text>
+              <text x="360" y="246" fill="#94A3B8" font-size="11">• Global IPAM Pool Allocation</text>
+            </g>
+
+            <!-- Shared Services -->
+            <g class="node" id="node-shared-services" onclick="selectNode('shared-services')">
+              <rect x="340" y="340" width="300" height="230" rx="14" fill="url(#gradMgmt)" stroke="#818CF8" stroke-width="1.5"/>
+              <text x="360" y="370" fill="#818CF8" font-size="15" font-weight="700">shared-services</text>
+              <text x="360" y="395" fill="#E2E8F0" font-size="12" font-weight="600">Central VPC Interface Endpoints</text>
+              <text x="360" y="412" fill="#94A3B8" font-size="11">(ECR, STS, SSM, KMS, Secrets, Logs)</text>
+              <text x="360" y="435" fill="#E2E8F0" font-size="12" font-weight="600">ACK Hub Controller Cluster</text>
+              <text x="360" y="452" fill="#94A3B8" font-size="11">Cross-Account Spoke Provisioner</text>
+              <text x="360" y="475" fill="#94A3B8" font-size="11">• Shared Route 53 Private Hosted Zones</text>
+            </g>
+
+            <!-- Workloads OU: Primary Active Region -->
+            <g class="node" id="node-workloads-prod" onclick="selectNode('workloads-prod')">
+              <rect x="670" y="70" width="290" height="250" rx="14" fill="url(#gradProd)" stroke="#10B981" stroke-width="2"/>
+              <text x="690" y="100" fill="#10B981" font-size="15" font-weight="700">workloads-prod (Primary)</text>
+              <text x="690" y="120" fill="#A7F3D0" font-size="11" font-weight="600">REGION: eu-central-1 (ACTIVE)</text>
+
+              <rect x="690" y="135" width="250" height="48" rx="6" fill="#064E3B" stroke="#059669"/>
+              <text x="705" y="156" fill="#ECFDF5" font-size="12" font-weight="600">Production EKS (Multi-AZ)</text>
+              <text x="705" y="172" fill="#6EE7B7" font-size="10">IMDSv2 Hop 1, Private Endpoints</text>
+
+              <text x="690" y="205" fill="#94A3B8" font-size="11">• Aurora Global Database (Primary)</text>
+              <text x="690" y="222" fill="#94A3B8" font-size="11">• S3 Bucket with Cross-Region Repl.</text>
+              <text x="690" y="239" fill="#94A3B8" font-size="11">• Spoke TGW Attachment (Prod RT)</text>
+              <text x="690" y="256" fill="#94A3B8" font-size="11">• SSM Parameter Discovery Contract</text>
+            </g>
+
+            <!-- Workloads OU: DR Secondary Region (Warm Standby) -->
+            <g class="node" id="node-workloads-dr" onclick="selectNode('workloads-dr')">
+              <rect x="670" y="340" width="290" height="230" rx="14" fill="url(#gradDR)" stroke="#F59E0B" stroke-width="2"/>
+              <text x="690" y="370" fill="#F59E0B" font-size="15" font-weight="700">workloads-prod (DR Standby)</text>
+              <text x="690" y="390" fill="#FDE68A" font-size="11" font-weight="600">REGION: eu-west-1 (WARM STANDBY)</text>
+
+              <rect x="690" y="405" width="250" height="48" rx="6" fill="#451A03" stroke="#D97706"/>
+              <text x="705" y="426" fill="#FEF3C7" font-size="12" font-weight="600">Standby EKS (Node Group: 0)</text>
+              <text x="705" y="442" fill="#FCD34D" font-size="10">Zero Cost Idle Compute / Instant Scale</text>
+
+              <text x="690" y="475" fill="#94A3B8" font-size="11">• Aurora Global Replica (RPO < 1s)</text>
+              <text x="690" y="492" fill="#94A3B8" font-size="11">• S3 Cross-Region Replica Bucket</text>
+              <text x="690" y="509" fill="#94A3B8" font-size="11">• AWS Backup Cross-Region Vault</text>
+              <text x="690" y="526" fill="#94A3B8" font-size="11">• Route 53 Active-Passive Failover</text>
+            </g>
+
+            <!-- Connective Flow Lines -->
+            <line x1="640" y1="180" x2="670" y2="180" class="flow-line" stroke="#38BDF8"/>
+            <line x1="640" y1="420" x2="670" y2="420" class="flow-line" stroke="#38BDF8"/>
+            <path d="M 815 320 L 815 340" class="flow-line" stroke="#F59E0B" stroke-width="3"/>
+          </svg>
+        `
+      },
+
+      'agentic-workflows': {
+        title: "AI Agentic Workflows & SRE Autonomous Operations",
+        description: "Zero-key agent operations: Local pair-programming agents (Claude Code, Antigravity) governed by local hooks, EventBridge-triggered ChatOps generators, and autonomous CI/CD healers with hard safety ceilings.",
+        stats: [
+          { val: "3 Max", label: "Healer Commits" },
+          { val: "Zero-Key", label: "Cloud Auth" },
+          { val: "3 Tiers", label: "Autonomy Levels" }
+        ],
+        legend: [
+          { color: "var(--accent-purple)", label: "Local AI Coding Agents" },
+          { color: "var(--accent-emerald)", label: "Safety Hooks & Guardrails" },
+          { color: "var(--accent-cyan)", label: "Autonomous Healer" },
+          { color: "var(--accent-amber)", label: "ChatOps Scaffolder" }
+        ],
+        svg: `
+          <svg class="interactive-diagram" viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg">
+            <!-- Stage 1: Local Laptop -->
+            <rect x="30" y="50" width="290" height="520" rx="16" fill="rgba(168, 85, 247, 0.05)" stroke="#A855F7" stroke-width="1.5"/>
+            <text x="50" y="85" fill="#A855F7" font-size="14" font-weight="700">STAGE 1: LOCAL DEVELOPER LAPTOP</text>
+
+            <g class="node" id="node-local-agent" onclick="selectNode('local-agent')">
+              <rect x="50" y="110" width="250" height="100" rx="10" fill="#162032" stroke="#C084FC" stroke-width="1.5"/>
+              <text x="70" y="140" fill="#F8FAFC" font-size="14" font-weight="700">Local AI Agent</text>
+              <text x="70" y="160" fill="#94A3B8" font-size="11">(Claude Code / Antigravity / CLI)</text>
+              <text x="70" y="180" fill="#A855F7" font-size="11">Edits HCL, tests & manifests</text>
+            </g>
+
+            <g class="node" id="node-guard-hooks" onclick="selectNode('guard-hooks')">
+              <rect x="50" y="240" width="250" height="150" rx="10" fill="#0C1E18" stroke="#10B981" stroke-width="2"/>
+              <text x="70" y="270" fill="#10B981" font-size="14" font-weight="700">.agents/hooks/guard.py</text>
+              <text x="70" y="295" fill="#A7F3D0" font-size="11">● pre-bash: Blocks apply/destroy</text>
+              <text x="70" y="315" fill="#A7F3D0" font-size="11">● pre-edit: Blocks .checkov & policies</text>
+              <text x="70" y="335" fill="#A7F3D0" font-size="11">● post-edit: Runs verify-module</text>
+              <text x="70" y="355" fill="#F43F5E" font-size="11">● 3-Attempt Failure Handover</text>
+            </g>
+
+            <g class="node" id="node-verify-module" onclick="selectNode('verify-module')">
+              <rect x="50" y="420" width="250" height="120" rx="10" fill="#162032" stroke="#38BDF8" stroke-width="1.5"/>
+              <text x="70" y="450" fill="#38BDF8" font-size="13" font-weight="700">make verify-module</text>
+              <text x="70" y="475" fill="#94A3B8" font-size="11">Offline 7-Gate Validation:</text>
+              <text x="70" y="495" fill="#94A3B8" font-size="10">fmt → init → validate → tflint →</text>
+              <text x="70" y="512" fill="#94A3B8" font-size="10">checkov → test → conftest plan</text>
+            </g>
+
+            <!-- Stage 2: GitHub Actions CI/CD -->
+            <rect x="360" y="50" width="310" height="520" rx="16" fill="rgba(56, 189, 248, 0.05)" stroke="#38BDF8" stroke-width="1.5"/>
+            <text x="380" y="85" fill="#38BDF8" font-size="14" font-weight="700">STAGE 2: GITHUB ACTIONS PIPELINE</text>
+
+            <g class="node" id="node-plan-scoping" onclick="selectNode('plan-scoping')">
+              <rect x="380" y="110" width="270" height="100" rx="10" fill="#162032" stroke="#38BDF8" stroke-width="1.5"/>
+              <text x="400" y="140" fill="#F8FAFC" font-size="14" font-weight="700">plan_scope.py</text>
+              <text x="400" y="165" fill="#94A3B8" font-size="11">PR Plan Scoping Algorithm</text>
+              <text x="400" y="185" fill="#38BDF8" font-size="11">Narrows plan to affected units only</text>
+            </g>
+
+            <g class="node" id="node-ci-gates" onclick="selectNode('ci-gates')">
+              <rect x="380" y="240" width="270" height="130" rx="10" fill="#162032" stroke="#818CF8" stroke-width="1.5"/>
+              <text x="400" y="270" fill="#818CF8" font-size="14" font-weight="700">Automated PR Gates</text>
+              <text x="400" y="295" fill="#94A3B8" font-size="11">1. Static Analysis (4 roots fmt)</text>
+              <text x="400" y="315" fill="#94A3B8" font-size="11">2. Checkov (HCL + Plan JSON)</text>
+              <text x="400" y="335" fill="#94A3B8" font-size="11">3. OPA/Rego Custom Policies</text>
+              <text x="400" y="355" fill="#94A3B8" font-size="11">4. Infracost Budget Breakdown</text>
+            </g>
+
+            <g class="node" id="node-healer-runner" onclick="selectNode('healer-runner')">
+              <rect x="380" y="400" width="270" height="140" rx="10" fill="#1F132B" stroke="#F43F5E" stroke-width="2"/>
+              <text x="400" y="430" fill="#F43F5E" font-size="14" font-weight="700">healer_runner.py (Autonomous)</text>
+              <text x="400" y="455" fill="#FDA4AF" font-size="11">● Triggers on Failed CI Workflow</text>
+              <text x="400" y="475" fill="#FDA4AF" font-size="11">● Refuses main branch / Needs Open PR</text>
+              <text x="400" y="495" fill="#FDA4AF" font-size="11">● Hard ceiling: 3 retry commits</text>
+              <text x="400" y="515" fill="#FDA4AF" font-size="11">● Restores .agents/ before push</text>
+            </g>
+
+            <!-- Stage 3: ChatOps & Human Verification -->
+            <rect x="710" y="50" width="260" height="520" rx="16" fill="rgba(245, 158, 11, 0.05)" stroke="#F59E0B" stroke-width="1.5"/>
+            <text x="730" y="85" fill="#F59E0B" font-size="14" font-weight="700">STAGE 3: CHATOPS & AUDIT</text>
+
+            <g class="node" id="node-chatops" onclick="selectNode('chatops')">
+              <rect x="730" y="110" width="220" height="120" rx="10" fill="#162032" stroke="#F59E0B" stroke-width="1.5"/>
+              <text x="750" y="140" fill="#F59E0B" font-size="14" font-weight="700">ChatOps Generator</text>
+              <text x="750" y="165" fill="#94A3B8" font-size="11">/generate category/name</text>
+              <text x="750" y="185" fill="#94A3B8" font-size="11">/reconcile account</text>
+              <text x="750" y="205" fill="#FCD34D" font-size="10">Requires Collaborator Role</text>
+            </g>
+
+            <g class="node" id="node-autonomy" onclick="selectNode('autonomy')">
+              <rect x="730" y="260" width="220" height="130" rx="10" fill="#162032" stroke="#10B981" stroke-width="1.5"/>
+              <text x="750" y="290" fill="#10B981" font-size="14" font-weight="700">docs/AGENT_AUTONOMY.md</text>
+              <text x="750" y="315" fill="#94A3B8" font-size="11">Autonomy Matrix:</text>
+              <text x="750" y="335" fill="#94A3B8" font-size="11">Dev: Auto PR & Plan</text>
+              <text x="750" y="355" fill="#94A3B8" font-size="11">Prod: Human Review & Approval</text>
+              <text x="750" y="375" fill="#94A3B8" font-size="11">Apply: Zero Agent Creds</text>
+            </g>
+
+            <g class="node" id="node-delivery-metrics" onclick="selectNode('delivery-metrics')">
+              <rect x="730" y="420" width="220" height="120" rx="10" fill="#162032" stroke="#38BDF8" stroke-width="1.5"/>
+              <text x="750" y="450" fill="#38BDF8" font-size="13" font-weight="700">delivery_metrics.py</text>
+              <text x="750" y="475" fill="#94A3B8" font-size="11">DORA Metrics Generator</text>
+              <text x="750" y="495" fill="#94A3B8" font-size="11">Splits Lead Time & CFR</text>
+              <text x="750" y="515" fill="#38BDF8" font-size="10">ai-generated vs Human PRs</text>
+            </g>
+
+            <!-- Connecting Pipelines -->
+            <path d="M 300 160 L 380 160" class="flow-line" stroke="#A855F7"/>
+            <path d="M 515 370 L 515 400" class="flow-line" stroke="#F43F5E"/>
+            <path d="M 650 470 L 730 470" class="flow-line" stroke="#38BDF8"/>
+          </svg>
+        `
+      },
+
+      'quality-flywheel': {
+        title: "Feedback Loops & Quality Flywheel Architecture",
+        description: "Three nested feedback loops ensuring code correctness, automated remediation, and production health telemetry before any infrastructure state is mutated.",
+        stats: [
+          { val: "3 Loops", label: "Feedback Layers" },
+          { val: "100%", label: "Checkov & Rego" },
+          { val: "< 15s", label: "Local Module Verify" }
+        ],
+        legend: [
+          { color: "var(--accent-purple)", label: "Inner Loop: Laptop" },
+          { color: "var(--accent-cyan)", label: "Middle Loop: CI PR & Healer" },
+          { color: "var(--accent-emerald)", label: "Outer Loop: Production SRE" }
+        ],
+        svg: `
+          <svg class="interactive-diagram" viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg">
+            <!-- Nested Circles / Loop Boxes -->
+            <!-- Outer Loop -->
+            <rect x="30" y="40" width="940" height="540" rx="20" fill="rgba(16, 185, 129, 0.03)" stroke="#10B981" stroke-width="1.5" stroke-dasharray="8,6"/>
+            <text x="60" y="75" fill="#10B981" font-size="15" font-weight="800">OUTER LOOP: PRODUCTION SRE & OBSERVABILITY (Telemetry & Error Budgets)</text>
+
+            <!-- Middle Loop -->
+            <rect x="70" y="110" width="860" height="340" rx="16" fill="rgba(56, 189, 248, 0.04)" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="6,4"/>
+            <text x="95" y="145" fill="#38BDF8" font-size="14" font-weight="700">MIDDLE LOOP: CI/CD PIPELINE & AUTONOMOUS REMEDIATION</text>
+
+            <!-- Inner Loop -->
+            <rect x="110" y="180" width="780" height="150" rx="12" fill="rgba(168, 85, 247, 0.06)" stroke="#A855F7" stroke-width="2"/>
+            <text x="135" y="210" fill="#A855F7" font-size="13" font-weight="700">INNER LOOP: LOCAL LAPTOP & AGENT GUARD HOOKS (Instant Seconds Feedback)</text>
+
+            <!-- Inner Loop Components -->
+            <g class="node" id="node-inner-edit" onclick="selectNode('inner-edit')">
+              <rect x="135" y="230" width="220" height="70" rx="8" fill="#162032" stroke="#A855F7" stroke-width="1"/>
+              <text x="155" y="255" fill="#F8FAFC" font-size="12" font-weight="600">1. Code Edit & Guard</text>
+              <text x="155" y="275" fill="#94A3B8" font-size="10">guard.py pre-edit checks</text>
+            </g>
+
+            <g class="node" id="node-inner-verify" onclick="selectNode('inner-verify')">
+              <rect x="390" y="230" width="220" height="70" rx="8" fill="#162032" stroke="#38BDF8" stroke-width="1"/>
+              <text x="410" y="255" fill="#F8FAFC" font-size="12" font-weight="600">2. verify-module.py</text>
+              <text x="410" y="275" fill="#94A3B8" font-size="10">fmt, init, tflint, test, conftest</text>
+            </g>
+
+            <g class="node" id="node-inner-stop" onclick="selectNode('inner-stop')">
+              <rect x="645" y="230" width="220" height="70" rx="8" fill="#162032" stroke="#F43F5E" stroke-width="1"/>
+              <text x="665" y="255" fill="#FDA4AF" font-size="12" font-weight="600">3. 3-Attempt Handover</text>
+              <text x="665" y="275" fill="#94A3B8" font-size="10">Ceiling prevents infinite spin</text>
+            </g>
+
+            <!-- Middle Loop Nodes -->
+            <g class="node" id="node-mid-gates" onclick="selectNode('mid-gates')">
+              <rect x="110" y="360" width="240" height="70" rx="8" fill="#162032" stroke="#38BDF8" stroke-width="1"/>
+              <text x="130" y="385" fill="#38BDF8" font-size="12" font-weight="600">PR Policy & Security Gates</text>
+              <text x="130" y="405" fill="#94A3B8" font-size="10">Checkov + OPA + Infracost</text>
+            </g>
+
+            <g class="node" id="node-mid-healer" onclick="selectNode('mid-healer')">
+              <rect x="390" y="360" width="240" height="70" rx="8" fill="#162032" stroke="#F43F5E" stroke-width="1"/>
+              <text x="410" y="385" fill="#F43F5E" font-size="12" font-weight="600">Autonomous Healer Loop</text>
+              <text x="410" y="405" fill="#FDA4AF" font-size="10">Auto-fixes & pushes PR update</text>
+            </g>
+
+            <g class="node" id="node-mid-apply" onclick="selectNode('mid-apply')">
+              <rect x="670" y="360" width="220" height="70" rx="8" fill="#162032" stroke="#10B981" stroke-width="1"/>
+              <text x="690" y="385" fill="#10B981" font-size="12" font-weight="600">Saved Plan Apply on Main</text>
+              <text x="690" y="405" fill="#94A3B8" font-size="10">SHA256 verified binary plan</text>
+            </g>
+
+            <!-- Outer Loop Nodes -->
+            <g class="node" id="node-out-drift" onclick="selectNode('out-drift')">
+              <rect x="110" y="480" width="240" height="75" rx="8" fill="#162032" stroke="#F59E0B" stroke-width="1"/>
+              <text x="130" y="505" fill="#F59E0B" font-size="12" font-weight="600">Nightly Drift Matrix</text>
+              <text x="130" y="525" fill="#94A3B8" font-size="10">Automated Issue + ChatOps prompt</text>
+            </g>
+
+            <g class="node" id="node-out-slo" onclick="selectNode('out-slo')">
+              <rect x="390" y="480" width="240" height="75" rx="8" fill="#162032" stroke="#10B981" stroke-width="1"/>
+              <text x="410" y="505" fill="#10B981" font-size="12" font-weight="600">SLO & Error Budget Gate</text>
+              <text x="410" y="525" fill="#94A3B8" font-size="10">Blocks agent changes if depleted</text>
+            </g>
+
+            <g class="node" id="node-out-signals" onclick="selectNode('out-signals')">
+              <rect x="670" y="480" width="220" height="75" rx="8" fill="#162032" stroke="#818CF8" stroke-width="1"/>
+              <text x="690" y="505" fill="#818CF8" font-size="12" font-weight="600">OAM Sink & Guardrail Signals</text>
+              <text x="690" y="525" fill="#94A3B8" font-size="10">Central CloudTrail alarms & metrics</text>
+            </g>
+
+            <!-- Flow Arrows -->
+            <path d="M 355 265 L 390 265" class="flow-line" stroke="#A855F7"/>
+            <path d="M 610 265 L 645 265" class="flow-line" stroke="#38BDF8"/>
+            <path d="M 350 395 L 390 395" class="flow-line" stroke="#F43F5E"/>
+            <path d="M 630 395 L 670 395" class="flow-line" stroke="#10B981"/>
+          </svg>
+        `
+      },
+
+      'idp-integration': {
+        title: "Internal Developer Platform (IDP) & Discovery Contract",
+        description: "Decoupled capability delivery: Backstage, OpenChoreo, or CLI-based IDPs dynamically provision resources using pinned Git modules and SSM Parameter Store without ever hardcoding AWS IDs.",
+        stats: [
+          { val: "SSM Store", label: "Catalog API" },
+          { val: "ACK", label: "Cross-Account Hub" },
+          { val: "Zero", label: "Hardcoded IDs" }
+        ],
+        legend: [
+          { color: "var(--accent-purple)", label: "Developer Platform (IDP)" },
+          { color: "var(--accent-cyan)", label: "SSM Discovery API" },
+          { color: "var(--accent-emerald)", label: "Tenant AWS Infrastructure" }
+        ],
+        svg: `
+          <svg class="interactive-diagram" viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg">
+            <!-- IDP Layer -->
+            <rect x="40" y="50" width="280" height="520" rx="16" fill="rgba(168, 85, 247, 0.05)" stroke="#A855F7" stroke-width="1.5"/>
+            <text x="60" y="85" fill="#A855F7" font-size="14" font-weight="700">1. DEVELOPER PLATFORM (IDP)</text>
+
+            <g class="node" id="node-idp-backstage" onclick="selectNode('idp-backstage')">
+              <rect x="60" y="110" width="240" height="120" rx="10" fill="#162032" stroke="#A855F7" stroke-width="1.5"/>
+              <text x="80" y="140" fill="#F8FAFC" font-size="14" font-weight="700">Backstage / OpenChoreo</text>
+              <text x="80" y="165" fill="#94A3B8" font-size="11">Self-Service Service Catalog</text>
+              <text x="80" y="185" fill="#A855F7" font-size="11">CLI / Scaffolder Templates</text>
+              <text x="80" y="205" fill="#94A3B8" font-size="10">Requests Postgres, S3, IAM</text>
+            </g>
+
+            <g class="node" id="node-git-catalog" onclick="selectNode('git-catalog')">
+              <rect x="60" y="260" width="240" height="130" rx="10" fill="#162032" stroke="#38BDF8" stroke-width="1.5"/>
+              <text x="80" y="290" fill="#38BDF8" font-size="14" font-weight="700">Pinned Git Module Ref</text>
+              <text x="80" y="315" fill="#94A3B8" font-size="10">git::https://github.com/ok-karthik/</text>
+              <text x="80" y="330" fill="#94A3B8" font-size="10">enterprise-aws-infrastructure.git//</text>
+              <text x="80" y="345" fill="#94A3B8" font-size="10">iac-modules-repo/data/postgres</text>
+              <text x="80" y="365" fill="#38BDF8" font-size="11">?ref=postgres-v1.0.0</text>
+            </g>
+
+            <!-- SSM Discovery Contract Layer -->
+            <rect x="360" y="50" width="280" height="520" rx="16" fill="rgba(56, 189, 248, 0.05)" stroke="#38BDF8" stroke-width="1.5"/>
+            <text x="380" y="85" fill="#38BDF8" font-size="14" font-weight="700">2. DISCOVERY CONTRACT (SSM)</text>
+
+            <g class="node" id="node-ssm-contract" onclick="selectNode('ssm-contract')">
+              <rect x="380" y="110" width="240" height="280" rx="12" fill="#0C1A2E" stroke="#38BDF8" stroke-width="2"/>
+              <text x="400" y="140" fill="#38BDF8" font-size="14" font-weight="700">AWS SSM Parameter Store</text>
+              <text x="400" y="165" fill="#94A3B8" font-size="11">Standard Catalog Schema:</text>
+              <text x="400" y="195" fill="#E2E8F0" font-size="11" font-family="monospace">/platform/${env}/${region}/</text>
+              <text x="400" y="215" fill="#A7F3D0" font-size="10" font-family="monospace">├─ vpc/id</text>
+              <text x="400" y="235" fill="#A7F3D0" font-size="10" font-family="monospace">├─ vpc/database_subnets</text>
+              <text x="400" y="255" fill="#A7F3D0" font-size="10" font-family="monospace">├─ eks/cluster_name</text>
+              <text x="400" y="275" fill="#A7F3D0" font-size="10" font-family="monospace">├─ eks/oidc_provider_arn</text>
+              <text x="400" y="295" fill="#A7F3D0" font-size="10" font-family="monospace">└─ ack/cross_account_role</text>
+              <text x="400" y="330" fill="#94A3B8" font-size="11">Published by foundation stacks</text>
+              <text x="400" y="350" fill="#94A3B8" font-size="11">Zero AWS IDs hardcoded!</text>
+            </g>
+
+            <g class="node" id="node-ack-hub" onclick="selectNode('ack-hub')">
+              <rect x="380" y="420" width="240" height="120" rx="10" fill="#162032" stroke="#818CF8" stroke-width="1.5"/>
+              <text x="400" y="450" fill="#818CF8" font-size="13" font-weight="700">ACK Hub-and-Spoke</text>
+              <text x="400" y="475" fill="#94A3B8" font-size="11">AWS Controllers for K8s</text>
+              <text x="400" y="495" fill="#94A3B8" font-size="11">Assumes spoke role in tenant</text>
+              <text x="400" y="515" fill="#818CF8" font-size="10">Bounded by ack-tenant-boundary</text>
+            </g>
+
+            <!-- Tenant Workload Layer -->
+            <rect x="680" y="50" width="280" height="520" rx="16" fill="rgba(16, 185, 129, 0.05)" stroke="#10B981" stroke-width="1.5"/>
+            <text x="700" y="85" fill="#10B981" font-size="14" font-weight="700">3. TENANT WORKLOAD STACK</text>
+
+            <g class="node" id="node-tenant-tf" onclick="selectNode('tenant-tf')">
+              <rect x="700" y="110" width="240" height="160" rx="10" fill="#162032" stroke="#10B981" stroke-width="1.5"/>
+              <text x="720" y="140" fill="#10B981" font-size="14" font-weight="700">Tenant Terraform Plan</text>
+              <text x="720" y="165" fill="#94A3B8" font-size="11">data "aws_ssm_parameter" "vpc"</text>
+              <text x="720" y="185" fill="#94A3B8" font-size="11">name = "/platform/dev/.../vpc/id"</text>
+              <text x="720" y="210" fill="#E2E8F0" font-size="12" font-weight="600">Provisioned Resource:</text>
+              <text x="720" y="230" fill="#A7F3D0" font-size="11">RDS Postgres (KMS encr, private)</text>
+              <text x="720" y="248" fill="#A7F3D0" font-size="11">Secrets Manager auto password</text>
+            </g>
+
+            <g class="node" id="node-tenant-boundary" onclick="selectNode('tenant-boundary')">
+              <rect x="700" y="300" width="240" height="120" rx="10" fill="#162032" stroke="#F59E0B" stroke-width="1.5"/>
+              <text x="720" y="330" fill="#F59E0B" font-size="14" font-weight="700">platform-workload-boundary</text>
+              <text x="720" y="355" fill="#94A3B8" font-size="11">IAM Permissions Boundary</text>
+              <text x="720" y="375" fill="#94A3B8" font-size="11">Attached to all tenant roles</text>
+              <text x="720" y="395" fill="#FCD34D" font-size="10">Blocks privilege escalation</text>
+            </g>
+
+            <!-- Flow connections -->
+            <path d="M 300 170 L 380 170" class="flow-line" stroke="#A855F7"/>
+            <path d="M 620 170 L 700 170" class="flow-line" stroke="#38BDF8"/>
+          </svg>
+        `
+      },
+
+      'ci-cd-governance': {
+        title: "CI/CD Pipeline, Security Governance & Policy Gates",
+        description: "Zero-key OIDC deployment pipeline: Scoped pull request planning, dual-stage Checkov scanning, OPA/Conftest compliance policies, and SHA-256 checksum-verified saved plan execution on main.",
+        stats: [
+          { val: "4 Gates", label: "Compliance Checks" },
+          { val: "SHA-256", label: "Plan Checksum" },
+          { val: "Zero", label: "Static AWS Keys" }
+        ],
+        legend: [
+          { color: "var(--accent-cyan)", label: "PR Scoping & Matrix" },
+          { color: "var(--accent-rose)", label: "Security & Policy Gates" },
+          { color: "var(--accent-emerald)", label: "Saved Plan Execution" }
+        ],
+        svg: `
+          <svg class="interactive-diagram" viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg">
+            <!-- Stage 1: Pull Request -->
+            <rect x="30" y="50" width="280" height="520" rx="16" fill="rgba(56, 189, 248, 0.04)" stroke="#38BDF8" stroke-width="1.5"/>
+            <text x="50" y="85" fill="#38BDF8" font-size="14" font-weight="700">STAGE 1: PR VALIDATION</text>
+
+            <g class="node" id="node-ci-matrix" onclick="selectNode('ci-matrix')">
+              <rect x="50" y="110" width="240" height="90" rx="10" fill="#162032" stroke="#38BDF8" stroke-width="1.5"/>
+              <text x="70" y="140" fill="#F8FAFC" font-size="13" font-weight="700">Parallel Account Matrix</text>
+              <text x="70" y="160" fill="#94A3B8" font-size="11">Generated from accounts.hcl</text>
+              <text x="70" y="178" fill="#38BDF8" font-size="11">mgmt, core, dev, staging, prod</text>
+            </g>
+
+            <g class="node" id="node-ci-scoping" onclick="selectNode('ci-scoping')">
+              <rect x="50" y="220" width="240" height="110" rx="10" fill="#162032" stroke="#38BDF8" stroke-width="1.5"/>
+              <text x="70" y="250" fill="#38BDF8" font-size="13" font-weight="700">PR Plan Scoping</text>
+              <text x="70" y="275" fill="#94A3B8" font-size="11">plan_scope.py inspects git diff</text>
+              <text x="70" y="295" fill="#94A3B8" font-size="11">Plans ONLY changed units</text>
+              <text x="70" y="312" fill="#38BDF8" font-size="10">Saves CI execution minutes</text>
+            </g>
+
+            <g class="node" id="node-ci-auth" onclick="selectNode('ci-auth')">
+              <rect x="50" y="350" width="240" height="100" rx="10" fill="#162032" stroke="#10B981" stroke-width="1.5"/>
+              <text x="70" y="380" fill="#10B981" font-size="13" font-weight="700">Zero-Key OIDC Auth</text>
+              <text x="70" y="405" fill="#94A3B8" font-size="11">Assumes github-actions-plan</text>
+              <text x="70" y="425" fill="#A7F3D0" font-size="10">Read-Only direct into target account</text>
+            </g>
+
+            <!-- Stage 2: Governance Gates -->
+            <rect x="350" y="50" width="300" height="520" rx="16" fill="rgba(244, 63, 94, 0.04)" stroke="#F43F5E" stroke-width="1.5"/>
+            <text x="370" y="85" fill="#F43F5E" font-size="14" font-weight="700">STAGE 2: GOVERNANCE GATES</text>
+
+            <g class="node" id="node-gate-checkov" onclick="selectNode('gate-checkov')">
+              <rect x="370" y="110" width="260" height="100" rx="10" fill="#1E121E" stroke="#F43F5E" stroke-width="2"/>
+              <text x="390" y="140" fill="#FDA4AF" font-size="14" font-weight="700">1. Checkov (Single Scanner)</text>
+              <text x="390" y="165" fill="#94A3B8" font-size="11">Scans raw HCL + plan JSON</text>
+              <text x="390" y="185" fill="#FDA4AF" font-size="11">0 soft_fail | Blocks merge</text>
+            </g>
+
+            <g class="node" id="node-gate-rego" onclick="selectNode('gate-rego')">
+              <rect x="370" y="230" width="260" height="110" rx="10" fill="#162032" stroke="#A855F7" stroke-width="1.5"/>
+              <text x="390" y="260" fill="#A855F7" font-size="14" font-weight="700">2. OPA / Conftest Rules</text>
+              <text x="390" y="285" fill="#94A3B8" font-size="11">policy-library-repo/POLICIES.md</text>
+              <text x="390" y="305" fill="#E2E8F0" font-size="11">● require_tags (5 keys)</text>
+              <text x="390" y="325" fill="#E2E8F0" font-size="11">● no_legacy_instances (t2/m3/m4)</text>
+            </g>
+
+            <g class="node" id="node-gate-infracost" onclick="selectNode('gate-infracost')">
+              <rect x="370" y="360" width="260" height="90" rx="10" fill="#162032" stroke="#F59E0B" stroke-width="1.5"/>
+              <text x="390" y="390" fill="#F59E0B" font-size="14" font-weight="700">3. Infracost FinOps</text>
+              <text x="390" y="415" fill="#94A3B8" font-size="11">Posts delta cost breakdown PR comment</text>
+              <text x="390" y="433" fill="#FCD34D" font-size="10">Blocks budget ceiling violations</text>
+            </g>
+
+            <!-- Stage 3: Merge & Saved Plan Apply -->
+            <rect x="690" y="50" width="270" height="520" rx="16" fill="rgba(16, 185, 129, 0.04)" stroke="#10B981" stroke-width="1.5"/>
+            <text x="710" y="85" fill="#10B981" font-size="14" font-weight="700">STAGE 3: SAVED PLAN APPLY</text>
+
+            <g class="node" id="node-apply-checksum" onclick="selectNode('apply-checksum')">
+              <rect x="710" y="110" width="230" height="100" rx="10" fill="#162032" stroke="#38BDF8" stroke-width="1.5"/>
+              <text x="730" y="140" fill="#38BDF8" font-size="13" font-weight="700">SHA256SUMS Manifest</text>
+              <text x="730" y="165" fill="#94A3B8" font-size="11">Verifies binary plan artifact</text>
+              <text x="730" y="185" fill="#38BDF8" font-size="11">Refuses tampered plans</text>
+            </g>
+
+            <g class="node" id="node-apply-env" onclick="selectNode('apply-env')">
+              <rect x="710" y="230" width="230" height="110" rx="10" fill="#162032" stroke="#F59E0B" stroke-width="1.5"/>
+              <text x="730" y="260" fill="#F59E0B" font-size="13" font-weight="700">GitHub Environments</text>
+              <text x="730" y="285" fill="#94A3B8" font-size="11">One environment per account</text>
+              <text x="730" y="305" fill="#FCD34D" font-size="11">Prod requires manual approval</text>
+            </g>
+
+            <g class="node" id="node-apply-exec" onclick="selectNode('apply-exec')">
+              <rect x="710" y="360" width="230" height="120" rx="10" fill="#064E3B" stroke="#10B981" stroke-width="2"/>
+              <text x="730" y="390" fill="#ECFDF5" font-size="14" font-weight="700">terragrunt apply</text>
+              <text x="730" y="415" fill="#A7F3D0" font-size="11">Strictly executes tfplan.bin</text>
+              <text x="730" y="435" fill="#A7F3D0" font-size="11">No fresh plan fallback</text>
+              <text x="730" y="455" fill="#A7F3D0" font-size="10">Role: github-actions-apply</text>
+            </g>
+
+            <!-- Connections -->
+            <path d="M 290 270 L 370 270" class="flow-line" stroke="#38BDF8"/>
+            <path d="M 630 270 L 710 270" class="flow-line" stroke="#10B981"/>
+          </svg>
+        `
+      }
+    };
+
+    // Component Detailed Metadata Dictionary for Inspector
+    const nodeDetails = {
+      'management': {
+        title: "management Account (Root)",
+        tag: "CORE LANDING ZONE",
+        desc: "AWS Organizations root account. Deploys organization-wide SCPs, Resource Control Policies (RCP data perimeters), IAM Identity Center permission sets (developer, platform, break-glass), and the Day-0 bootstrap CloudFormation StackSets.",
+        meta: { "OU Placement": "Root (Management)", "Region": "eu-central-1", "Deploy Method": "CloudFormation StackSets & OIDC" },
+        guardrail: "Service Control Policies (SCPs) protect github-actions-* and platform-* IAM roles from deletion or alteration across all member accounts.",
+        code: "foundation-live-repo/management/_global/governance/organization/terragrunt.hcl"
+      },
+      'network-hub': {
+        title: "network-hub Account",
+        tag: "CENTRAL NETWORKING",
+        desc: "Hub-and-spoke transit gateway architecture. Manages org-wide IPAM pools, RAM-shared Transit Gateway, Route 53 Resolver query logging, and the central inspection VPC with AWS Network Firewall.",
+        meta: { "OU Placement": "Infrastructure", "Egress Mode": "central (Appliance Mode ON)", "Shared Via": "AWS Resource Access Manager (RAM)" },
+        guardrail: "Network Firewall applies a STRICT_ORDER stateful domain drop policy: only approved package registries and base-image repositories are allowed outbound.",
+        code: "iac-modules-repo/network/inspection-egress/main.tf\n_envcommon/network/transit-gateway.hcl"
+      },
+      'workloads-prod': {
+        title: "workloads-prod (Primary Region)",
+        tag: "PRODUCTION WORKLOADS",
+        desc: "Active primary production cluster in eu-central-1. Hardened EKS cluster with private endpoints and IMDSv2 hop limit 1, Aurora Global Database Primary, and continuous cross-region S3 state replication.",
+        meta: { "Region": "eu-central-1 (Active)", "OU Placement": "Workloads/Prod", "Discovery Contract": "SSM /platform/prod/eu-central-1/..." },
+        guardrail: "KMS customer-managed keys (CMK) per data classification tier. Public EKS API endpoint is strictly disabled by default.",
+        code: "workloads-live-repo/workloads/prod/workloads-prod/eu-central-1/compute/eks/terragrunt.hcl"
+      },
+      'workloads-dr': {
+        title: "workloads-prod (DR Warm Standby)",
+        tag: "DISASTER RECOVERY",
+        desc: "Secondary warm standby stack in eu-west-1. Standby VPC and EKS cluster with zero-sized worker node group to minimize idle run costs. Houses the Aurora Global Database secondary replica and S3 replica target.",
+        meta: { "Region": "eu-west-1 (Warm Standby)", "RTO / RPO Target": "RTO < 2h / RPO < 1s", "Failover": "Route 53 Active-Passive Health Checks" },
+        guardrail: "S3 replication is strictly one-way with Delete Marker replication disabled to prevent accidental state deletion propagation.",
+        code: "docs/DISASTER_RECOVERY.md\nworkloads-live-repo/workloads/prod/workloads-prod/eu-west-1/region.hcl"
+      },
+      'log-archive': {
+        title: "log-archive Account",
+        tag: "IMMUTABLE COMPLIANCE",
+        desc: "Dedicated S3 bucket vault with Object Lock in COMPLIANCE mode (400-day retention for CloudTrail). Enforces TLS, KMS server-side encryption, and S3 Block Public Access.",
+        meta: { "OU Placement": "Security", "Retention": "400 Days Compliance Lock", "KMS Key": "CMK with Org-wide Trust" },
+        guardrail: "Bucket policies permit delivery only from AWS service principals with explicit aws:SourceOrgID conditions.",
+        code: "iac-modules-repo/security/log-archive/main.tf"
+      },
+      'security-tooling': {
+        title: "security-tooling Account",
+        tag: "THREAT DETECTION & REMEDIATION",
+        desc: "Delegated administrator for GuardDuty, Security Hub (FSBP + CIS v3 standards), Inspector v2, and Macie. Hosts the EventBridge-triggered auto-remediation Lambda.",
+        meta: { "OU Placement": "Security", "Auto-Remediation": "Removes open 0.0.0.0/0 SSH/RDP rules", "Aggregator": "Cross-Region Finding Aggregator" },
+        guardrail: "Remediation Lambda assumes a strictly scoped security-remediation role in member accounts; never has admin privileges.",
+        code: "iac-modules-repo/security/auto-remediation/src/remediate_open_ssh.py"
+      },
+      'observability': {
+        title: "observability Account",
+        tag: "CENTRAL MONITORING",
+        desc: "Central CloudWatch Observability Access Manager (OAM) sink, Managed Prometheus workspace, and organization guardrail alarm dashboard.",
+        meta: { "OU Placement": "Infrastructure", "Telemetry Protocol": "CloudWatch OAM Sink & Link", "Dashboard": "Cross-Account Guardrail Alarms" },
+        guardrail: "Member accounts link metrics and logs read-only to the central sink.",
+        code: "iac-modules-repo/observability/oam/main.tf\ndocs/SLO.md"
+      },
+      'shared-services': {
+        title: "shared-services Account",
+        tag: "SHARED CAPABILITIES",
+        desc: "Houses central VPC interface endpoints (ECR, STS, SSM, KMS, Secrets Manager) and private hosted zones, plus the ACK controller hub cluster.",
+        meta: { "OU Placement": "Infrastructure", "Endpoints": "Interface Endpoints + Private DNS", "Cost Savings": "~$7.20/AZ/mo per service avoided in spokes" },
+        guardrail: "Spoke VPCs resolve central endpoints privately via Route 53 Private Hosted Zone associations.",
+        code: "iac-modules-repo/network/central-endpoints/main.tf"
+      },
+      'guard-hooks': {
+        title: "Local Agent Guardrails (guard.py)",
+        tag: "AGENT SAFETY",
+        desc: "Local laptop guardrail invoked via .claude/settings.json before Bash and file edits. Blocks destructive commands, protects policy definitions, and runs offline module verification.",
+        meta: { "File": ".agents/hooks/guard.py", "Enforcement": "Pre-Bash, Pre-Edit, Post-Edit", "Max Retries": "3 consecutive failed attempts" },
+        guardrail: "Quote-aware shell tokenizer blocks apply, destroy, and state rm/mv while permitting read-only commands and multi-line commit messages.",
+        code: ".agents/hooks/guard.py\n.agents/tests/test_hooks.py"
+      },
+      'healer-runner': {
+        title: "Autonomous Pipeline Healer",
+        tag: "AUTONOMOUS REMEDIATION",
+        desc: "GitHub Actions bot triggered on CI failure. Analyzes plan/lint/conftest errors, scaffolds compliant fixes, and commits updates to the pull request.",
+        meta: { "Script": ".agents/scripts/healer_runner.py", "Trigger": "pipeline_healer.yml (workflow_run failure)", "Safety Guard": "healer_guards.py" },
+        guardrail: "Refuses main branch, requires an open PR, enforces a 3-commit retry ceiling, and automatically restores the repository .agents/ directory before committing.",
+        code: ".agents/scripts/healer_runner.py\n.agents/scripts/healer_guards.py"
+      },
+      'ssm-contract': {
+        title: "SSM Discovery Contract",
+        tag: "SERVICE CATALOG API",
+        desc: "Contract published into every workload account via SSM Parameter Store (/platform/${env}/${region}/...). Tenant Terraform modules query this dynamically.",
+        meta: { "Scope": "Per-Account SSM Store", "Owner": "governance/discovery-publisher", "Contract Spec": "docs/DISCOVERY_CONTRACT.md" },
+        guardrail: "Tenants never hardcode VPC IDs, subnets, or cluster names. Breaking parameter renames require a v2 prefix and deprecation period.",
+        code: "docs/DISCOVERY_CONTRACT.md\niac-modules-repo/governance/discovery-publisher/main.tf"
+      },
+      'gate-checkov': {
+        title: "Checkov Unified IaC Scanner",
+        tag: "GOVERNANCE GATE",
+        desc: "Single source of truth for IaC security compliance in CI. Evaluates both raw HCL code and plan JSON artifacts against 1,500+ security benchmarks.",
+        meta: { "Config": ".checkov.yaml", "Plan Scan": "tfplan.json on every unit", "Pass Policy": "0 soft_fail | Zero tolerance" },
+        guardrail: "Inline #checkov:skip requires an explicit, audited rationale. Repository-wide skips are strictly restricted to non-applicable checks.",
+        code: ".checkov.yaml\nworkloads-live-repo/scripts/run-checkov.sh"
+      }
+    };
+
+    // View Switching Logic
+    let currentView = 'multi-account';
+
+    function initView(viewKey) {
+      currentView = viewKey;
+      const data = viewsData[viewKey];
+      if (!data) return;
+
+      document.getElementById('viewTitle').textContent = data.title;
+      document.getElementById('viewDescription').textContent = data.description;
+
+      // Render stats
+      const statsContainer = document.getElementById('viewStats');
+      statsContainer.innerHTML = data.stats.map(s => `
+        <div class="stat-badge">
+          <div class="stat-value">${s.val}</div>
+          <div class="stat-label">${s.label}</div>
+        </div>
+      `).join('');
+
+      // Render legend
+      const legendContainer = document.getElementById('diagramLegend');
+      legendContainer.innerHTML = data.legend.map(l => `
+        <div class="legend-item">
+          <div class="legend-dot" style="background: ${l.color};"></div>
+          <span>${l.label}</span>
+        </div>
+      `).join('');
+
+      // Inject SVG
+      document.getElementById('svgCanvasWrapper').innerHTML = data.svg;
+
+      // Select default node
+      const defaultNode = Object.keys(nodeDetails)[0];
+      selectNode(defaultNode);
+    }
+
+    // Node Selection & Detail Drawer Update
+    function selectNode(nodeId) {
+      // Remove active class from all SVG nodes
+      document.querySelectorAll('.node').forEach(n => n.classList.remove('active'));
+      const targetNode = document.getElementById(`node-${nodeId}`);
+      if (targetNode) {
+        targetNode.classList.add('active');
+      }
+
+      const info = nodeDetails[nodeId] || {
+        title: nodeId,
+        tag: "PLATFORM COMPONENT",
+        desc: "Detailed architectural component configured in this platform.",
+        meta: { "Repository": "enterprise-aws-infrastructure" },
+        guardrail: "Standard infrastructure security guardrails applied.",
+        code: "README.md"
+      };
+
+      document.getElementById('drawerTitle').textContent = info.title;
+      document.getElementById('drawerBadge').textContent = info.tag;
+      document.getElementById('drawerDesc').textContent = info.desc;
+
+      // Render metadata rows
+      const metaContainer = document.getElementById('drawerMeta');
+      metaContainer.innerHTML = Object.entries(info.meta).map(([k, v]) => `
+        <div class="meta-row">
+          <span class="meta-label">${k}:</span>
+          <span class="meta-val">${v}</span>
+        </div>
+      `).join('');
+
+      document.getElementById('drawerGuardrailText').textContent = info.guardrail;
+      document.getElementById('drawerCode').textContent = info.code;
+    }
+
+    // Tab Button Handlers
+    document.getElementById('viewTabs').addEventListener('click', (e) => {
+      const btn = e.target.closest('.tab-btn');
+      if (!btn) return;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      initView(btn.dataset.view);
+    });
+
+    // Workflow Simulation Flow
+    let simInterval = null;
+    function runSimulation() {
+      const simBar = document.getElementById('simBar');
+      const stepText = document.getElementById('simStepText');
+      const stepCounter = document.getElementById('simStepCounter');
+      simBar.style.display = 'flex';
+
+      const scenarios = {
+        'multi-account': [
+          { text: "1. Traffic enters network-hub AWS Network Firewall (STRICT_ORDER inspect)", node: "network-hub" },
+          { text: "2. Firewall permits legitimate egress; routes through Transit Gateway", node: "network-hub" },
+          { text: "3. Primary Region (eu-central-1) workloads-prod serves active traffic", node: "workloads-prod" },
+          { text: "4. Continuous Aurora Global replication & S3 sync to eu-west-1", node: "workloads-dr" },
+          { text: "5. Route 53 health check detects primary health; zero failover needed", node: "workloads-dr" }
+        ],
+        'agentic-workflows': [
+          { text: "1. Local AI Agent edits HCL module code in iac-modules-repo/", node: "local-agent" },
+          { text: "2. guard.py intercepts edit: verify-module.py executes 7 offline gates", node: "guard-hooks" },
+          { text: "3. Agent pushes branch; plan_scope.py scopes PR plan to modified unit", node: "plan-scoping" },
+          { text: "4. Checkov, OPA/Rego & Infracost evaluate plan JSON in CI", node: "ci-gates" },
+          { text: "5. Autonomous Healer remediates any transient policy finding", node: "healer-runner" }
+        ],
+        'quality-flywheel': [
+          { text: "1. Inner Loop: Agent laptop verified via guard.py and verify_module.py", node: "inner-verify" },
+          { text: "2. Middle Loop: CI PR gate verifies HCL + plan JSON across 4 matrices", node: "mid-gates" },
+          { text: "3. Saved plan apply on main strictly executes verified SHA256 plan", node: "mid-apply" },
+          { text: "4. Outer Loop: Nightly drift detection scans all accounts and regions", node: "out-drift" },
+          { text: "5. SLO Error Budget Gate tracks change success rate in platform_slo.json", node: "out-slo" }
+        ],
+        'idp-integration': [
+          { text: "1. Tenant requests Postgres capability in Backstage / OpenChoreo IDP", node: "idp-backstage" },
+          { text: "2. IDP pulls pinned release tag git ref: postgres-v1.0.0", node: "git-catalog" },
+          { text: "3. Tenant Terraform queries SSM Parameter Store for VPC ID & Subnets", node: "ssm-contract" },
+          { text: "4. Provisioning executes inside tenant workload account with zero hardcoded IDs", node: "tenant-tf" },
+          { text: "5. IAM boundary platform-workload-boundary enforces permission ceilings", node: "tenant-boundary" }
+        ],
+        'ci-cd-governance': [
+          { text: "1. Parallel matrix generates jobs for all accounts in accounts.hcl", node: "ci-matrix" },
+          { text: "2. Zero-key AWS OIDC assumes read-only github-actions-plan role", node: "ci-auth" },
+          { text: "3. Checkov (0 soft_fail) and OPA/Rego validate plan JSON artifacts", node: "gate-checkov" },
+          { text: "4. SHA256SUMS manifest seals the binary plan artifact", node: "apply-checksum" },
+          { text: "5. On merge to main, github-actions-apply applies verified saved plan", node: "apply-exec" }
+        ]
+      };
+
+      const steps = scenarios[currentView] || scenarios['multi-account'];
+      let currentStep = 0;
+
+      if (simInterval) clearInterval(simInterval);
+
+      simInterval = setInterval(() => {
+        if (currentStep >= steps.length) {
+          clearInterval(simInterval);
+          stepText.textContent = "Simulation Complete: Flow Verified Clean.";
+          stepCounter.textContent = "Finished";
+          setTimeout(() => { simBar.style.display = 'none'; }, 4000);
+          return;
+        }
+
+        const step = steps[currentStep];
+        stepText.textContent = step.text;
+        stepCounter.textContent = `Step ${currentStep + 1} of ${steps.length}`;
+        selectNode(step.node);
+        currentStep++;
+      }, 2500);
+    }
+
+    // Initialize default view
+    initView('multi-account');
+  </script>
+</body>
+</html>
