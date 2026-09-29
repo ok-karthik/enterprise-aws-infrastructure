@@ -1,6 +1,13 @@
 # Smallest useful use of this module. Also the plan that `make verify-module` checks with conftest.
 terraform {
   required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0"
+    }
+  }
 }
 
 provider "aws" {
