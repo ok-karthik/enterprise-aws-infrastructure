@@ -1109,14 +1109,14 @@ has been applied there yet, so there is no state or resource to migrate. Until
 
 ## Phase 9 — Observability and FinOps across accounts
 
-- [ ] **9.1** An observability account (Infrastructure OU) with CloudWatch cross-account
+- [x] **9.1** An observability account (Infrastructure OU) with CloudWatch cross-account
   observability (OAM sink there, links from every workload account through
   `account-baseline`). Amazon Managed Prometheus / Grafana workspace as an optional flag.
-- [ ] **9.2** Billing: a CUR 2.0 / Data Exports bucket in management (or a billing account),
+- [x] **9.2** Billing: a CUR 2.0 / Data Exports bucket in management (or a billing account),
   Cost Anomaly Detection monitors per OU (per-account budgets are already in 2.8), and a
   showback view by `CostCenter` tag. Update `FINOPS.md` with the measured cost of the landing
   zone itself (per-account baseline cost, NAT per VPC vs central egress).
-- [ ] **9.3 SLOs for the foundation itself** (observability is in 64% of Senior+ infra ads;
+- [x] **9.3 SLOs for the foundation itself** (observability is in 64% of Senior+ infra ads;
   SLOs in 21% of Staff ads). CloudWatch alarms and one dashboard in the observability account
   for "the guardrails are working" signals: CloudTrail delivery failures, Config recorder
   stopped, GuardDuty/Security Hub disabled in any account, root or BreakGlass sign-in, drift
@@ -1124,7 +1124,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   "99% of PR plans finish in < 10 min", "drift fixed within 5 working days", "new account
   vended in < 1 hour") and connect them to `.agents/sre/error_budgets.yaml`, so the
   error-budget gate uses real numbers instead of static ones.
-- [ ] **9.4 Delivery metrics for infra changes.** A small script (Python, run in CI) that
+- [x] **9.4 Delivery metrics for infra changes.** A small script (Python, run in CI) that
   computes lead time, deployment frequency, change failure rate (failed or reverted applies)
   and drift MTTR from GitHub Actions and issue history. It writes a weekly summary into the
   drift-detection issue or into `.agents/metrics/`.

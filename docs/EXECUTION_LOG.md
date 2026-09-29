@@ -579,3 +579,23 @@ Moved out of `PLAN.md` on 2026-09-28 (PLAN 10.8). Newest entries go at the botto
     toolbox image pins Terragrunt 1.0.3, and I could not confirm the flags exist there or the file names `--json-out-dir`
     writes (the workflow globs `*.json` for that reason). **First PR and first main run must be watched.** The Checkov IDs in
     `POLICIES.md` are from memory and marked unverified.
+  - **Phase 9.** 9.1: new `observability/oam` (sink / link, optional Managed Prometheus workspace; Managed Grafana is *not* built,
+    it needs Identity Center wiring), a new `observability` account in the registry (placeholder id `000000000007`, `ci = false`)
+    with a sink leaf, and an optional `observability_sink_arn` link in `governance/account-baseline`. 9.2: new
+    `governance/billing` (CUR 2.0 Data Export to a locked-down bucket, Cost Anomaly Detection per OU plus one by service,
+    cost allocation tags, Athena showback query in the README) with a management leaf; the Data Exports resource has no
+    `region` argument, so the module needs a `us-east-1` provider alias, which the leaf generates. `FINOPS.md` got a
+    landing-zone cost section that says plainly **nothing is measured yet** and how to measure it. 9.3: new
+    `observability/guardrail-signals` (six CloudTrail-based alarms and one dashboard; alarms in management, dashboard in
+    observability through OAM), `docs/SLO.md` (3 measurable SLOs, 1 not measurable yet), and the agent's error-budget gate now
+    prefers a measured value (`.agents/metrics/platform_slo.json`, at most 8 days old) over the static YAML, with the env
+    override still first. 9.4: `.agents/scripts/delivery_metrics.py` (lead time, deployment frequency, change failure rate,
+    drift MTTR, the `ai-generated` split for 11.5, cost per verified agent change) and a weekly workflow.
+    **Checked:** `terraform test` for oam (6), account-baseline (23), billing (6), guardrail-signals (5); `terragrunt render` of
+    the four new leaves; 27 agent tests (13 new, offline). **Not checked:** nothing was applied; `delivery_metrics.py` was tested
+    on synthetic data only and never run against the real `gh` API (field names come from `gh` help, unverified here); the
+    metric filter patterns were not run against real CloudTrail events; the CUR 2.0 column names in the Athena example are
+    unverified; FINOPS prices are from memory. **Not covered:** CloudTrail delivery failures (no metric exists) and "drift open
+    over 7 days" as an alarm (reported in the weekly summary instead). **Found:** none of `terraform validate`, and the
+    `moved`/alias behaviour of a root module with `configuration_aliases`, run in CI (see the Phase 8 note on the no-op
+    validate step): `governance/billing` would fail a standalone `terraform validate`.

@@ -228,6 +228,12 @@
       "package-name": "billing",
       "component": "billing",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/observability/guardrail-signals": {
+      "release-type": "terraform-module",
+      "package-name": "guardrail-signals",
+      "component": "guardrail-signals",
+      "tag-separator": "-"
     }
   }
 }

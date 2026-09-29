@@ -4,6 +4,7 @@ locals {
 
   # --- MODULE VERSIONS ---
   module_versions = {
-    oam = "oam-v1.0.0"
+    oam               = "oam-v1.0.0"
+    guardrail_signals = "guardrail-signals-v1.0.0"
   }
 }

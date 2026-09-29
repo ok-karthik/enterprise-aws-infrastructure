@@ -36,8 +36,34 @@ Non-production environments follow a surgical lifecycle:
 
 **The crossover:** central egress is cheaper once enough spoke VPCs share the same firewall that their combined local-NAT cost would exceed the firewall's flat cost — roughly break-even around 8–12 always-on spoke VPCs at 3 AZs each, before counting the value of one enforced domain allow-list (which local NAT cannot give you at any spoke count). For a handful of workload accounts, `local-nat` is cheaper; it is also the default, so nothing changes until a spoke opts into `central` deliberately.
 
+## 📈 What the landing zone itself costs (PLAN 9.2)
+
+**Not measured yet.** Nothing in the new organization has been applied, so there is no bill to read. The estimates below are written from memory of AWS list prices and behaviour, **not checked against current pricing pages**: verify each before quoting it. This section
+says what will cost money, and how to measure it once it does. Fill the "measured" column from real data (after one
+full month) and delete this paragraph.
+
+| Item | Cost driver | Estimate | Measured |
+|---|---|---|---|
+| Per-account baseline (`account-baseline`, KMS keys, IAM, SSM parameters) | 2 customer-managed KMS keys per account and region (about $1/month each) plus API calls | a few dollars per account | not yet |
+| Config, GuardDuty, Security Hub (per account) | Billed per recorded configuration item, per event and per check. **The biggest baseline line in most landing zones.** | tens of dollars per account, grows with resources | not yet |
+| Organization CloudTrail | The first management-event trail is free; data events, CloudTrail Lake and the log storage are not | depends on data events | not yet |
+| NAT per VPC vs central egress | See the egress section above | about $105 per spoke VPC (3 AZs) vs a shared firewall | not yet |
+| Cross-account observability (`observability/oam`) | Links are free. Cross-account metrics, logs and traces are shared without extra charge; you pay for what is stored and queried in each account | none extra | not yet |
+| Managed Prometheus (optional flag) | Per ingested sample and per stored sample | zero until `enable_prometheus = true` | n/a |
+| Cost Anomaly Detection, CUR 2.0 export | Anomaly Detection is free; the export costs S3 storage and any Athena queries | cents to a few dollars | not yet |
+| Guardrail alarms (`observability/guardrail-signals`) | Six alarms and six metric filters | about $0.60/month | not yet |
+
+**How to measure it** (after a month of real use):
+
+1. In Cost Explorer, group by **Service** and filter on the platform accounts (log-archive, security-tooling, network-hub,
+   shared-services, observability, management). That is the cost of the foundation.
+2. Group by **Linked account** for the per-account baseline, on a workload account that has no workloads yet.
+3. For "NAT per VPC vs central egress", compare `NatGateway-Hours` and `NatGateway-Bytes` usage types per account against the
+   inspection VPC's, using the CUR query in `iac-modules-repo/governance/billing/README.md`.
+4. Use Infracost on a plan for a module to see its estimate before it is applied (CI already does this per PR).
+
 ## 🏷️ Cost Allocation
-100% of resources are tagged with `Project` and `Environment`. This allows for granular reporting in **AWS Cost Explorer** using Tag-Based Cost Allocation.
+Every resource is tagged with `Project`, `Environment`, `Owner` and `DataClassification` (from `default_tags`). For a per-team **showback** the `CostCenter` tag must also be *activated* for cost allocation, which `governance/billing` does through `cost_allocation_tags` once a resource with that tag has appeared in billing data. See the Athena query in that module's README.
 
 ## 🛡️ Shield Advanced (PLAN 6.4)
 

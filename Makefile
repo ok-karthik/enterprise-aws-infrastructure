@@ -97,3 +97,4 @@ docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/data/backup
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/route53-failover
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/governance/billing
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/observability/guardrail-signals

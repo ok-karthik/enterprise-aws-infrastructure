@@ -20,7 +20,7 @@ Features:
 import argparse
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -464,6 +464,32 @@ def is_in_change_window(now_utc: datetime, windows: list[str]) -> bool:
     return False
 
 
+SLO_STATUS_PATH = BASE_DIR / "metrics" / "platform_slo.json"
+SLO_STATUS_MAX_AGE_DAYS = 8
+
+
+def measured_error_budget(prod_cfg: dict, now: Optional[datetime] = None, status_path: Optional[Path] = None) -> float:
+    """Remaining prod error budget in percent. Order of trust (PLAN 9.3):
+    1. SLO_ERROR_BUDGET_REMAINING (an explicit human override),
+    2. the measured value in .agents/metrics/platform_slo.json, if it is at most 8 days old and has a number
+       (written by delivery_metrics.py from real GitHub history),
+    3. the static number in error_budgets.yaml (the old behaviour, and the fallback when nothing is measured)."""
+    override = os.getenv("SLO_ERROR_BUDGET_REMAINING")
+    if override is not None:
+        return float(override)
+    path = status_path or SLO_STATUS_PATH
+    try:
+        status = json.loads(path.read_text())
+        value = status.get("error_budget_remaining_pct")
+        made = datetime.fromisoformat(status["generated_at"])
+        age = (now or datetime.now(timezone.utc)) - made
+        if value is not None and age <= timedelta(days=SLO_STATUS_MAX_AGE_DAYS):
+            return float(value)
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    return float(prod_cfg.get("error_budget_remaining_pct", 100.0))
+
+
 def check_sre_error_budget(env: str, bypass: bool = False, now: Optional[datetime] = None) -> tuple[bool, str]:
     """Inspects SRE error budgets and change windows for production change-risk gating."""
     if env != "prod" or bypass:
@@ -476,7 +502,7 @@ def check_sre_error_budget(env: str, bypass: bool = False, now: Optional[datetim
 
     config = yaml.safe_load(SRE_CONFIG_PATH.read_text()) or {}
     prod_cfg = config.get("environments", {}).get("prod", {})
-    remaining = float(os.getenv("SLO_ERROR_BUDGET_REMAINING", prod_cfg.get("error_budget_remaining_pct", 100.0)))
+    remaining = measured_error_budget(prod_cfg, now)
     critical_threshold = float(prod_cfg.get("critical_threshold_pct", 10.0))
 
     if remaining < critical_threshold and prod_cfg.get("freeze_on_exhaustion", True):
