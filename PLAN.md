@@ -1043,7 +1043,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   `python3 .agents/scripts/iac_agent_eval.py` and `python3 -m unittest discover -s .agents/tests`
   must pass.
 
-- [~] **8.9 One scanner per job, and every gate blocks (do before 8.10).** *Steps 1–4, 6, 7 done (PR `feat/p8-scanner-gates`); step 5 (remove `trivy config`) is still open.*
+- [x] **8.9 One scanner per job, and every gate blocks (do before 8.10).** *Steps 1–4, 6, 7 done (PR `feat/p8-scanner-gates`); step 5 (remove `trivy config`) done on the Phase 7–11 branch.*
   **Why:** today two tools do the same job, and the strict one is the wrong one. Checkov and
   Trivy both check Terraform for security problems. The static Checkov step is
   `soft_fail: true`, so its job goes green even with findings. The PR is still red because

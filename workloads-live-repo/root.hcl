@@ -24,6 +24,16 @@ locals {
 }
 
 
+# Wait for a held state lock instead of failing at once (PLAN 8.3). State is split per account, region and
+# component, so a lock is only ever held by another run on the SAME unit; 5 minutes covers a normal apply
+# without hiding a stuck lock for long. Applies to every command that takes the lock.
+terraform {
+  extra_arguments "lock_timeout" {
+    commands  = ["plan", "apply", "destroy", "import", "refresh"]
+    arguments = ["-lock-timeout=5m"]
+  }
+}
+
 # Generate an AWS provider block
 generate "provider" {
   path      = "provider.tf"

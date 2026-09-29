@@ -60,6 +60,15 @@ locals {
       monthly_budget_usd = 30                       # TODO(owner): monthly budget in USD
       ci                 = false                    # no live stack yet
     }
+    observability = {
+      id                 = "000000000007" # TODO(owner): real account ID
+      ou                 = "Infrastructure"
+      env                = "global"
+      email              = "aws+observability@example.com" # TODO(owner): real root email
+      create             = true
+      monthly_budget_usd = 30    # TODO(owner): monthly budget in USD
+      ci                 = false # PLAN 9.1: live folder exists, id is still a placeholder
+    }
     workloads-dev = {
       id                 = "000000000005" # TODO(owner): the existing "Account A" workload account
       ou                 = "NonProd"

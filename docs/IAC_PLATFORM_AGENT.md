@@ -34,7 +34,7 @@ The **IaC Platform Agent** is an autonomous platform engineering and SRE capabil
         ├── 3. tflint (AWS rules)
         ├── 4. Infracost delta threshold check
         ├── 5. Conftest OPA/Rego compliance rules
-        └── 6. Checkov CIS & Trivy security scans
+        └── 6. Checkov security scans
         │
         ▼
 [ 5. Delivery & Telemetry ]
@@ -61,7 +61,7 @@ The **IaC Platform Agent** is an autonomous platform engineering and SRE capabil
 
 4. [ Autonomous Synthesis & Validation ]
       └── Agent parses plan diff and synthesizes corrective Terragrunt HCL.
-      └── Runs the 5-stage validation ladder (OPA, Trivy, Infracost).
+      └── Runs the 5-stage validation ladder (OPA, Checkov, Infracost).
       └── Pushes a branch and opens a Pull Request that auto-closes the drift issue.
 ```
 
@@ -102,7 +102,7 @@ The validation ladder reuses standard repository tooling:
 - `terragrunt` (`>=1.0.3`)
 - `tflint`
 - `conftest` (OPA policies in `policy-library-repo/terraform/`)
-- `checkov` & `trivy` (optional for local offline runs; runs automatically in CI)
+- `checkov` (optional for local offline runs; runs automatically in CI)
 - `infracost` (optional; used when `--cost-threshold` is set)
 
 ---

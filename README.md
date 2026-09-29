@@ -3,7 +3,7 @@
 [![Terragrunt](https://img.shields.io/badge/Terragrunt-1.0.3-blue?logo=terraform)](https://terragrunt.gruntwork.io/)
 [![Terraform](https://img.shields.io/badge/Terraform-1.15.1-623CE4?logo=terraform)](https://www.terraform.io/)
 [![Policy: OPA](https://img.shields.io/badge/Policy-OPA%2FConftest-F7931E)](https://www.openpolicyagent.org/)
-[![Security: Trivy · Checkov](https://img.shields.io/badge/Security-Trivy_·_Checkov-1904DA)](https://github.com/aquasecurity/trivy)
+[![Security: Checkov](https://img.shields.io/badge/Security-Checkov-1904DA)](https://www.checkov.io/)
 [![FinOps: Infracost](https://img.shields.io/badge/FinOps-Infracost-0080FF)](https://www.infracost.io/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
@@ -19,7 +19,7 @@ A production-grade, multi-environment AWS platform built with **Terragrunt + Ter
 | :--- | :--- |
 | **100% DRY multi-env config** | Hierarchical Terragrunt blueprint — `root.hcl` generates provider + backend; `_envcommon/` holds shared module inputs; leaf files are ~10 lines. |
 | **Policy-as-code governance** | OPA/Rego gates run on the **Terraform plan JSON** — mandatory tagging, no legacy instance families. Unit-tested with `conftest verify`. |
-| **Multi-layer security scanning** | TFLint · Trivy · Checkov as blocking CI gates, plus module-level hardening (KMS, deny-all NACLs, Flow Logs). |
+| **Multi-layer security scanning** | TFLint · Checkov · Conftest/Rego as blocking CI gates (Trivy scans the toolbox image), plus module-level hardening (KMS, deny-all NACLs, Flow Logs). |
 | **Zero-key auth** | GitHub Actions OIDC assumes short-lived IAM roles. No static AWS credentials exist anywhere. |
 | **Self-healing CI** | On pipeline failure an agent pulls the failed logs, auto-upgrades provider locks or generates a fix diff, and pushes it to the PR branch. |
 | **Cost governance** | Infracost posts a per-module cost breakdown on every PR; spot + scale-to-zero keep non-prod near $0. |
@@ -59,7 +59,7 @@ See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the full inheritance mo
 
 ```mermaid
 graph LR
-    PR["PR / Push to main"] --> SA["Static Analysis\nTFLint · Trivy · Checkov"]
+    PR["PR / Push to main"] --> SA["Static Analysis\nTFLint · Checkov"]
     PR --> PD["Plan: dev"]
     PR --> PP["Plan: prod"]
     PD --> GD["OPA + Cost: dev"]
@@ -83,7 +83,7 @@ This repository features a fully autonomous Platform Engineering agent that conv
 ### Key Capabilities:
 - **Golden-Path First (Deterministic & $0 Cost):** Standard modules (encrypted S3, RDS PostgreSQL, DynamoDB) match pre-vetted templates with **zero LLM tokens and zero hallucination risk**. Uncatalogued requests route to the LLM scaffolding engine.
 - **Semantic Second-Opinion Gate:** Every generated diff passes an independent review by the Policy Auditor persona before validation.
-- **5-Stage Verification Ladder:** Every proposal must pass offline `-backend=false` init, TFLint, Conftest/OPA Rego rules, Trivy/Checkov security scans, and Infracost FinOps budgets.
+- **5-Stage Verification Ladder:** Every proposal must pass offline `-backend=false` init, TFLint, Conftest/OPA Rego rules, Checkov security scans, and Infracost FinOps budgets.
 - **Closed-Loop Drift Healing:** Responds to `/reconcile` issue comments to reverse-engineer AWS drift into an exact GitOps pull request.
 - **SRE Error-Budget Guardrails:** Automatically freezes production proposals if the environment error budget is below 10%.
 
@@ -110,7 +110,7 @@ This turns a red pipeline into an auto-generated fix proposal instead of a manua
 git clone https://github.com/ok-karthik/enterprise-aws-infrastructure.git
 cd enterprise-aws-infrastructure
 
-make install        # install the pre-commit hook (fmt + smoke-test + trivy)
+make install        # install the pre-commit hook (fmt + checkov)
 make validate       # full local validation suite (compliance, fmt, init/validate, tflint)
 make test           # run the OPA policy unit tests
 ```
@@ -147,7 +147,7 @@ Full tagging/IAM policy in [GOVERNANCE.md](GOVERNANCE.md).
 
 ## Tech stack
 
-Terragrunt · Terraform · GitHub Actions · OPA/Conftest · Infracost · Trivy · Checkov · TFLint · Renovate · AWS EKS · AWS VPC · Docker (toolchain image)
+Terragrunt · Terraform · GitHub Actions · OPA/Conftest · Infracost · Checkov · Trivy (image scan) · TFLint · Renovate · AWS EKS · AWS VPC · Docker (toolchain image)
 
 ## License
 

@@ -182,35 +182,6 @@ jobs:
           sarif_file: "checkov-results-${{ inputs.account }}.sarif"
           category: checkov-plan-${{ inputs.account }}
 
-      - name: "📂 X-Ray: Verify File Structure"
-        run: |
-          echo "🔍 Searching for plans..."
-          ls -R
-          mkdir -p plans/ # Ensure dir exists
-          cp .trivyignore plans/.trivyignore || true
-
-      - name: "Trivy Security Scan (Plan)"
-        run: |
-          PLAN_FILE=$(find plans -name "*.json" | head -n 1)
-          echo "🎯 Found Plan File: $PLAN_FILE"
-
-          echo "📡 Generating SARIF for GitHub Security Tab..."
-          trivy config "$PLAN_FILE" \
-            --severity CRITICAL,HIGH \
-            --format sarif \
-            --output trivy-results-${{ inputs.account }}.sarif \
-            --ignorefile plans/.trivyignore
-
-          echo "📊 Printing Table Report and enforcing security gate..."
-          trivy config "$PLAN_FILE" --severity CRITICAL,HIGH --ignorefile plans/.trivyignore --format table --exit-code 1
-
-      - name: Upload Trivy SARIF results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles(format('trivy-results-{0}.sarif', inputs.account)) != ''
-        with:
-          sarif_file: "trivy-results-${{ inputs.account }}.sarif"
-          category: trivy-plan-${{ inputs.account }}
-
   cost-analysis:
     name: "💰 Cost Analysis (Infracost): ${{ inputs.account }}"
     needs: [plan]

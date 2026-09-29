@@ -27,7 +27,7 @@ resource "aws_db_subnet_group" "this" {
 
 resource "aws_security_group" "this" {
   #checkov:skip=CKV_AWS_382: "The database only needs replies to inbound connections; egress is governed by the VPC. Same reasoning as data/postgres."
-  name        = "${local.identifier}-sg"
+  name_prefix = "${local.identifier}-sg-"
   description = "PostgreSQL access for ${var.team_name}/${var.app_name}"
   vpc_id      = var.vpc_id
 
@@ -49,6 +49,8 @@ resource "aws_security_group" "this" {
 
   tags = merge({ Name = "${local.identifier}-sg" }, local.tags)
 
+  # PLAN 8.4: name_prefix gives a replacement a different name, so it can be created before the old one is
+  # destroyed. Without it a change that forces replacement fails on "already exists" or drops traffic.
   lifecycle {
     create_before_destroy = true
   }

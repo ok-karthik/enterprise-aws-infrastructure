@@ -34,5 +34,7 @@
   "iac-modules-repo/security/shield-advanced": "1.0.0",
   "iac-modules-repo/data/aurora-postgres": "1.0.0",
   "iac-modules-repo/data/backup": "1.0.0",
-  "iac-modules-repo/network/route53-failover": "1.0.0"
+  "iac-modules-repo/network/route53-failover": "1.0.0",
+  "iac-modules-repo/observability/oam": "1.0.0",
+  "iac-modules-repo/governance/billing": "1.0.0"
 }

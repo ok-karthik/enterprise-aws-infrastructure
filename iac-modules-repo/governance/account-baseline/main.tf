@@ -522,3 +522,14 @@ resource "aws_ssm_parameter" "discovery" {
 
   tags = local.tags
 }
+
+# Cross-account observability (PLAN 9.1): send this account's metrics and logs to the observability account.
+# Regional, like the sink. The link is what makes the account's data visible there; nothing leaves the organization.
+resource "aws_oam_link" "observability" {
+  count = var.observability_sink_arn != "" ? 1 : 0
+
+  label_template  = "$AccountName"
+  resource_types  = ["AWS::CloudWatch::Metric", "AWS::Logs::LogGroup"]
+  sink_identifier = var.observability_sink_arn
+  tags            = var.tags
+}

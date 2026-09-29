@@ -216,6 +216,18 @@
       "package-name": "route53-failover",
       "component": "route53-failover",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/observability/oam": {
+      "release-type": "terraform-module",
+      "package-name": "oam",
+      "component": "oam",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/governance/billing": {
+      "release-type": "terraform-module",
+      "package-name": "billing",
+      "component": "billing",
+      "tag-separator": "-"
     }
   }
 }

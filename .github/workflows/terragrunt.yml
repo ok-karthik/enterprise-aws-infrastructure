@@ -57,14 +57,6 @@ jobs:
       - name: "Static Analysis"
         uses: ./.github/actions/static-analysis
 
-      - name: Upload Trivy SARIF results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-          category: 'static-analysis'
-
-
 
   # ─────────────────────────────────────────────────────────────
   # Account matrix: which accounts does the pipeline run for?

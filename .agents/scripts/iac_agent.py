@@ -611,7 +611,7 @@ def validation_ladder(
     cost_threshold: Optional[float] = None,
 ) -> tuple[bool, Optional[str], Optional[str], Optional[float]]:
     """
-    Validation ladder with syntax, static lint, offline validation, OPA/Checkov/Trivy,
+    Validation ladder with syntax, static lint, offline validation, OPA/Checkov,
     and Infracost monthly budget enforcement.
     """
     leaf_dir = live_env_dir(env) / region / module_path
@@ -649,7 +649,7 @@ def validation_ladder(
         print(f"   ⏭️  Skipping tflint — {module_dir.relative_to(REPO_ROOT)} doesn't exist (registry module).")
 
     if skip_plan:
-        print("   ⏭️  Skipping plan/OPA/Checkov/Trivy/Infracost — no AWS credentials available (--skip-plan).")
+        print("   ⏭️  Skipping plan/OPA/Checkov/Infracost — no AWS credentials available (--skip-plan).")
         return True, None, None, None
 
     res = run(["terragrunt", "plan", "-out=tfplan.bin", "--non-interactive"], cwd=leaf_dir)
@@ -687,16 +687,6 @@ def validation_ladder(
     gates = [("conftest", ["conftest", "test", "--policy", str(REPO_ROOT / "policy-library-repo" / "terraform"), str(plan_json)], REPO_ROOT)]
     if module_dir.exists():
         gates.append(("checkov", ["checkov", "-d", str(module_dir), "--config-file", str(REPO_ROOT / ".checkov.yaml")], REPO_ROOT))
-        gates.append((
-            "trivy",
-            [
-                "trivy", "config", str(module_dir),
-                "--severity", "CRITICAL,HIGH",
-                "--ignorefile", str(REPO_ROOT / ".trivyignore"),
-                "--tf-exclude-downloaded-modules",
-            ],
-            REPO_ROOT,
-        ))
 
     for name, cmd, cwd in gates:
         res = run(cmd, cwd=cwd)
@@ -1009,7 +999,7 @@ def main():
     parser.add_argument("--provider", choices=["gemini", "groq", "openai", "ollama"], default="gemini")
     parser.add_argument("--model", default=None)
     parser.add_argument("--max-retries", type=int, default=3)
-    parser.add_argument("--skip-plan", action="store_true", help="Skip terragrunt plan + OPA/Checkov/Trivy.")
+    parser.add_argument("--skip-plan", action="store_true", help="Skip terragrunt plan + OPA/Checkov.")
     parser.add_argument("--no-branch", action="store_true", help="Don't create a new branch.")
     parser.add_argument("--dry-run", action="store_true", help="Scaffold only. No LLM diff, no validation.")
     parser.add_argument("--cost-threshold", type=float, default=None, help="Monthly cost threshold in USD for Infracost.")

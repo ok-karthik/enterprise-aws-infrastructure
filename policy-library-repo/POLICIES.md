@@ -19,18 +19,27 @@ not listed here** (`workloads-live-repo/scripts/check_policy_catalog.py`).
 | admin-attachments | Admin-level managed policies on anything except `github-actions-apply*` / `break-glass*` roles or the break-glass permission set | `deny_admin_attachments.rego` | critical | Org-specific role names |
 | member-org-admin | A member-account bootstrap StackSet that can manage Organizations or Identity Center, or is not named `bootstrap-*` | `deny_member_org_admin.rego` | critical | Org-specific StackSet contract |
 | legacy-instances | Old-generation EC2 instance types | `no_legacy_instances.rego` | medium | Org-specific list of allowed families |
-| public-s3 | Missing S3 Block Public Access flags; bucket policy with `Principal: "*"` and no `aws:PrincipalOrgID` | `deny_public_s3.rego` | critical | **Overlaps Checkov** (CKV_AWS_53-56, CKV_AWS_70). Kept until each test case is mapped to a Checkov ID (8.10) |
-| encryption | Unencrypted RDS, EBS, launch template volumes, S3 without SSE config, SQS and SNS | `require_encryption.rego` | high | **Overlaps Checkov** (CKV_AWS_16, 3, 19, 27, 26). Same |
-| open-ingress | Security group ingress from `0.0.0.0/0` on 22, 3389, 5432, 3306, 6379, 27017, 9200 (or all ports) | `deny_open_ingress.rego` | critical | **Overlaps Checkov** (CKV_AWS_24, 25, 260). Same |
-| iam-wildcards | IAM policy that allows `Action: *` on `Resource: *` (permissions boundaries are named exceptions) | `deny_iam_wildcards.rego` | critical | **Overlaps Checkov** (CKV_AWS_62, 63, 286-290). Same |
+| encryption-ec2 | Unencrypted root or extra block devices on `aws_instance`, and launch template EBS mappings without `encrypted = true` | `require_encryption.rego` | high | No Checkov equivalent: `CKV_AWS_8` (instances) is skipped repo-wide in `.checkov.yaml`, and Checkov has no launch template check |
+| open-datastore-ports | Security group ingress from `0.0.0.0/0` or `::/0` on 5432, 3306, 6379, 27017, 9200 (or all ports) | `deny_open_ingress.rego` | critical | Checkov only covers 22, 3389, 80 and all ports (`CKV_AWS_24`, `25`, `260`, `277`), not datastore ports |
+| iam-wildcards | IAM policy that allows `Action: *` on `Resource: *` (permissions boundaries are named exceptions) | `deny_iam_wildcards.rego` | critical | Organisational permission boundary (`platform-workload-boundary`) is a named exception |
+
+## Moved to Checkov (PLAN 8.10)
+
+These used to be Rego rules. Each case was mapped to a Checkov check (IDs confirmed with `checkov --list`) and the Rego
+was removed or trimmed. Checkov enforces them on the HCL and on every `tfplan.json`.
+
+| Was | Now enforced by |
+|---|---|
+| `deny_public_s3.rego` (block public access flags, public bucket policy), removed | `CKV_AWS_53`, `54`, `55`, `56`, `CKV_AWS_70` |
+| `require_encryption.rego`: RDS, standalone EBS volumes, S3, SQS, SNS, trimmed | `CKV_AWS_16`, `CKV_AWS_3`, `CKV_AWS_19`, `CKV_AWS_27`, `CKV_AWS_26` |
+| `deny_open_ingress.rego`: ports 22 and 3389, trimmed | `CKV_AWS_24`, `CKV_AWS_25` |
+
+Not fully equivalent, worth knowing: Rego accepted a bucket policy with `Principal: "*"` when limited by
+`aws:PrincipalOrgID`; check `CKV_AWS_70`'s behaviour on that pattern before relying on it. The old "S3 SSE must be in
+the same module" logic is replaced by `CKV_AWS_19`, which checks the bucket's own encryption configuration resource.
 
 `helpers.rego` holds shared functions, not rules.
 
-> The Checkov IDs above are a starting guess written from memory and **not yet verified** against Checkov's list.
-> Checking them is the first step of the 8.10 mapping.
-
-The four "overlaps Checkov" rules are candidates for removal, **only after** every case in their `_test.rego` maps
-to a Checkov check and Checkov is confirmed blocking locally and in CI. Not done yet: see `docs/EXECUTION_LOG.md`.
 
 ## Checkov
 

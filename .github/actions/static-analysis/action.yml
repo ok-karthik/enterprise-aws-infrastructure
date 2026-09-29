@@ -89,28 +89,6 @@ runs:
         sarif_file: checkov-results.sarif
         category: static-analysis-checkov
 
-    - name: Run Trivy Scan (Security)
-      if: ${{ !cancelled() }}
-      shell: bash
-      run: |
-        echo "🛡️ Running Trivy scan (SARIF)..."
-        trivy config . \
-          --severity CRITICAL,HIGH \
-          --format sarif \
-          --output trivy-results.sarif \
-          --ignorefile .trivyignore \
-          --tf-exclude-downloaded-modules
-
-        echo "📊 Printing Table Report and enforcing security gate..."
-        trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --format table --tf-exclude-downloaded-modules --exit-code 1
-
-    - name: Upload Trivy SARIF results
-      uses: github/codeql-action/upload-sarif@v4
-      if: always() && hashFiles('trivy-results.sarif') != ''
-      with:
-        sarif_file: trivy-results.sarif
-        category: static-analysis-trivy
-
     - name: License Compliance Check
       if: ${{ !cancelled() }}
       shell: bash

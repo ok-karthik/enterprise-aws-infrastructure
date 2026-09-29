@@ -80,11 +80,17 @@ resource "aws_subnet" "this" {
 # Resolver endpoints: inbound (on-prem -> AWS) and outbound (AWS -> on-prem).
 # ------------------------------------------------------------------------------
 resource "aws_security_group" "inbound" {
-  name        = "${var.name}-resolver-inbound"
+  name_prefix = "${var.name}-resolver-inbound-"
   description = "Allows DNS (53/tcp+udp) from on-premises networks to the inbound resolver endpoint"
   vpc_id      = aws_vpc.this.id
 
   tags = local.tags
+
+  # PLAN 8.4: name_prefix gives a replacement a different name, so it can be created before the old one is
+  # destroyed. Without it a change that forces replacement fails on "already exists" or drops traffic.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_vpc_security_group_ingress_rule" "inbound_udp" {
@@ -129,11 +135,17 @@ resource "aws_route53_resolver_endpoint" "inbound" {
 }
 
 resource "aws_security_group" "outbound" {
-  name        = "${var.name}-resolver-outbound"
+  name_prefix = "${var.name}-resolver-outbound-"
   description = "Allows the outbound resolver endpoint to reach on-premises DNS servers"
   vpc_id      = aws_vpc.this.id
 
   tags = local.tags
+
+  # PLAN 8.4: name_prefix gives a replacement a different name, so it can be created before the old one is
+  # destroyed. Without it a change that forces replacement fails on "already exists" or drops traffic.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_vpc_security_group_egress_rule" "outbound_dns" {

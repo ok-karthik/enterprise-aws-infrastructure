@@ -33,10 +33,6 @@ lint: ## Run TFLint recursively
 validate: ## Full local validation suite (compliance, fmt, init/validate, tflint)
 	./workloads-live-repo/scripts/smoke-test.sh
 
-.PHONY: security
-security: ## Trivy security scan of the repo
-	trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --tf-exclude-downloaded-modules
-
 .PHONY: checkov
 checkov: ## Checkov with the CI settings (.checkov.yaml); the same result as the CI check
 	./workloads-live-repo/scripts/run-checkov.sh --compact --quiet
@@ -100,3 +96,4 @@ docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/data/aurora-postgres
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/data/backup
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/route53-failover
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/governance/billing

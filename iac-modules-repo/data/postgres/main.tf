@@ -44,7 +44,7 @@ resource "aws_db_subnet_group" "this" {
 resource "aws_security_group" "this" {
   #checkov:skip=CKV_AWS_382: "RDS needs outbound access for S3 import/export, extensions and replication; egress is governed by the VPC (endpoints, NACLs, route tables) and the SG allows ingress only from the private supernet on 5432"
   count       = var.vpc_id != "" ? 1 : 0
-  name        = "${local.identifier}-sg"
+  name_prefix = "${local.identifier}-sg-"
   description = "PostgreSQL access for ${var.team_name}/${var.app_name}"
   vpc_id      = var.vpc_id
 
@@ -72,6 +72,12 @@ resource "aws_security_group" "this" {
     },
     var.tags
   )
+
+  # PLAN 8.4: name_prefix gives a replacement a different name, so it can be created before the old one is
+  # destroyed. Without it a change that forces replacement fails on "already exists" or drops traffic.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_db_instance" "this" {

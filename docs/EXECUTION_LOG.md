@@ -564,9 +564,16 @@ Moved out of `PLAN.md` on 2026-09-28 (PLAN 10.8). Newest entries go at the botto
     `generate-module.sh` still used the pre-OU layout (`workloads-live-repo/workloads-<env>`); both fixed and tested, and the
     prompts and `AGENTS.md` paths and required tags updated. 8.10 (partly): `policy-library-repo/POLICIES.md` (one catalog)
     and a CI check that fails when a Rego rule is not listed (tested).
-    **Not done, on purpose:** 8.9 step 5 (removing `trivy config`) and the removal of the Rego rules that duplicate Checkov
-    (8.10): an automated control blocked the first as a CI-gate removal, so both are left for the owner to decide. 8.2 (Digger)
-    is not built: the plan marks it low priority and the ADR is the owner's. The Rego `exceptions` data file is not built.
+    **8.9 step 5 and the 8.10 pruning (done after the owner said so):** `trivy config` is gone from the static-analysis
+    action, the plan job, `terragrunt.yml`, pre-commit, `make security` and the agent's validation ladder, and `.trivyignore`
+    is deleted; Trivy now only scans the toolbox image. Rego: `deny_public_s3` removed (every case maps to `CKV_AWS_53-56`, `70`);
+    `require_encryption` trimmed to EC2 instance and launch template volumes; `deny_open_ingress` trimmed to the datastore ports;
+    `deny_iam_wildcards` kept. Checkov IDs checked with `checkov --list`. **Finding:** the cases I kept have no Checkov cover,
+    because `.checkov.yaml` skips `CKV_AWS_8` repo-wide under the comment "Detailed monitoring", but `CKV_AWS_8` is EBS
+    encryption for instances and launch configurations, so Checkov does not enforce it here (comment is wrong, owner to
+    decide). `conftest verify`: 48 tests pass. 8.2 (Digger) is not built: the plan marks it low priority and the ADR is the
+    owner's. The Rego `exceptions` data file is not built. **Also found:** the CI step "Terraform Validate" uses
+    `find iac-modules-repo -maxdepth 2 -name main.tf`, but module files are at depth 3, so it has never validated anything.
     **Not checked:** none of the workflow changes ran on GitHub (no actionlint available; YAML parses). The `--out-dir` /
     `--json-out-dir` / `--filter=[origin/<base>...HEAD]` flags were read from `terragrunt run --help` (1.1.1), but the
     toolbox image pins Terragrunt 1.0.3, and I could not confirm the flags exist there or the file names `--json-out-dir`

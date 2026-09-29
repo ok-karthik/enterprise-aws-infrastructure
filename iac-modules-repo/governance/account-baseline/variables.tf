@@ -79,6 +79,21 @@ variable "enable_vpc_block_public_access" {
   default     = true
 }
 
+variable "observability_sink_arn" {
+  description = <<-EOT
+    ARN of the CloudWatch cross-account observability sink in the observability account (PLAN 9.1), in THIS region.
+    When set, this account sends its metrics and logs to it through an OAM link. Empty (the default) creates no link:
+    leave it empty until the observability account and its sink exist.
+  EOT
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.observability_sink_arn == "" || can(regex("^arn:aws[a-z-]*:oam:[a-z0-9-]+:[0-9]{12}:sink/[a-z0-9-]+$", var.observability_sink_arn))
+    error_message = "observability_sink_arn must be empty or an OAM sink ARN (arn:aws:oam:<region>:<account>:sink/<id>)."
+  }
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)

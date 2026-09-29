@@ -101,7 +101,6 @@ terragrunt hcl fmt
 
 # Lint / security / policy
 tflint --init && tflint --recursive --format=compact
-trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --tf-exclude-downloaded-modules
 make checkov        # same settings and result as the CI Checkov check (.checkov.yaml)
 make image-scan     # build the toolbox image and Trivy-scan it (needs Docker)
 conftest test --policy policy-library-repo/terraform <plan.json>   # policy runs against plan JSON, not HCL
@@ -116,7 +115,7 @@ cd workloads-live-repo/workloads/nonprod/workloads-dev/eu-central-1/compute/eks 
 # Scaffold a new module manually
 ./workloads-live-repo/scripts/generate-module.sh <category/module-name> [env] [region]
 
-# Install the pre-commit hook (fmt + trivy + checkov on every commit)
+# Install the pre-commit hook (fmt + checkov on every commit)
 pre-commit install
 ```
 
@@ -152,7 +151,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
   - `no_legacy_instances.rego` — blocks old instance families (`t2.`, `m3.`, `m4.`, `c3.`, `c4.`).
   - `deny_admin_attachments.rego`, `deny_public_s3.rego`, `deny_open_ingress.rego`, `deny_iam_wildcards.rego`, `require_encryption.rego` — see `docs/CICD.md` for what each blocks. Shared helpers live in `helpers.rego` (all files are package `main`, so helper names must not collide).
 - **Checkov** — the only Checkov settings file is `.checkov.yaml`; always run it through `./workloads-live-repo/scripts/run-checkov.sh` (or `make checkov`), which is what CI and the pre-commit hook run, so the result matches. It blocks (no `soft_fail`). Accept a finding with an inline `#checkov:skip=<ID>: <reason>` on that resource; the repo-wide `skip-check` list is only for checks that do not apply to the platform. Plan-stage Checkov runs on every `tfplan.json`. Checkov IAM checks read only Allow statements, so a Deny does not clear a finding. The Checkov version is pinned in `.github/docker/Dockerfile` (`CHECKOV_VERSION`, Renovate-managed).
-- **Trivy** — `trivy config` (Terraform, `CRITICAL,HIGH`, suppressions in `.trivyignore`) stays until PLAN 8.9 step 5. `publish-toolchain.yml` also scans the toolbox image (`trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1`) before pushing it; `make image-scan` runs it locally.
+- **Trivy** — scans the toolbox image only (it no longer scans Terraform, PLAN 8.9). `publish-toolchain.yml` scans the toolbox image (`trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1`) before pushing it; `make image-scan` runs it locally.
 - Gate ownership (8.9): tflint = written correctly, Checkov = secure, conftest/Rego = this org's rules, Trivy = the toolbox image.
 - **Infracost** — posts a per-module cost breakdown PR comment (and blocks agent changes exceeding configured budget thresholds).
 
@@ -161,7 +160,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 ## 6. CI/CD Pipeline
 
 - `terragrunt.yml` — main orchestrator. Static analysis + one reusable stack per account run in parallel (the account matrix is generated from `foundation-live-repo/_config/accounts.hcl` by `workloads-live-repo/scripts/generate_account_matrix.py`; an account runs only with `ci = true`, a live folder and a real account id). On push to `main`, an `apply` matrix job runs one account at a time (management, core, dev, staging, prod), each in the account's GitHub Environment (prod requires manual approval).
-- `reusable-terragrunt.yml` — per-account plan → governance (OPA on every plan, Checkov on every plan, Trivy) → cost analysis. Plans are generated as `tfplan.bin`, converted to `tfplan.json`, uploaded as artifacts, and consumed by the gate jobs.
+- `reusable-terragrunt.yml` — per-account plan → governance (OPA on every plan, Checkov on every plan) → cost analysis. Plans are generated as `tfplan.bin`, converted to `tfplan.json`, uploaded as artifacts, and consumed by the gate jobs.
 - Auth is **zero-key OIDC** with two roles per account, straight into the target account (no shared role, no role chaining, no per-environment role variables): plan/governance/drift jobs assume the read-only `arn:aws:iam::<account-id>:role/github-actions-plan` (trusted from PRs and `main`); apply/destroy jobs assume `.../github-actions-apply` (trusted only from that account's GitHub Environment: `management`, `core`, `dev`, `prod`), via `setup-platform`. The account id comes from the registry. No static AWS credentials exist.
 - `drift-detection.yml` — nightly matrix over the account matrix; manages one GitHub Issue per account (create/comment/auto-close) and prompts for ChatOps reconciliation.
 - `chatops_generator.yml` — listens for `/generate` and `/reconcile` issue/PR comments to trigger automated module authoring and PR creation.
@@ -204,7 +203,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
     1.  **Golden-Path Catalog** (`.agents/catalog/golden-paths.yaml`): Deterministic keyword matching renders pre-vetted modules (`data-s3-encrypted`, `data-rds-postgres`) with zero LLM-authored HCL.
     2.  **Uncatalogued Requests**: LLM classification (`classify_request`) + deterministic scaffolding (`scaffold_skeleton`) + diff-only generation (`generate_diff`) informed by live Rego/Checkov policy digests (`build_policy_digest`).
     3.  **Semantic Second-Opinion Gate**: Every diff passes independent LLM review via the Policy Auditor persona before validation.
-    4.  **Full Validation Ladder**: Offline validation (`-backend=false`), `tflint`, OPA/Conftest, Checkov, Trivy, and Infracost cost threshold gating.
+    4.  **Full Validation Ladder**: Offline validation (`-backend=false`), `tflint`, OPA/Conftest, Checkov, and Infracost cost threshold gating.
     5.  **Drift-to-Diff Reconciliation** (`--reconcile`): Ingests Terraform plan drift outputs and generates corrective HCL diffs.
     6.  **ChatOps Trigger** (`.github/workflows/chatops_generator.yml`): Responds to `/generate` and `/reconcile` issue comments.
     7.  **Multi-Module Graph Decomposition** (`--graph`): Topologically decomposes multi-service requests (VPC + EKS + RDS) with cross-module dependency injection.
