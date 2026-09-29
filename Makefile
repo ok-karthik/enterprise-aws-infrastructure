@@ -44,6 +44,12 @@ image-scan: ## Build the toolbox image and scan it with Trivy (needs Docker), li
 		public.ecr.aws/aquasecurity/trivy:$$(sed -n 's/^ARG TRIVY_VERSION=//p' .github/docker/Dockerfile | head -n 1) \
 		image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 infrastructure-toolchain:scan
 
+.PHONY: verify-module
+verify-module: ## Check ONE module with the CI tools, no AWS credentials: make verify-module MODULE=storage/s3
+	@test -n "$(MODULE)" || { echo "usage: make verify-module MODULE=<category/name>"; exit 2; }
+	@mkdir -p "$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}"
+	TF_PLUGIN_CACHE_DIR="$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}" python3 workloads-live-repo/scripts/verify_module.py $(MODULE) $(VERIFY_ARGS)
+
 .PHONY: plan
 plan: ## Plan one workload account: make plan ENV=nonprod/workloads-dev
 	cd workloads-live-repo/workloads/$(ENV) && terragrunt run --all plan --non-interactive --log-format bare

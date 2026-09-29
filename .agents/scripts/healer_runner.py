@@ -8,6 +8,8 @@ from typing import Optional
 import requests
 from openai import OpenAI
 
+from healer_guards import AI_LABEL, count_healer_commits, push_decision
+
 # ==========================================
 # 1. Environment & API Setup
 # ==========================================
@@ -206,14 +208,58 @@ def run_lock_file_upgrade() -> bool:
     return False
 
 
+def find_open_pr(repo: str, branch: str, token: str) -> Optional[int]:
+    """Number of the open pull request whose head is this branch in THIS repository, else None."""
+    owner = repo.split("/")[0]
+    url = f"https://api.github.com/repos/{repo}/pulls"
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+    try:
+        response = requests.get(url, headers=headers, params={"head": f"{owner}:{branch}", "state": "open"}, timeout=20)
+        if response.status_code == 200 and response.json():
+            return int(response.json()[0]["number"])
+    except Exception as e:
+        print(f"⚠️ Could not look up the pull request for {branch}: {e}")
+    return None
+
+
+def label_pull_request(repo: str, number: int, token: str) -> None:
+    """Mark the PR `ai-generated` (PLAN 11.5). Best effort: a failed label never fails the healer."""
+    url = f"https://api.github.com/repos/{repo}/issues/{number}/labels"
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+    try:
+        requests.post(url, headers=headers, json={"labels": [AI_LABEL]}, timeout=20)
+    except Exception as e:
+        print(f"⚠️ Could not label PR #{number}: {e}")
+
+
+def changed_paths() -> list[str]:
+    """Every path the working tree changes (modified, added, deleted, untracked)."""
+    res = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
+    return [line[3:].split(" -> ")[-1].strip('"') for line in res.stdout.splitlines() if line.strip()]
+
+
 def commit_and_push_changes(commit_message: str) -> bool:
-    """Stages all local modifications, commits them, and pushes to the PR branch."""
+    """Stages all local modifications, commits them, and pushes to the PR branch, within the hard limits (healer_guards)."""
     head_branch = os.getenv("HEAD_BRANCH")
     if not head_branch:
         print("⚠️ HEAD_BRANCH env var is not set. Skipping git commit/push.")
         return False
 
-    print(f"🚀 Committing and pushing fixes to branch: {head_branch}...")
+    # The workflow copies main's .agents/ over the checkout so the latest healer code runs. That is for running, not for
+    # committing: put the branch's own .agents/ back so those differences never end up in the fix commit.
+    subprocess.run(["git", "reset", "-q", "HEAD", "--", ".agents"], capture_output=True)
+    subprocess.run(["git", "checkout", "--", ".agents"], capture_output=True)
+
+    # Hard limits first: never main, only a branch with an open PR, at most N healer commits, no protected paths.
+    log =subprocess.run(["git", "log", "--format=%s", "origin/main..HEAD"], capture_output=True, text=True)
+    prior = count_healer_commits(log.stdout.splitlines())
+    open_pr = None if head_branch in ("main", "master") else find_open_pr(GITHUB_REPOSITORY, head_branch, GITHUB_TOKEN)
+    allowed, reason = push_decision(head_branch, open_pr, prior, changed_paths())
+    if not allowed:
+        print(f"🛑 [Healer] Standing down: {reason}.")
+        return False
+
+    print(f"🚀 Committing and pushing fixes to branch: {head_branch} (PR #{open_pr}, healer commit {prior + 1})...")
     subprocess.run(["git", "config", "user.name", "github-actions[bot]"])
     subprocess.run(["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"])
 
@@ -235,6 +281,7 @@ def commit_and_push_changes(commit_message: str) -> bool:
         print(f"❌ Failed to push changes to branch {head_branch}. Error:\n{push_res.stderr}")
         return False
 
+    label_pull_request(GITHUB_REPOSITORY, open_pr, GITHUB_TOKEN)
     print("🎉 Successfully pushed remediation commit to the PR branch!")
     return True
 

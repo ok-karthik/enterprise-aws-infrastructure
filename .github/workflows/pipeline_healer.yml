@@ -14,6 +14,7 @@ jobs:
     permissions:
       actions: read     # download the logs of the failed run
       contents: write   # push the remediation commit to the PR branch
+      pull-requests: write # find the branch's open PR (it refuses to push without one) and label it ai-generated
     # Run inside the platform toolchain container to access terragrunt/terraform
     container:
       image: ghcr.io/ok-karthik/infrastructure-toolchain:latest

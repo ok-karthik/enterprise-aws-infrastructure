@@ -1215,7 +1215,7 @@ these before 11.2 and 11.4:
 - `trivy config` still runs in pre-commit and `make security` (8.9 step 5 is open). 11.1 leaves
   it out.
 
-- [ ] **11.1 One command to check one module locally.** `make verify-module
+- [x] **11.1 One command to check one module locally.** `make verify-module
   MODULE=<category/name>` runs these checks on one module in `iac-modules-repo`, with no AWS
   credentials: `terraform fmt -check`, `init -backend=false`, `validate`, `tflint`, Checkov through
   `workloads-live-repo/scripts/run-checkov.sh` (the CI settings, per 8.9), `terraform test` (the
@@ -1241,7 +1241,7 @@ these before 11.2 and 11.4:
   fails `make verify-module` locally with the same check ID CI reports, and a clean module passes
   with no AWS credentials in the environment.
 
-- [ ] **11.2 Hooks and hard limits for local coding agents.** Write the rules once, tool-neutral,
+- [~] **11.2 Hooks and hard limits for local coding agents.** Write the rules once, tool-neutral,
   in `.agents/AGENTS.md`. Add a committed `.claude/settings.json` as one implementation of them.
   - **After every edit:** run 11.1 for the module that was touched and give the short summary
     back to the agent.
@@ -1258,7 +1258,7 @@ these before 11.2 and 11.4:
   *Done when:* the tests pass, and in a real session the agent's `terragrunt apply` is refused and
   a broken edit gets the 11.1 summary back.
 
-- [ ] **11.3 Terraform MCP server: use it or not.**
+- [~] **11.3 Terraform MCP server: use it or not.**
   1. **Model: report what C1 connects to today.** `mcp_client.py` posts to `MCP_TERRAFORM_URL`
      (default `http://localhost:8080/mcp`). That is `hashicorp/terraform-mcp-server:1.2.0` from
      `.agents/mcp/docker-compose.yml` when it runs. `iac_agent.py` falls back to GitHub raw docs
@@ -1282,7 +1282,7 @@ these before 11.2 and 11.4:
   *Done when:* ADR 11 says use / don't use and why, and the compose file and `mcp_client.py`
   match it.
 
-- [ ] **11.4 Autonomy levels for this repo.** `docs/AGENT_AUTONOMY.md`: one row per agent (IaC
+- [x] **11.4 Autonomy levels for this repo.** `docs/AGENT_AUTONOMY.md`: one row per agent (IaC
   generation agent, pipeline healer, drift `/reconcile`, ChatOps `/generate`, local coding agents
   from 11.2). For each: its level per environment, what it may do there, and the control that
   enforces it.
@@ -1299,7 +1299,7 @@ these before 11.2 and 11.4:
   *Done when:* every agent in `.agents/AGENTS.md` §8 has a row, every control cell points at a
   file or setting that exists, and every gap links to a task.
 
-- [ ] **11.5 Measure AI changes.** Label every agent-created PR `ai-generated` (add `--label` to
+- [x] **11.5 Measure AI changes.** Label every agent-created PR `ai-generated` (add `--label` to
   `gh pr create` in `chatops_generator.yml`; the healer pushes commits, not PRs, so it adds the
   label to the PR it pushed to). Extend 9.4 to split its numbers by that label: change failure
   rate, rework (follow-up fixes or reverts within 7 days), time to first review and to merge.
@@ -1308,7 +1308,7 @@ these before 11.2 and 11.4:
   Report per team, never per person (see 11.6, works council). Needs 9.4 first.
   *Done when:* the weekly 9.4 summary shows agent and human PRs side by side, with sample sizes.
 
-- [ ] **11.6 Org adoption playbook.** `docs/AGENTIC_ADOPTION.md`: how to take these workflows from
+- [~] **11.6 Org adoption playbook.** `docs/AGENTIC_ADOPTION.md`: how to take these workflows from
   one repo to teams and then the whole organisation. **Model writes a draft; the owner rewrites it
   in their own words** (the Phase 10 writing rule). Until then the file starts with
   "Model-written draft, not yet reviewed". Sections:

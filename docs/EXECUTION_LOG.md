@@ -612,3 +612,37 @@ Moved out of `PLAN.md` on 2026-09-28 (PLAN 10.8). Newest entries go at the botto
     **Left for the owner, on purpose:** 10.1 (the ADRs, in your own words; `0012-terragrunt-stacks.md` is the only new one and is marked
     as a model-written proposal), 10.3 (the walkthrough you say out loud), 10.5 (failure drills need a sandbox and real postmortems),
     and the rest of 10.7.
+  - **Phase 11 (11.1-11.6; 11.7 is the owner's story card).** 11.1: `make verify-module MODULE=<category/name>`
+    (`workloads-live-repo/scripts/verify_module.py`): fmt, init, validate, tflint, checkov, terraform test, and conftest on a plan JSON
+    from `<module>/examples/basic`, offline with fake keys set in the environment only. Output: one line per failure
+    (`<tool> <check-id> <file>:<line>`), a status per step, `--json`, exit code 1 on failure; a step that cannot run says SKIPPED with a
+    reason, never a silent pass. **Checked first, as the plan asked:** with `.checkov.yaml`, `-d <module>` *narrows* the scan (6 checks on
+    `data/backup`, identical to a run without the config), it does not add to the `directory:` list. **Done-when, checked:** a clean module
+    (`storage/s3`) passes all 7 steps with no AWS credentials; a copy with public access turned off fails with `CKV_AWS_53`, `CKV_AWS_56`
+    and its own test. Only `storage/s3` and `network/route53-failover` have `examples/basic` so far; every other module reports conftest as
+    SKIPPED. **Found:** the new example made Checkov evaluate `route53-failover`'s alias records and flag `CKV2_AWS_23`, which would have
+    failed the next commit and CI; fixed with an inline skip and a reason.
+    11.2: the rules are in `.agents/AGENTS.md` ("Local agent guardrails"); `.claude/settings.json` + `.agents/hooks/guard.py` implement them
+    (block apply/destroy/import/force-unlock/state edits and `run --all` without a read-only command, through `cd`, `bash -c`, `sudo`, `xargs`
+    and `make`; block edits to the checks, the policy library and the hooks; run `verify-module` after a module edit; stop after 3 failures;
+    `guard.py reset` clears it). 22 tests found and fixed **four bugs in my own guard** (a flag value read as the command, a quoted string cut
+    in half, and a `lstrip` that removed the leading dot of `.checkov.yaml` so the protection never matched). **Seen live:** once installed,
+    the hook refused my own test command in this session. **Known limits:** the splitting ignores quotes, so a command that only *mentions* a
+    blocked command inside quotes is refused (I hit it twice); the fix is written up but the hook files are protected, so a human applies it
+    (`guard_quote_aware_split.md` in the session scratchpad; not tested by me). The "broken edit gets the summary back" half of the done-when
+    was covered by tests, not observed in a real session.
+    11.3: `.agents/mcp/README.md` (evaluation notes for ADR 11), the compose file (pinned tag, `127.0.0.1` only, no `TFE_TOKEN`, the unpinned
+    community Terragrunt image removed) and `mcp_client.py` (handshake, session id, SSE, the real tool names) with a fake-server test.
+    **Not run against the real server** (needs a Docker pull); the argument names of the two tools are from memory; `--toolsets=registry` is a
+    `TODO(owner)` because the container's command line was not verified. **Finding:** the old client sent no `initialize` and called tools that
+    are not in HashiCorp's list, so it most likely always used the GitHub fallback (a reading of the code, not a measurement). ADR 11 is the
+    owner's.
+    11.4: `docs/AGENT_AUTONOMY.md` (a row per agent, levels per environment, enforcing controls that exist, seven known gaps). **Confirmed today:**
+    `main` has no protection and no rulesets. **Fixed while writing it:** the healer (`healer_guards.py`, 9 tests) now refuses `main`, refuses a
+    branch without an open PR, stops after 3 healer commits and refuses protected paths, and puts back the branch's own `.agents/` before
+    committing; the ChatOps workflow ran for **any commenter on a public repo with LLM secrets and a write token**, and now needs OWNER, MEMBER or
+    COLLABORATOR, and lost an unused `id-token: write`. **Not run on GitHub.**
+    11.5: PRs from ChatOps and healer pushes get the `ai-generated` label; `delivery_metrics.py` splits every number by it with sample sizes,
+    prices CI minutes per verified agent change (LLM tokens are not recorded yet, so that part says so). Synthetic data only.
+    11.6: `docs/AGENTIC_ADOPTION.md`, marked as a model-written draft; the legal points are a checklist for legal, the DPO and the works council.
+    **Left for the owner:** 11.7 (story card), rewriting 11.6, ADR 11, and applying the guard fix.

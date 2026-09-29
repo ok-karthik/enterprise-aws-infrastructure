@@ -15,6 +15,7 @@ resource "aws_route53_health_check" "primary" {
 }
 
 resource "aws_route53_record" "primary" {
+  #checkov:skip=CKV2_AWS_23: "The alias target is an input (the load balancer lives in another stack), so this stack cannot contain the resource Checkov looks for"
   zone_id        = var.zone_id
   name           = var.record_name
   type           = "A"
@@ -34,6 +35,7 @@ resource "aws_route53_record" "primary" {
 }
 
 resource "aws_route53_record" "secondary" {
+  #checkov:skip=CKV2_AWS_23: "The alias target is an input (the load balancer lives in another stack), so this stack cannot contain the resource Checkov looks for"
   zone_id        = var.zone_id
   name           = var.record_name
   type           = "A"
