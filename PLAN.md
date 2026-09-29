@@ -45,8 +45,8 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ### Standing guardrails (apply to every phase, including the IaC agent in `.agents/`)
 
 - Never auto-push to `main`, never apply, never bypass the prod manual-approval gate.
-- Every change, human or agent, has to pass the OPA/Checkov/Trivy/Infracost gates as they
-  are. Suppressions go in `.checkov.yaml` / `.trivyignore`, each with a comment saying why.
+- Every change, human or agent, has to pass the OPA/Checkov/Infracost gates as they
+  are. Suppressions go in `.checkov.yaml` (or an inline `#checkov:skip`), each with a comment saying why.
 - Modules stay pure: no `provider` or `backend` blocks, and nothing environment-specific.
 - Security settings live in the modules (fail closed), not only in CI checks.
 - Diff-only, single-module-scoped generation stays the default for the IaC agent.
@@ -1155,14 +1155,14 @@ Everything goes under `docs/`.
       in ~49%, so write down why Terragrunt is still worth it here, and keep modules usable
       from plain Terraform.
   11. Terraform MCP server for the agents: use it or not, and on what terms (11.3)
-- [ ] **10.2 Architecture diagram**: one diagram (Mermaid in `docs/ARCHITECTURE.md`, plus an
+- [~] **10.2 Architecture diagram** *(Mermaid done and embedded in README and ARCHITECTURE.md; the exported PNG is not: no Mermaid renderer was available)*: one diagram (Mermaid in `docs/ARCHITECTURE.md`, plus an
   exported PNG for the README) showing OUs → accounts → CI identity chain → log and finding
   flows → network hub. It goes at the top of `README.md`.
 - [ ] **10.3 `docs/SYSTEM_DESIGN_WALKTHROUGH.md`**: the answer to "design the AWS foundation
   for a scaleup going from 3 to 50 teams", written to be said out loud in 20 minutes. Stage 1
   (one account) → stage 2 (this repo's layout) → stage 3 (multi-region, many teams). At each
   stage, cover what breaks first and what you'd add next. Link to the ADRs.
-- [ ] **10.4 README rewrite for a 90-second read**: what it is, the diagram, what's actually
+- [x] **10.4 README rewrite for a 90-second read**: what it is, the diagram, what's actually
   applied vs plan-only (be honest, using the 🟢/🟡/🔴 table), the security controls with
   links to `COMPLIANCE.md`, and how it connects to `internal-developer-platform`.
   **Fix these claims now, because a reviewer can check them:** (a) "deployed to a real AWS
@@ -1181,10 +1181,10 @@ Everything goes under `docs/`.
   assume its role), cause a state lock conflict, delete a VPC endpoint (private subnet loses
   access to SSM/ECR), apply a bad SCP to the Policy-Staging OU and roll it back. Link to the
   EKS drills in the IDP repo.
-- [ ] **10.6 Contributor guide** (the mentoring signal): `CONTRIBUTING.md` with "how to add a
+- [x] **10.6 Contributor guide** (the mentoring signal): `CONTRIBUTING.md` with "how to add a
   module in 30 minutes", a walkthrough of a good PR, and the review checklist the Policy
   Auditor agent uses. This shows how others would work in the repo, not just how you work.
-- [ ] **10.7 The single-account → multi-account migration as a story** (migration is in ~15%
+- [~] **10.7 The single-account → multi-account migration as a story** (migration is in ~15%
   of ads): record what 2.2's state-key migration actually took (units moved, downtime, what
   went wrong) in `docs/migrations/2026-single-to-multi-account.md`.
 

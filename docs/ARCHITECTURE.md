@@ -1,5 +1,67 @@
 # Architecture
 
+## The big picture (PLAN 10.2)
+
+One AWS Organization, one OU tree, one account per job. Solid arrows are what the code in this repo builds. **Nothing
+here is applied yet unless [`docs/EXECUTION_LOG.md`](EXECUTION_LOG.md) says so**: the diagram is the design the code and
+its offline tests implement.
+
+```mermaid
+flowchart TB
+    GH["GitHub Actions<br/>(OIDC, no static keys)"]
+
+    subgraph ORG["AWS Organization (management account owns the OU tree, SCPs, RCPs, Identity Center)"]
+        direction TB
+        MGMT["management<br/>organization, SCPs/RCPs,<br/>Identity Center, org CloudTrail,<br/>billing (CUR 2.0, anomalies)"]
+
+        subgraph SEC["OU: Security"]
+            LOGA["log-archive<br/>S3 + KMS: CloudTrail, Config,<br/>WAF, flow logs"]
+            SECT["security-tooling<br/>GuardDuty / Security Hub / Config<br/>delegated admin, alerts,<br/>auto-remediation Lambda, Firewall Manager"]
+        end
+
+        subgraph INF["OU: Infrastructure"]
+            NET["network-hub<br/>Transit Gateway,<br/>inspection + central egress"]
+            SHR["shared-services<br/>central VPC endpoints,<br/>DNS"]
+            OBS["observability<br/>OAM sink, guardrail dashboard"]
+        end
+
+        subgraph WL["OU: Workloads"]
+            DEV["workloads-dev (NonProd)<br/>VPC, EKS"]
+            PRD["workloads-prod (Prod)<br/>eu-central-1 primary,<br/>eu-west-1 warm standby"]
+        end
+    end
+
+    GH -- "PR: github-actions-plan (read-only)<br/>main: github-actions-apply<br/>(only from that account's<br/>GitHub Environment, boundary-capped)" --> MGMT
+    GH --> SEC
+    GH --> INF
+    GH --> WL
+
+    MGMT -- "organization CloudTrail" --> LOGA
+    SECT -- "findings, alarms" --> ALERT(["SNS: security alerts"])
+    WL -- "Config, flow logs, WAF logs" --> LOGA
+    WL -- "GuardDuty, Security Hub findings" --> SECT
+    WL -- "open SSH/RDP rule event" --> SECT
+    SECT -. "assume security-remediation,<br/>revoke the rule" .-> WL
+    WL == "TGW attachment" ==> NET
+    SHR == "TGW attachment" ==> NET
+    WL -- "metrics + logs (OAM link)" --> OBS
+    MGMT -- "guardrail metrics (OAM link)" --> OBS
+```
+
+### Reading it
+
+- **Identity chain.** GitHub proves who it is with an OIDC token. Each account has two roles made by the Day-0 stack:
+  `github-actions-plan` (read-only, for PRs and drift detection) and `github-actions-apply` (only the account's GitHub
+  Environment can assume it, capped by a permissions boundary). There is no role chaining and no static key.
+- **Findings flow** to `security-tooling`; **logs flow** to `log-archive`; **metrics and logs for people** flow to
+  `observability`. Nothing is copied by hand.
+- **Network.** Spokes join the Transit Gateway in `network-hub`; internet egress can be local NAT per VPC or central
+  (Network Firewall in the inspection VPC), chosen per VPC (`egress_mode`).
+- **Second region.** `eu-west-1` holds a warm standby of prod; state is replicated to it and DNS failover is a module
+  (`network/route53-failover`). See `DISASTER_RECOVERY.md`.
+- **Not in the picture:** Sandbox, Policy-Staging and Suspended OUs (SCP test bed, throwaway accounts, closed accounts), and
+  Firewall Manager policies applied to every account.
+
 This platform follows a **Hierarchical Blueprint Pattern**: a generic, reusable Terraform library is kept strictly separate from live, per-environment configuration, so nothing is duplicated across environments.
 
 ## The two halves

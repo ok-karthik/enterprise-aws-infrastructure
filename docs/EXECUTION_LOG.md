@@ -599,3 +599,16 @@ Moved out of `PLAN.md` on 2026-09-28 (PLAN 10.8). Newest entries go at the botto
     over 7 days" as an alarm (reported in the weekly summary instead). **Found:** none of `terraform validate`, and the
     `moved`/alias behaviour of a root module with `configuration_aliases`, run in CI (see the Phase 8 note on the no-op
     validate step): `governance/billing` would fail a standalone `terraform validate`.
+  - **Phase 10 (what a model can do; the rest is the owner's).** 10.2: a Mermaid diagram (OUs, accounts, CI identity chain, log
+    and finding flows, network hub, second region) at the top of `docs/ARCHITECTURE.md` and in the README. **Not done:** the exported
+    PNG (no `mmdc` available), and the Mermaid was **not rendered**, so the syntax is unchecked. 10.4: README rewritten to lead
+    with the multi-account foundation, a "what is real and what is not" table (nothing in the new organization applied,
+    no measured numbers, `COMPLIANCE.md` not written), the agent section below it; the old claim that the platform was "deployed to a real AWS
+    account and torn down" is now attributed to the old single account. 10.6: `CONTRIBUTING.md` (add a module in 30 minutes, what a
+    good PR looks like, the review checklist the auditor uses); the auditor prompt was **stale** (it listed the Rego rules removed in
+    8.10) and is fixed, as was a standing guardrail in `PLAN.md` that still named `.trivyignore`. 10.7: partly, in
+    `docs/migrations/2026-single-to-multi-account.md`: only what the log supports (no state moved, no downtime, five things found while
+    working), with a checklist for the parts that need real accounts. 10.8: done earlier.
+    **Left for the owner, on purpose:** 10.1 (the ADRs, in your own words; `0012-terragrunt-stacks.md` is the only new one and is marked
+    as a model-written proposal), 10.3 (the walkthrough you say out loud), 10.5 (failure drills need a sandbox and real postmortems),
+    and the rest of 10.7.
