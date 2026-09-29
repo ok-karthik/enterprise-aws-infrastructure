@@ -37,6 +37,9 @@ jobs:
   plan:
     name: "📝 Plan: ${{ inputs.account }}"
     runs-on: ubuntu-latest
+    outputs:
+      # "false" when a PR touches no unit of this account (PLAN 8.5): the governance and cost jobs then skip.
+      has_plans: ${{ steps.collect.outputs.has_plans }}
     container:
       image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
       credentials:
@@ -46,6 +49,8 @@ jobs:
     steps:
       - name: "Git Checkout"
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # the affected-units filter compares against origin/<base branch>
 
       - name: "Setup Platform"
         uses: ./.github/actions/setup-platform
@@ -56,36 +61,64 @@ jobs:
       - name: "Disaster Recovery (Smoke Test)"
         run: ./workloads-live-repo/scripts/smoke-test.sh ${{ inputs.working_directory }}
 
+      # PLAN 8.5: a PR plans only the units it changed. Shared code (modules, _envcommon, root.hcl, ...) or any
+      # non-PR run plans everything. The scheduled drift-detection run is the full check.
+      - name: "Decide plan scope"
+        id: scope
+        run: python3 workloads-live-repo/scripts/plan_scope.py "${{ github.event_name }}" "${{ github.base_ref }}" | tee -a "$GITHUB_OUTPUT"
+
+      # --out-dir keeps the binary plans (what apply will run, PLAN 8.6); --json-out-dir keeps the readable
+      # copies the governance and cost jobs scan.
       - name: "Terragrunt Plan"
         run: |
-          # 1. Generate binary plans
-          terragrunt run --all plan --non-interactive -no-color --log-format bare -- -out=tfplan.bin
-
-          # 2. Convert to JSON (searching inside .terragrunt-cache)
-          echo "🔍 Converting binary plans to JSON..."
-          find . -name "tfplan.bin" | while read -r plan_path; do
-            dir_path=$(dirname "$plan_path")
-            module_path=$(echo "$dir_path" | sed 's/\/\.terragrunt-cache.*//')
-            echo "Processing module: $module_path"
-            (cd "$dir_path" && terraform show -json tfplan.bin > tfplan.json)
-            mv "$dir_path/tfplan.json" "$module_path/tfplan.json"
-          done
+          mkdir -p "$GITHUB_WORKSPACE/plan-out" "$GITHUB_WORKSPACE/plan-json"
+          terragrunt run --all --non-interactive -no-color --log-format bare \
+            --out-dir "$GITHUB_WORKSPACE/plan-out" --json-out-dir "$GITHUB_WORKSPACE/plan-json" \
+            ${{ steps.scope.outputs.filter }} plan
         working-directory: ${{ inputs.working_directory }}
 
-      - name: "Debug: List Plans"
-        run: find ${{ inputs.working_directory }} -name "tfplan.json"
+      - name: "Collect plans"
+        id: collect
+        run: |
+          count=$(find plan-json -name '*.json' | wc -l | tr -d ' ')
+          echo "Found $count plan(s) (scope: ${{ steps.scope.outputs.scope }})"
+          if [ "$count" -eq 0 ]; then
+            if [ "${{ steps.scope.outputs.scope }}" = "full" ]; then
+              echo "::error::A full run produced no plans"
+              exit 1
+            fi
+            echo "has_plans=false" >> "$GITHUB_OUTPUT"
+            echo "No unit of this account is affected by the PR: nothing to plan."
+            exit 0
+          fi
+          echo "has_plans=true" >> "$GITHUB_OUTPUT"
+          # A checksum manifest, so the apply job can prove it applies exactly the plans that were reviewed (PLAN 8.6).
+          (cd plan-out && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
 
       - name: "Upload Plans"
+        if: steps.collect.outputs.has_plans == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: "plans-${{ inputs.account }}"
-          path: "${{ inputs.working_directory }}/**/tfplan.json"
+          path: "plan-json/**"
+          if-no-files-found: error
+          retention-days: 1
+
+      # Binary plans can contain secret values, so they are kept for one day and only on a push to main, where
+      # the apply job of the same run needs them.
+      - name: "Upload binary plans (for apply)"
+        if: steps.collect.outputs.has_plans == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v7
+        with:
+          name: "planbin-${{ inputs.account }}"
+          path: "plan-out/**"
           if-no-files-found: error
           retention-days: 1
 
   security-governance:
     name: "⚖️ Security & Governance (OPA/Checkov): ${{ inputs.account }}"
     needs: [plan]
+    if: needs.plan.outputs.has_plans == 'true'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
@@ -133,7 +166,7 @@ jobs:
             checkov -f "$plan" --framework terraform_plan --config-file .checkov.yaml \
               --output cli --output sarif --output-file-path "console,checkov-plan-sarif/$count" || status=1
             echo "::endgroup::"
-          done < <(find plans -name "tfplan.json" | sort)
+          done < <(find plans -name "*.json" | sort)
           if [ "$count" -eq 0 ]; then
             echo "::error::No tfplan.json found to scan"
             exit 1
@@ -158,7 +191,7 @@ jobs:
 
       - name: "Trivy Security Scan (Plan)"
         run: |
-          PLAN_FILE=$(find plans -name "tfplan.json" | head -n 1)
+          PLAN_FILE=$(find plans -name "*.json" | head -n 1)
           echo "🎯 Found Plan File: $PLAN_FILE"
 
           echo "📡 Generating SARIF for GitHub Security Tab..."
@@ -181,6 +214,7 @@ jobs:
   cost-analysis:
     name: "💰 Cost Analysis (Infracost): ${{ inputs.account }}"
     needs: [plan]
+    if: needs.plan.outputs.has_plans == 'true'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
@@ -215,7 +249,7 @@ jobs:
       - name: "Generate FinOps Summary"
         run: |
           # 1. Cost Breakdown (CLI only)
-          find plans -name "tfplan.json" | while read -r plan; do
+          find plans -name "*.json" | while read -r plan; do
             unique_name=$(echo "$plan" | tr '/' '-')
             module_name=$(dirname "$plan" | sed 's|plans/||')
             infracost breakdown --path "$plan" --format json --project-name "$module_name" --out-file "cost-${unique_name}.json"
@@ -226,7 +260,7 @@ jobs:
           echo "## 📊 Infrastructure Change Summary (${{ inputs.account }})" > /tmp/pr-comment.md
           echo "> 💡 This report summarizes resource changes and estimated cost impact for the **${{ inputs.account }}** account." >> /tmp/pr-comment.md
 
-          find plans -name "tfplan.json" | while read -r plan; do
+          find plans -name "*.json" | while read -r plan; do
             module_name=$(dirname $plan | sed 's|plans/||')
             echo "" >> /tmp/pr-comment.md
             echo "<details><summary><b>📂 Module: ${module_name}</b></summary>" >> /tmp/pr-comment.md

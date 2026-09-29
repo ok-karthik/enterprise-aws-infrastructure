@@ -142,6 +142,18 @@ jobs:
           aws_region: ${{ env.AWS_REGION }}
           aws_role_arn: ${{ matrix.apply_role_arn }}
 
-      - name: "Terragrunt Apply"
-        run: terragrunt run --all apply --non-interactive -auto-approve --log-format bare
+      # PLAN 8.6: apply exactly the plans the "stack" job made for this commit (the ones the approver reviewed),
+      # never a fresh plan. A missing artifact or a checksum mismatch stops the job; there is no fallback to
+      # planning again. If state changed since the plan, Terraform refuses the stale plan and the run must be repeated.
+      - name: "Download reviewed plans"
+        uses: actions/download-artifact@v8
+        with:
+          name: "planbin-${{ matrix.account }}"
+          path: plan-out
+
+      - name: "Verify plan checksums"
+        run: cd plan-out && sha256sum --check --strict SHA256SUMS
+
+      - name: "Terragrunt Apply (saved plans)"
+        run: terragrunt run --all --non-interactive --log-format bare --out-dir "$GITHUB_WORKSPACE/plan-out" apply -auto-approve
         working-directory: ${{ matrix.working_directory }}

@@ -13,6 +13,7 @@ Each job builds its role ARN from the account id, so there are no per-environmen
 
 Usage:
   generate_account_matrix.py                       print the matrix JSON
+  generate_account_matrix.py --per-region          one entry per account and region (drift detection, PLAN 8.7)
   generate_account_matrix.py --github-output       also write matrix= and count= to $GITHUB_OUTPUT
   generate_account_matrix.py --account NAME        print one entry (must be in the matrix); with
                                                    --github-output write its fields to $GITHUB_OUTPUT
@@ -117,6 +118,27 @@ def build_matrix(registry_text: str, root: Path = REPO_ROOT) -> tuple[list[dict]
     return entries, notices
 
 
+def expand_per_region(entries: list[dict], root: Path = REPO_ROOT) -> tuple[list[dict], list[str]]:
+    """One entry per (account, region), for drift detection (PLAN 8.7).
+
+    A region is a folder directly under the account folder that holds a region.hcl (eu-central-1, eu-west-1, and
+    _global for the account-wide stacks). The entry keeps the account fields, sets working_directory to the region
+    folder and adds region and key ("<account>/<region>", the name of the drift issue)."""
+    expanded: list[dict] = []
+    notices: list[str] = []
+    for entry in entries:
+        account_dir = root / entry["working_directory"]
+        regions = sorted(p.parent.name for p in account_dir.glob("*/region.hcl"))
+        if not regions:
+            notices.append(f"{entry['account']}: no region folder (a folder with region.hcl) yet, nothing to check for drift")
+            continue
+        for region in regions:
+            expanded.append(
+                {**entry, "region": region, "key": f"{entry['account']}/{region}", "working_directory": f"{entry['working_directory']}/{region}"}
+            )
+    return expanded, notices
+
+
 def write_github_output(values: dict[str, str]) -> None:
     path = os.environ.get("GITHUB_OUTPUT")
     if not path:
@@ -129,6 +151,7 @@ def write_github_output(values: dict[str, str]) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--github-output", action="store_true", help="write results to $GITHUB_OUTPUT")
+    parser.add_argument("--per-region", action="store_true", help="one entry per account and region (drift detection)")
     parser.add_argument("--account", help="print only this account's entry (it must be in the matrix)")
     args = parser.parse_args(argv)
 
@@ -144,6 +167,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.github_output:
             write_github_output({k: str(v) for k, v in entry.items()})
         return 0
+
+    if args.per_region:
+        entries, region_notices = expand_per_region(entries)
+        for notice in region_notices:
+            print(f"::notice title=Nothing to check::{notice}", file=sys.stderr)
 
     matrix = {"include": entries}
     print(json.dumps(matrix))

@@ -19,7 +19,8 @@ env:
   TG_LOG_FORMAT: 'bare'
 
 jobs:
-  # Which accounts to check: generated from the account registry (see terragrunt.yml).
+  # What to check: one entry per account AND region, generated from the account registry (PLAN 8.7). Each entry
+  # has its own job and its own GitHub Issue, so drift in eu-west-1 is not hidden behind a green eu-central-1.
   matrix:
     name: '🧭 Account matrix'
     runs-on: ubuntu-latest
@@ -35,10 +36,10 @@ jobs:
 
       - name: "Generate account matrix"
         id: matrix
-        run: python3 workloads-live-repo/scripts/generate_account_matrix.py --github-output
+        run: python3 workloads-live-repo/scripts/generate_account_matrix.py --per-region --github-output
 
   detect-drift:
-    name: '🔍 Detect Drift: ${{ matrix.account }}'
+    name: '🔍 Detect Drift: ${{ matrix.key }}'
     needs: [matrix]
     if: needs.matrix.outputs.count != '0'
     runs-on: ubuntu-latest
@@ -76,7 +77,7 @@ jobs:
 
           if [ $exitcode -eq 2 ]; then
             echo "DRIFT_DETECTED=true" >> $GITHUB_ENV
-            echo "Drift detected in ${{ matrix.account }}! Exit code 2."
+            echo "Drift detected in ${{ matrix.key }}! Exit code 2."
           elif [ $exitcode -ne 0 ]; then
             echo "Error running plan. Exit code $exitcode"
             exit 1
@@ -91,7 +92,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const env = '${{ matrix.account }}';
+            const env = '${{ matrix.key }}'; // account/region: one issue per pair
+            const account = '${{ matrix.account }}';
             const title = `🚨 Infrastructure Drift Detected: ${env}`;
             const driftDetected = process.env.DRIFT_DETECTED === 'true';
 
@@ -133,7 +135,7 @@ jobs:
                   repo: context.repo.repo,
                   title: title,
                   body: `The nightly drift detection workflow found that the live infrastructure in \`${env}\` does not match the Terraform state/code.\n\nPlease review the [Action Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) to see the exact resources that have drifted and remediate immediately.${planBlock}\n\n🤖 **Automated Remediation**: Comment \`/reconcile remediate ${env} drift\` on this issue to trigger the IaC Platform Agent to propose a corrective Pull Request.`,
-                  labels: ["bug", "security", "drift", env]
+                  labels: ["bug", "security", "drift", account]
                 });
               }
             } else {

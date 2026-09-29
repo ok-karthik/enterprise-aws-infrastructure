@@ -155,5 +155,25 @@ class Cli(unittest.TestCase):
         self.assertTrue(notices)  # every ci = true account explains why it was skipped
 
 
+class PerRegion(unittest.TestCase):
+    def test_one_entry_per_account_and_region_folder(self):
+        root = make_root("foundation-live-repo/management/_global", "foundation-live-repo/management/eu-central-1", "foundation-live-repo/management/notes")
+        for f in ["_global", "eu-central-1"]:
+            (root / "foundation-live-repo/management" / f / "region.hcl").write_text("")
+        entries, _ = gam.build_matrix(REGISTRY, root)
+        expanded, notices = gam.expand_per_region(entries, root)
+        self.assertEqual([e["key"] for e in expanded], ["management/_global", "management/eu-central-1"])
+        self.assertEqual(expanded[1]["working_directory"], "foundation-live-repo/management/eu-central-1")
+        self.assertEqual(expanded[1]["account"], "management")
+        self.assertEqual(notices, [])
+
+    def test_an_account_without_region_folders_is_reported_not_failed(self):
+        root = make_root("foundation-live-repo/management")
+        entries, _ = gam.build_matrix(REGISTRY, root)
+        expanded, notices = gam.expand_per_region(entries, root)
+        self.assertEqual(expanded, [])
+        self.assertIn("management", notices[0])
+
+
 if __name__ == "__main__":
     unittest.main()
