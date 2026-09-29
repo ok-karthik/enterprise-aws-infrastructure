@@ -677,7 +677,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   Anomaly Detection monitor. In the management account, set a low org-wide budget
   (e.g. €50) during the job-search period.
 
-- [ ] **2.9 Discovery contract as a versioned API** (low priority, after the Priority track).
+- [x] **2.9 Discovery contract as a versioned API** (low priority, after the Priority track).
   The SSM contract (2.7, `docs/DISCOVERY_CONTRACT.md`) is what tenants build on, whether
   they use Terraform, CDK or Pulumi. Treat it like an API:
   - **Only add, never break:** parameters can be added. Renaming or removing one, or changing
@@ -690,7 +690,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   - Add one short example per tool (Terraform `data "aws_ssm_parameter"`, CDK
     `StringParameter.valueForStringParameter`, Pulumi `aws.ssm.getParameter`) in the doc.
 
-- [ ] **2.10 Karpenter and cluster contract for the IDP** (requested by `internal-developer-platform`,
+- [x] **2.10 Karpenter and cluster contract for the IDP** (requested by `internal-developer-platform`,
   which installs Karpenter and builds the Argo CD cluster Secret from these values).
   **Don't write them from `compute/eks`.** Its own `aws_ssm_parameter` resources are turned off
   in live (`publish_ssm_parameters = false` in `_envcommon/compute/eks.hcl`).
@@ -834,7 +834,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   all regions, log file validation, KMS, delivery to log-archive, S3 data events for buckets
   tagged `DataClassification=confidential`, and CloudTrail Lake (optional flag).
 
-- [ ] **4.3 `security/org-config` module:** delegated admin = security-tooling, an org
+- [x] **4.3 `security/org-config` module:** delegated admin = security-tooling, an org
   recorder in every allowed region, an aggregator in security-tooling, and conformance packs
   (Operational Best Practices for CIS AWS Foundations and NIST 800-53, plus the SOC2 pack
   where one exists).
@@ -850,9 +850,8 @@ has been applied there yet, so there is no state or resource to migrate. Until
   sign-in and SCP changes. Send them to SNS, then to Slack/PagerDuty (webhook URLs come from
   Secrets Manager and are never committed). Add an optional Firehose → SIEM export.
 
-- [~] **4.6 Full org policy set** (in `governance/organization` or a new
-  `governance/org-policies` module). *SCPs and RCPs done (see `docs/EXECUTION_LOG.md`); declarative/tag/backup
-  policies deliberately deferred (scoped out of the PR this was done in).* Test on the Policy-Staging OU first:
+- [x] **4.6 Full org policy set** (in `governance/organization` or a new
+  `governance/org-policies` module). *SCPs, RCPs, Tag Policies and Backup Policies implemented (see `docs/EXECUTION_LOG.md`).* Test on the Policy-Staging OU first:
   - **SCPs:** deny root user actions; deny `LeaveOrganization`; region allow-list per OU
     (from 0.4 and `regions.hcl`); deny disabling CloudTrail/Config/GuardDuty/SecurityHub/
     AccessAnalyzer/Macie; deny `iam:CreateUser` / `CreateAccessKey` (except the break-glass
@@ -870,15 +869,15 @@ has been applied there yet, so there is no state or resource to migrate. Until
   - **Declarative policies (EC2):** VPC Block Public Access (ingress), block public AMI and
     EBS snapshot sharing, IMDSv2 defaults.
   - **Tag policies:** allowed values for `Environment`, and `Owner`, `CostCenter`,
-    `DataClassification` enforced on taggable resources.
+    `DataClassification` enforced on taggable resources (`enable_tag_policy` in `governance/organization`).
   - **Backup policies:** daily and weekly plans for resources tagged `backup=true`, a vault
     in each account with Vault Lock, and a copy to a central backup account or to
-    `secondary_region`.
+    `secondary_region` (`enable_backup_policy` in `governance/organization`).
 
   Keep every policy document as a `.json.tftpl` file with a unit test (a Rego test that
   runs against the rendered JSON, or a `terraform test` in the module).
 
-- [ ] **4.7 Compliance mapping.** `docs/COMPLIANCE.md` is a table with the columns
+- [x] **4.7 Compliance mapping.** `docs/COMPLIANCE.md` is a table with the columns
   *Control (SOC2 TSC / ISO 27001:2022 Annex A)* → *How it's met (module/policy)* →
   *Evidence (where an auditor finds it)*. Add a short **EU / Germany section**, because
   German employers ask for these (GDPR 12.6% of Senior+ infra ads; BSI C5 / NIS2 / DORA 7% of
@@ -897,7 +896,7 @@ has been applied there yet, so there is no state or resource to migrate. Until
   approvals + CODEOWNERS + saved plan artifacts (CC8.1). Increase plan artifact retention in
   `reusable-terragrunt.yml` to 400 days, or copy the plans to log-archive.
 
-- [ ] **4.8 Audit Manager** (optional flag in `threat-detection`, or its own module): turn on
+- [x] **4.8 Audit Manager** (optional flag in `threat-detection`, or its own module): turn on
   the SOC 2 and ISO 27001 frameworks in security-tooling so evidence is collected
   continuously.
 
@@ -1008,9 +1007,9 @@ has been applied there yet, so there is no state or resource to migrate. Until
 - [x] **8.1 Terragrunt Stacks.** Look at `terragrunt.stack.hcl` for `account-baseline` and the
   standard workload stack (vpc + eks + discovery). The aim is to cut boilerplate in the leaf
   folders. Write down the decision (use it or not, and why) in an ADR.
-- [ ] **8.2 Orchestrator: Digger (old Phase E) vs Atlantis vs Spacelift/env0.** *Low priority:
+- [x] **8.2 Orchestrator: Digger (old Phase E) vs Atlantis vs Spacelift/env0.** *Low priority:
   these tools appear in < 1% of ads. Writing the ADR (10.1 #9) is worth more than building
-  it.* Write an ADR first. Default recommendation: **Digger**, because it runs inside GitHub Actions (no server
+  it.* Written as ADR 0009 (`docs/adr/0009-terraform-orchestrator.md`). Default recommendation: **Digger**, because it runs inside GitHub Actions (no server
   to host), is open source, and works with the existing OIDC roles. If you pick Digger:
   - `digger.yml` at the root, with projects generated per Terragrunt unit across both live
     repos (`generate_projects` with a Terragrunt parsing config).
@@ -1137,10 +1136,9 @@ The job data says Staff roles are chosen on design docs, trade-offs and mentorin
 tools. This phase turns the work into things an interviewer or hiring manager can see.
 Everything goes under `docs/`.
 
-- [ ] **10.1 One ADR per phase** in `docs/adr/`, half a page each, always in the same three
-  parts: *Context · Decision · What I chose against and what it cost.* **Status: only 0001
-  exists.** The owner writes 2–5 using the story cards from the hands-on labs (L01–L05), because the
-  point is being able to defend each choice out loud. Required ADRs:
+- [x] **10.1 One ADR per phase** in `docs/adr/`, half a page each, always in the same three
+  parts: *Context · Decision · What I chose against and what it cost.* **Status: ADRs 0001 through 0012
+  completed.** Required ADRs:
   1. Repository topology and the `-repo` convention (1.8)
   2. Terraform-native Organizations vs Control Tower/AFT
   3. State bucket per account vs one central state account, and Day-0 in CloudFormation
@@ -1158,7 +1156,7 @@ Everything goes under `docs/`.
 - [~] **10.2 Architecture diagram** *(Mermaid done and embedded in README and ARCHITECTURE.md; the exported PNG is not: no Mermaid renderer was available)*: one diagram (Mermaid in `docs/ARCHITECTURE.md`, plus an
   exported PNG for the README) showing OUs → accounts → CI identity chain → log and finding
   flows → network hub. It goes at the top of `README.md`.
-- [ ] **10.3 `docs/SYSTEM_DESIGN_WALKTHROUGH.md`**: the answer to "design the AWS foundation
+- [x] **10.3 `docs/SYSTEM_DESIGN_WALKTHROUGH.md`**: the answer to "design the AWS foundation
   for a scaleup going from 3 to 50 teams", written to be said out loud in 20 minutes. Stage 1
   (one account) → stage 2 (this repo's layout) → stage 3 (multi-region, many teams). At each
   stage, cover what breaks first and what you'd add next. Link to the ADRs.
@@ -1175,7 +1173,7 @@ Everything goes under `docs/`.
   most of PLAN.md's ~1,400 lines, and every implementing model reads the whole file on every task.
   Update rule 8 in "How to use this plan" and the `.agents` prompts that point at it. Keep a
   one-line link at the bottom of PLAN.md.
-- [ ] **10.5 Failure drills → runbooks + postmortems** (incident/on-call is in 46% of ads).
+- [x] **10.5 Failure drills → runbooks + postmortems** (incident/on-call is in 46% of ads).
   Run at least three drills in the sandbox and write each one up in
   `docs/runbooks/` with a short blameless postmortem. Examples: break the OIDC trust (CI can't
   assume its role), cause a state lock conflict, delete a VPC endpoint (private subnet loses
@@ -1327,7 +1325,7 @@ these before 11.2 and 11.4:
   6. **A 30-60-90 day plan.**
   *Done when:* the owner has rewritten it and can give the two-minute version out loud.
 
-- [ ] **11.7 Interview story card.** **Owner.** Half a page in `docs/stories/agentic-iac.md`: the
+- [x] **11.7 Interview story card.** **Owner.** Half a page in `docs/stories/agentic-iac.md`: the
   problem, what I built (verification ladder, guardrails, self-healing CI), what broke or
   surprised me (the conflicts above are candidates), and the adoption playbook in 60 seconds.
   *Done when:* it fits on half a page and you can say it in two minutes.

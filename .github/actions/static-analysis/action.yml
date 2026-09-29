@@ -56,6 +56,10 @@ runs:
       shell: bash
       run: ./workloads-live-repo/scripts/check-account-registry.sh
 
+    - name: Discovery contract check (ensure no contract parameter disappears)
+      shell: bash
+      run: python3 workloads-live-repo/scripts/check_discovery_contract.py
+
     - name: Run TFLint
       shell: bash
       run: |

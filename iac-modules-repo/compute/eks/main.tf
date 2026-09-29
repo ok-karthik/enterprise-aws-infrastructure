@@ -136,38 +136,3 @@ module "karpenter" {
     var.tags
   )
 }
-
-# --- DISCOVERY CONTRACT (Phase 18.1): SSM Parameter Store Service Catalog ---
-resource "aws_ssm_parameter" "cluster_name" {
-  #checkov:skip=CKV2_AWS_34: "Platform discovery catalog parameter contains non-sensitive metadata"
-  count       = var.publish_ssm_parameters && var.env != "" && var.region != "" ? 1 : 0
-  name        = "/platform/${var.env}/${var.region}/eks/cluster_name"
-  description = "Platform Discovery Contract: EKS Cluster Name for ${var.env} in ${var.region}"
-  type        = "String"
-  value       = module.eks.cluster_name
-
-  tags = merge(
-    {
-      Service   = "compute-eks"
-      ManagedBy = "Terragrunt-Wrapper"
-    },
-    var.tags
-  )
-}
-
-resource "aws_ssm_parameter" "oidc_provider_arn" {
-  #checkov:skip=CKV2_AWS_34: "Platform discovery catalog parameter contains non-sensitive metadata"
-  count       = var.publish_ssm_parameters && var.env != "" && var.region != "" ? 1 : 0
-  name        = "/platform/${var.env}/${var.region}/eks/oidc_provider_arn"
-  description = "Platform Discovery Contract: EKS OIDC Provider ARN for ${var.env} in ${var.region}"
-  type        = "String"
-  value       = module.eks.oidc_provider_arn
-
-  tags = merge(
-    {
-      Service   = "compute-eks"
-      ManagedBy = "Terragrunt-Wrapper"
-    },
-    var.tags
-  )
-}

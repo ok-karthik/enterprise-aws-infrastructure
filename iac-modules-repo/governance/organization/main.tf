@@ -496,3 +496,123 @@ resource "aws_organizations_policy_attachment" "guardrails" {
   policy_id = local.guardrail_policy_ids[each.value.policy]
   target_id = local.organizational_unit_ids[each.value.ou]
 }
+
+# ------------------------------------------------------------------------------
+# 5. Tag policy (PLAN 4.6)
+# ------------------------------------------------------------------------------
+resource "aws_organizations_policy" "tag_policy" {
+  count = var.enable_tag_policy ? 1 : 0
+
+  name        = "Platform-Tag-Policy"
+  description = "Enforces standard tagging compliance (Environment, Owner, CostCenter, DataClassification)"
+  type        = "TAG_POLICY"
+
+  content = jsonencode({
+    tags = {
+      Environment = {
+        tag_key = {
+          "@@assign" = "Environment"
+        }
+        tag_value = {
+          "@@assign" = var.tag_policy_allowed_environments
+        }
+        enforced_for = {
+          "@@assign" = [
+            "ec2:instance",
+            "ec2:volume",
+            "s3:bucket",
+            "rds:db",
+            "dynamodb:table"
+          ]
+        }
+      }
+      DataClassification = {
+        tag_key = {
+          "@@assign" = "DataClassification"
+        }
+        tag_value = {
+          "@@assign" = var.tag_policy_allowed_data_classifications
+        }
+      }
+      Owner = {
+        tag_key = {
+          "@@assign" = "Owner"
+        }
+      }
+      CostCenter = {
+        tag_key = {
+          "@@assign" = "CostCenter"
+        }
+      }
+    }
+  })
+
+  tags = local.tags
+}
+
+resource "aws_organizations_policy_attachment" "tag_policy" {
+  for_each = var.enable_tag_policy ? toset(var.guardrail_target_ous) : []
+
+  policy_id = aws_organizations_policy.tag_policy[0].id
+  target_id = local.organizational_unit_ids[each.value]
+}
+
+# ------------------------------------------------------------------------------
+# 6. Backup policy (PLAN 4.6)
+# ------------------------------------------------------------------------------
+resource "aws_organizations_policy" "backup_policy" {
+  count = var.enable_backup_policy ? 1 : 0
+
+  name        = "Platform-Backup-Policy"
+  description = "Enforces organization-wide daily backup plans for resources tagged backup=true"
+  type        = "BACKUP_POLICY"
+
+  content = jsonencode({
+    plans = {
+      PlatformDailyBackupPlan = {
+        regions = {
+          "@@assign" = var.backup_policy_regions
+        }
+        rules = {
+          Daily = {
+            schedule_expression = {
+              "@@assign" = "cron(0 5 ? * * *)"
+            }
+            start_window_minutes = {
+              "@@assign" = "480"
+            }
+            target_backup_vault_name = {
+              "@@assign" = "Default"
+            }
+            lifecycle = {
+              delete_after_days = {
+                "@@assign" = tostring(var.backup_policy_delete_after_days)
+              }
+            }
+          }
+        }
+        selections = {
+          tags = {
+            BackupResources = {
+              tag_key = {
+                "@@assign" = "backup"
+              }
+              tag_value = {
+                "@@assign" = ["true", "True", "TRUE"]
+              }
+            }
+          }
+        }
+      }
+    }
+  })
+
+  tags = local.tags
+}
+
+resource "aws_organizations_policy_attachment" "backup_policy" {
+  for_each = var.enable_backup_policy ? toset(var.guardrail_target_ous) : []
+
+  policy_id = aws_organizations_policy.backup_policy[0].id
+  target_id = local.organizational_unit_ids[each.value]
+}

@@ -47,3 +47,13 @@ output "suspended_deny_all_policy_id" {
   description = "ID of the Suspended deny-all SCP, or null when enable_suspended_deny_all is false"
   value       = try(aws_organizations_policy.suspended_deny_all[0].id, null)
 }
+
+output "tag_policy_id" {
+  description = "ID of the Platform Tag Policy, or null when enable_tag_policy is false"
+  value       = try(aws_organizations_policy.tag_policy[0].id, null)
+}
+
+output "backup_policy_id" {
+  description = "ID of the Platform Backup Policy, or null when enable_backup_policy is false"
+  value       = try(aws_organizations_policy.backup_policy[0].id, null)
+}

@@ -102,7 +102,7 @@ jobs:
           name: "plans-${{ inputs.account }}"
           path: "plan-json/**"
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 400
 
       # Binary plans can contain secret values, so they are kept for one day and only on a push to main, where
       # the apply job of the same run needs them.

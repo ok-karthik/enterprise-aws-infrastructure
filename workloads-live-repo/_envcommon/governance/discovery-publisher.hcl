@@ -33,8 +33,12 @@ dependency "eks" {
   config_path = "${get_terragrunt_dir()}/../../compute/eks"
 
   mock_outputs = {
-    cluster_name      = "mock-eks"
-    oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/oidc.eks.eu-central-1.amazonaws.com/id/MOCK"
+    cluster_name                       = "mock-eks"
+    oidc_provider_arn                  = "arn:aws:iam::123456789012:oidc-provider/oidc.eks.eu-central-1.amazonaws.com/id/MOCK"
+    cluster_endpoint                   = "https://mock-eks.gr7.eu-central-1.eks.amazonaws.com"
+    cluster_certificate_authority_data = "bW9jay1jYS1kYXRh"
+    karpenter_node_iam_role_name       = "mock-eks-karpenter-node"
+    karpenter_queue_name               = "mock-eks-karpenter"
   }
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "show"]
 }
@@ -43,12 +47,22 @@ inputs = {
   env    = local.account_vars.locals.env
   region = local.region_vars.locals.aws_region
 
-  parameters = {
-    "vpc/id"                = dependency.vpc.outputs.vpc_id
-    "vpc/database_subnets"  = join(",", dependency.vpc.outputs.database_subnets)
-    "eks/cluster_name"      = dependency.eks.outputs.cluster_name
-    "eks/oidc_provider_arn" = dependency.eks.outputs.oidc_provider_arn
-  }
+  parameters = merge(
+    {
+      "vpc/id"                = dependency.vpc.outputs.vpc_id
+      "vpc/database_subnets"  = join(",", dependency.vpc.outputs.database_subnets)
+      "eks/cluster_name"      = dependency.eks.outputs.cluster_name
+      "eks/oidc_provider_arn" = dependency.eks.outputs.oidc_provider_arn
+      "eks/cluster_endpoint"  = dependency.eks.outputs.cluster_endpoint
+      "eks/cluster_ca_data"   = dependency.eks.outputs.cluster_certificate_authority_data
+    },
+    try(dependency.eks.outputs.karpenter_node_iam_role_name, null) != null && try(dependency.eks.outputs.karpenter_node_iam_role_name, "") != "" ? {
+      "eks/karpenter_node_role" = dependency.eks.outputs.karpenter_node_iam_role_name
+    } : {},
+    try(dependency.eks.outputs.karpenter_queue_name, null) != null && try(dependency.eks.outputs.karpenter_queue_name, "") != "" ? {
+      "eks/karpenter_queue_name" = dependency.eks.outputs.karpenter_queue_name
+    } : {}
+  )
 
   tags = {
     ManagedBy = "Terragrunt-Wrapper"

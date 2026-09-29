@@ -165,6 +165,42 @@ variable "enable_suspended_deny_all" {
   default     = true
 }
 
+variable "enable_tag_policy" {
+  description = "Enable organization Tag Policy enforcing standard tags on taggable resources (PLAN 4.6)."
+  type        = bool
+  default     = false
+}
+
+variable "tag_policy_allowed_environments" {
+  description = "Allowed values for the Environment tag enforced by the Tag Policy."
+  type        = list(string)
+  default     = ["dev", "staging", "prod", "global"]
+}
+
+variable "tag_policy_allowed_data_classifications" {
+  description = "Allowed values for the DataClassification tag enforced by the Tag Policy."
+  type        = list(string)
+  default     = ["public", "internal", "confidential", "restricted"]
+}
+
+variable "enable_backup_policy" {
+  description = "Enable organization Backup Policy enforcing daily backups for resources tagged backup=true (PLAN 4.6)."
+  type        = bool
+  default     = false
+}
+
+variable "backup_policy_regions" {
+  description = "Target regions for backup plan execution in the organization Backup Policy."
+  type        = list(string)
+  default     = ["eu-central-1", "eu-west-1"]
+}
+
+variable "backup_policy_delete_after_days" {
+  description = "Retention period in days for daily backups created by the organization Backup Policy."
+  type        = number
+  default     = 35
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)

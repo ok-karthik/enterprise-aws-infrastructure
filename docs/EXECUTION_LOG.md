@@ -649,3 +649,42 @@ Moved out of `PLAN.md` on 2026-09-28 (PLAN 10.8). Newest entries go at the botto
   - **11.2 Guard hook quote-awareness follow-up.** Updated `.agents/hooks/guard.py` with quote-aware segment splitting (`split_segments`)
     and precise write-target checking (`check_segment_writes`), eliminating false positives on commit messages, heredocs, and shell strings
     mentioning tool names or protected paths. Added comprehensive test coverage in `.agents/tests/test_hooks.py` (all 58 tests in `.agents` passing).
+  - **4.7 Compliance mapping.** Created `docs/COMPLIANCE.md` providing a comprehensive, auditor-verifiable mapping of SOC 2 Type II
+    (CC6.1-CC6.3, CC6.6-CC6.8, CC7.1-CC7.3, CC8.1) and ISO/IEC 27001:2022 (A.5.15-5.18, A.8.2, A.8.7, A.8.13, A.8.15-8.16, A.8.20-8.22,
+    A.8.24, A.8.32) controls to repository modules, policies, and evidence locations. Added dedicated European Union & German statutory
+    sections: GDPR data residency (`eu-central-1` primary, `eu-west-1` DR, region allow-list SCP and RCP data perimeter), BSI C5 domain
+    alignments (IDM, CRY, SIM, OPS/CHG), and NIS2 / DORA operational resilience requirements. Increased plan artifact retention in
+    `.github/workflows/reusable-terragrunt.yml` to 400 days (`retention-days: 400`) to guarantee an auditor-verifiable paper trail of all reviewed plans.
+  - **2.9 Discovery contract as a versioned API.** Added `docs/discovery-contract.json` specifying all 15 platform discovery parameters
+    with strict typing, descriptions, owner modules, and since-version markers. Built `workloads-live-repo/scripts/check_discovery_contract.py`
+    and wired it into CI static analysis (`.github/actions/static-analysis/action.yml`) to guarantee contract keys never disappear without
+    an explicit versioned deprecation cycle. Added multi-tool consumption snippets (Terraform, AWS CDK TypeScript, and Pulumi Python) in
+    `docs/DISCOVERY_CONTRACT.md`.
+  - **2.10 Karpenter & cluster contract for IDP.** Updated `network/vpc` to tag private subnets with `"karpenter.sh/discovery" = var.cluster_name`
+    whenever `var.cluster_name != ""` (verified with offline unit tests). Extended `governance/discovery-publisher` with `eks/cluster_endpoint`,
+    `eks/cluster_ca_data`, `eks/karpenter_node_role` and `eks/karpenter_queue_name`. Extended `_envcommon/governance/discovery-publisher.hcl`
+    to map them conditionally from EKS outputs only when non-null and non-empty. Removed dead duplicate `aws_ssm_parameter` resources and
+    `publish_ssm_parameters` flags from `compute/eks` and `network/vpc`.
+    *Upstream Karpenter verification:* In `terraform-aws-modules/eks//modules/karpenter` (`modules/karpenter/outputs.tf:54`), the output is
+    `value = try(aws_iam_role.node[0].name, null)`. Even when `name_prefix` is used, the resource `.name` attribute evaluates to the
+    concrete assigned IAM role name, guaranteeing compatibility with `EC2NodeClass.spec.role`.
+    Documented the Argo CD cluster secret generation and External Secrets sync model in `docs/design/argocd-cluster-secret.md`.
+  - **8.2 & 10.1 Architecture Decision Records Suite (ADRs 0002–0011).** Authored comprehensive, industry-grade ADRs in `docs/adr/` documenting foundational architectural choices, alternatives considered, tradeoffs, and compliance guardrails:
+    - `0002-terraform-native-organizations.md`: Multi-account AWS Organizations topology managed natively via Terraform vs. AWS Control Tower / AWS Landing Zone Accelerator.
+    - `0003-state-architecture-and-day-0.md`: Day-0 CloudFormation bootstrap decoupling state bucket & GitHub OIDC identity from Terraform lifecycle; prevents cyclic bootstrap dependencies.
+    - `0004-identity-center-jit-access.md`: Human workforce authentication via IAM Identity Center with Just-In-Time BreakGlass elevation, eliminating static IAM users.
+    - `0005-layered-authorization-boundaries.md`: Defense-in-depth authorization layering Organizations SCPs, IAM Permissions Boundaries, and Workload Pod Identity.
+    - `0006-transit-gateway-network-topology.md`: Central hub-and-spoke transit gateway with isolated route tables (Prod, NonProd, Shared, Inspection) preventing direct cross-environment routing.
+    - `0007-central-egress-network-firewall.md`: Centralized egress VPC with AWS Network Firewall stateful domain allow-listing in STRICT_ORDER drop mode.
+    - `0008-waf-and-firewall-manager.md`: Edge protection via AWS WAF and AWS Firewall Manager for org-wide baseline rule group enforcement.
+    - `0009-terraform-orchestrator.md`: Evaluation of Terraform orchestrators (Terragrunt vs. Spacelift / Terraform Cloud / Atlantis / Env0); justifies Terragrunt open-source orchestration with zero SaaS lock-in (PLAN 8.2).
+    - `0010-terragrunt-vs-plain-terraform.md`: Rigorous analysis of plain Terraform + backend configs vs. layered Terragrunt blueprints (`_envcommon`).
+    - `0011-agent-mcp-integration.md`: Standardized Model Context Protocol (MCP) server integration for AI coding agents with localhost sandboxing and strict credential isolation.
+  - **10.3 System Design Walkthrough.** Authored `docs/SYSTEM_DESIGN_WALKTHROUGH.md`: A 20-minute verbal walkthrough answering "scale infrastructure from 3 to 50 teams", covering Stage 1 (single account), Stage 2 (current landing zone), and Stage 3 (domain account mesh, multi-region cell architecture, and self-service IDP platform engineering).
+  - **10.5 Failure Drills, Runbooks & Blameless Postmortems.** Authored 3 realistic infrastructure failure drills with postmortems in `docs/runbooks/`:
+    - `drill-oidc-trust-breakage.md`: OIDC thumbprint mismatch / trust policy breakage breaking CI deployment; incident timeline, blameless root cause, recovery steps, and prevention via automated thumbprint verification.
+    - `drill-state-lock-conflict.md`: Abandoned DynamoDB/S3 state lock stalling production pipelines; incident timeline, root cause analysis, safe `terragrunt force-unlock` procedures, and lock TTL guardrails.
+    - `drill-bad-scp-rollback.md`: Erroneous SCP applied to Policy-Staging OU blocking cluster autoscaling / API calls; rapid detection, emergency rollback via management account, and canary OU staging protocol.
+  - **11.7 Agentic IaC Interview Story Card.** Created `docs/stories/agentic-iac.md`: Concise 2-minute verbal walkthrough covering the problem (IaC toil & agent hallucination risk), what was built (5-gate verification ladder, autonomous healer `healer_runner.py`, and guardrail hook `guard.py`), what broke/surprised (infinite remediation loops, synthetic mock partitions, and boundary traps), and the 60-second 30-60-90 enterprise adoption playbook.
+  - **4.6 Tag & Backup Policies in `governance/organization`.** Extended `iac-modules-repo/governance/organization` with native AWS Organizations Tag Policy (`type = "TAG_POLICY"`) and Backup Policy (`type = "BACKUP_POLICY"`), automatically attached to `var.guardrail_target_ous`. Enforces allowed values for `Environment`, `DataClassification`, `Owner`, and `CostCenter`, and daily backup plans for resources tagged `backup=true`. Verified with 25 passing offline unit tests (`tests/organization.tftest.hcl`) and clean `make verify-module`.
+  - **4.8 AWS Audit Manager Continuous Evidence Collection.** Added optional AWS Audit Manager support to `iac-modules-repo/security/threat-detection` (`enable_audit_manager`) for the primary region. Enables continuous evidence collection against standard compliance frameworks (SOC 2 Type II and ISO/IEC 27001), delegating admin registration to `security-tooling`. Added unit tests in `tests/threat_detection.tftest.hcl` (13 tests passing) and validated with clean `make verify-module`.

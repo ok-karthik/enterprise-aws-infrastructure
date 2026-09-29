@@ -366,3 +366,49 @@ run "delegated_service_needs_trusted_access" {
 
   expect_failures = [var.delegated_administrators]
 }
+
+run "tag_policy_can_be_enabled_and_attached" {
+  command = plan
+
+  variables {
+    enable_tag_policy = true
+  }
+
+  assert {
+    condition     = length(aws_organizations_policy.tag_policy) == 1
+    error_message = "Tag policy must be created when enable_tag_policy is true."
+  }
+
+  assert {
+    condition     = aws_organizations_policy.tag_policy[0].type == "TAG_POLICY"
+    error_message = "Tag policy resource must have type TAG_POLICY."
+  }
+
+  assert {
+    condition     = length(aws_organizations_policy_attachment.tag_policy) == length(var.guardrail_target_ous)
+    error_message = "Tag policy must attach to all guardrail target OUs."
+  }
+}
+
+run "backup_policy_can_be_enabled_and_attached" {
+  command = plan
+
+  variables {
+    enable_backup_policy = true
+  }
+
+  assert {
+    condition     = length(aws_organizations_policy.backup_policy) == 1
+    error_message = "Backup policy must be created when enable_backup_policy is true."
+  }
+
+  assert {
+    condition     = aws_organizations_policy.backup_policy[0].type == "BACKUP_POLICY"
+    error_message = "Backup policy resource must have type BACKUP_POLICY."
+  }
+
+  assert {
+    condition     = length(aws_organizations_policy_attachment.backup_policy) == length(var.guardrail_target_ous)
+    error_message = "Backup policy must attach to all guardrail target OUs."
+  }
+}

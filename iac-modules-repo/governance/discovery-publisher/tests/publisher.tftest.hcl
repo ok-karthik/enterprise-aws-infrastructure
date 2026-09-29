@@ -56,3 +56,26 @@ run "unknown_env_is_rejected" {
 
   expect_failures = [var.env]
 }
+
+run "eks_and_karpenter_keys_are_accepted" {
+  command = plan
+
+  variables {
+    parameters = {
+      "eks/cluster_endpoint"     = "https://test.eks.eu-central-1.amazonaws.com"
+      "eks/cluster_ca_data"      = "dGVzdC1jYQ=="
+      "eks/karpenter_node_role"  = "karpenter-node-role"
+      "eks/karpenter_queue_name" = "karpenter-queue"
+    }
+  }
+
+  assert {
+    condition     = aws_ssm_parameter.this["eks/cluster_endpoint"].name == "/platform/dev/eu-central-1/eks/cluster_endpoint"
+    error_message = "cluster_endpoint parameter name must match contract."
+  }
+
+  assert {
+    condition     = aws_ssm_parameter.this["eks/karpenter_node_role"].value == "karpenter-node-role"
+    error_message = "karpenter_node_role value must match input."
+  }
+}
