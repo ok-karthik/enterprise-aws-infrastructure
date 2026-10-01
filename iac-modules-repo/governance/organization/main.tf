@@ -36,7 +36,7 @@ resource "aws_organizations_organization" "this" {
 # 1b. Centralized root access management (PLAN 3.5)
 # ------------------------------------------------------------------------------
 # Removes the need for root credentials in member accounts: they can be deleted, and a privileged
-# root task is done from the management account with sts:AssumeRoot (docs/ROOT_ACCESS.md). Needs
+# root task is done from the management account with sts:AssumeRoot (docs/IDENTITY.md). Needs
 # trusted access for iam.amazonaws.com (in the default aws_service_access_principals).
 resource "aws_iam_organizations_features" "this" {
   count = var.enable_centralized_root_access ? 1 : 0
@@ -225,7 +225,7 @@ locals {
 
 resource "aws_organizations_policy" "deny_root_user_actions" {
   name        = "deny-root-user-actions"
-  description = "Deny every action taken as the account's literal root user (not a break-glass sts:AssumeRoot session, which has a different principal ARN shape, see docs/ROOT_ACCESS.md)"
+  description = "Deny every action taken as the account's literal root user (not a break-glass sts:AssumeRoot session, which has a different principal ARN shape, see docs/IDENTITY.md)"
   type        = "SERVICE_CONTROL_POLICY"
 
   content = jsonencode({
@@ -281,7 +281,7 @@ resource "aws_organizations_policy" "deny_disable_detection_services" {
 
 resource "aws_organizations_policy" "deny_iam_user_creation" {
   name        = "deny-iam-user-creation"
-  description = "Deny creating IAM users, login profiles or access keys, except from a break-glass session (docs/ROOT_ACCESS.md's root-recovery tasks are a separate, root-only path and are not affected by this)"
+  description = "Deny creating IAM users, login profiles or access keys, except from a break-glass session (docs/IDENTITY.md's root-recovery tasks are a separate, root-only path and are not affected by this)"
   type        = "SERVICE_CONTROL_POLICY"
 
   content = jsonencode({

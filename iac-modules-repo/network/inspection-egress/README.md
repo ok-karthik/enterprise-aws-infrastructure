@@ -24,7 +24,7 @@ Alert and flow logs (the firewall's own) go to `var.log_archive_bucket_name` (`s
 
 ## Cost
 
-See `FINOPS.md` for the cost comparison against `egress_mode = "local-nat"`. Roughly: one Network Firewall endpoint per AZ (~$395/month per endpoint, `us-east-1` pricing, at the time this was written — check current pricing before applying) plus data processing, versus a NAT gateway per spoke VPC (~$35/month plus data). Centralizing is worth it once there are enough spoke VPCs that shared NAT + firewall costs less than every VPC's own NAT, and it is the only way to get one enforced domain allow-list for every spoke.
+See `docs/FINOPS.md` for the cost comparison against `egress_mode = "local-nat"`. Roughly: one Network Firewall endpoint per AZ (~$395/month per endpoint, `us-east-1` pricing, at the time this was written — check current pricing before applying) plus data processing, versus a NAT gateway per spoke VPC (~$35/month plus data). Centralizing is worth it once there are enough spoke VPCs that shared NAT + firewall costs less than every VPC's own NAT, and it is the only way to get one enforced domain allow-list for every spoke.
 
 ## Not verified offline
 

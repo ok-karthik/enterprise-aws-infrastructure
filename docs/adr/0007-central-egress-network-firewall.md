@@ -1,6 +1,6 @@
 # ADR 0007: Central Egress + Network Firewall vs NAT per Spoke VPC
 
-- Status: accepted
+- Status: draft
 - Date: 2026-09-29
 
 ## Context

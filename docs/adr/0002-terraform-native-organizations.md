@@ -1,6 +1,6 @@
 # ADR 0002: Terraform-Native Organizations vs Control Tower / AFT
 
-- Status: accepted
+- Status: draft
 - Date: 2026-09-29
 
 ## Context

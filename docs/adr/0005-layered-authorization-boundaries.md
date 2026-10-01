@@ -1,6 +1,6 @@
 # ADR 0005: SCP vs RCP vs Permissions Boundary: Layered Authorization
 
-- Status: accepted
+- Status: draft
 - Date: 2026-09-29
 
 ## Context

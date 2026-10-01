@@ -12,9 +12,20 @@
 >   - [🔌 IDP Integration & Discovery Contract](diagrams/idp_integration.html)
 >   - [🛡️ CI/CD Pipeline & Policy Gates](diagrams/ci_cd_policy_gates.html)
 
-One AWS Organization, one OU tree, one account per job. Solid arrows are what the code in this repo builds. **Nothing
-here is applied yet unless [`docs/EXECUTION_LOG.md`](EXECUTION_LOG.md) says so**: the diagram is the design the code and
-its offline tests implement.
+One AWS Organization, one OU tree, one account per job. Solid arrows are what the code in this repo builds. The diagram is the design the code and its offline tests implement.
+
+### Implementation Status Legend
+
+| Status | Meaning |
+|---|---|
+| ✅ applied | Applied to the sandbox at least once; proof linked |
+| 📝 plan-only | Valid, tested, wired into a live stack; not applied (usually cost) |
+| 📐 design-only | Tested offline (`terraform test`), not wired into any live stack, never planned |
+
+Every component has an explicit status:
+- [Module Catalog Status Table](../iac-modules-repo/README.md#module-catalog--status) (40 modules: 27 plan-only, 13 design-only)
+- [Foundation Live Stacks Status](../foundation-live-repo/README.md#live-stacks--status)
+- [Workloads Live Stacks Status](../workloads-live-repo/README.md#live-stacks--status)
 
 ```mermaid
 flowchart TB

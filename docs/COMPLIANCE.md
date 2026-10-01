@@ -1,6 +1,6 @@
 # Compliance & Regulatory Control Matrix
 
-This document provides a verifiable mapping of regulatory frameworks (**SOC 2 Type II**, **ISO/IEC 27001:2022**, and **German/EU standards: GDPR, BSI C5, NIS2, DORA**) to the automated controls, Terraform/Terragrunt modules, policies, and audit evidence implemented across this enterprise AWS platform.
+This document provides a verifiable mapping of core regulatory frameworks (**SOC 2 Type II**, **ISO/IEC 27001:2022**, and **GDPR**) to the automated controls, Terraform/Terragrunt modules, policies, and audit evidence implemented across this enterprise AWS platform.
 
 ---
 
@@ -31,58 +31,20 @@ All infrastructure changes are managed strictly as code through GitOps pipelines
 
 ---
 
-## 3. European Union & German Regulatory Compliance
+## 3. GDPR (General Data Protection Regulation - Art. 25, 32, 44–49)
 
-For enterprise environments operating in Germany and the EU, specific statutory standards apply regarding data sovereignty, operational resilience, and cybersecurity.
-
-### 3.1 GDPR (General Data Protection Regulation - Art. 25, 32, 44–49)
-
-*   **Data Residency & Geographic Fencing**:
-    *   **Enforcement**: Service Control Policy (`foundation-live-repo/management/_global/governance/organization/policies/region_allowlist.json.tftpl`) explicitly blocks any resource creation outside approved EU regions:
-        *   **Primary Region**: `eu-central-1` (Frankfurt, Germany) — all production data processing, EKS clusters, and transactional databases.
-        *   **Secondary / DR Region**: `eu-west-1` (Dublin, Ireland) — read replicas, backup storage, and warm standby infrastructure.
-    *   **Data Perimeter**: Resource Control Policies (RCPs) deny access to S3, KMS, SQS, and Secrets Manager from any principal outside the AWS Organization, preventing cross-border exfiltration or unauthorized third-party access.
-    *   **PII Discovery**: AWS Macie is configured in `security-tooling` to continuously scan buckets tagged `DataClassification=confidential` or `DataClassification=restricted` for PII and personal data identifiers.
-
-### 3.2 BSI C5 (German Federal Office for Information Security - Cloud Computing Compliance Criteria Catalogue)
-
-The controls implemented in this repository directly align with BSI C5 core domains:
-
-*   **Identity & Access Management (IDM)**:
-    *   Zero static AWS access keys allowed for human users.
-    *   Multi-factor authentication (MFA) enforced at the IAM Identity Center portal.
-    *   Machine access isolated to short-lived OpenID Connect (OIDC) tokens with branch-level trust scopes.
-*   **Cryptographic Security (CRY)**:
-    *   Dedicated AWS KMS Customer Managed Keys (CMKs) separated by data classification (`kms/general`, `kms/confidential`).
-    *   Default EBS volume encryption enforced at the account baseline level.
-    *   IMDSv2 enforced across all EC2 nodes with hop limit 1 to prevent SSRF credential theft.
-*   **Security Incident Management (SIM)**:
-    *   Multi-region org CloudTrail delivered to write-once compliance bucket.
-    *   Continuous threat monitoring via GuardDuty and AWS Security Hub with centralized alerting.
-*   **Operations & Change Control (OPS / CHG)**:
-    *   Strict separation of duties: Developers have no direct AWS Console write permissions in Production.
-    *   Automated nightly drift detection identifies discrepancies between Git state and deployed infrastructure.
-
-### 3.3 NIS2 Directive & DORA (Digital Operational Resilience Act)
-
-For critical infrastructure and financial financial entity requirements:
-
-1.  **ICT Risk Management & Governance (DORA Art. 5–15)**:
-    *   Infrastructure resilience guaranteed via automated multi-AZ topologies, cross-region Aurora storage replication, and AWS Backup Vault Lock.
-    *   Maximum Tolerable Downtime (MTD), RTO (< 15 minutes for DNS switch), and RPO (< 1 minute for Aurora Global Database) validated via automated game-day checklists (`docs/DISASTER_RECOVERY.md`).
-2.  **Incident Reporting & Automated Containment (NIS2 Art. 21 / DORA Art. 17–23)**:
-    *   EventBridge rules classify threats by severity and route to immediate on-call notification.
-    *   High-risk misconfigurations (e.g. open administrative security group ports) are remediated in < 30 seconds by automated serverless functions (`security/auto-remediation`).
-3.  **ICT Third-Party / Supply Chain Risk (DORA Art. 28–44)**:
-    *   Supply-chain protection: All external Terraform modules and container images are cryptographically digest-pinned.
-    *   Toolbox images undergo automated vulnerability scanning via Trivy prior to registry publication (`publish-toolchain.yml`).
-    *   PRs are scanned using Checkov for misconfigurations and Open Policy Agent (OPA) for institutional compliance before apply authorization.
+* **Data Residency & Geographic Fencing**:
+  * **Enforcement**: Service Control Policy (`foundation-live-repo/management/_global/governance/organization/policies/region_allowlist.json.tftpl`) explicitly blocks any resource creation outside approved EU regions:
+    * **Primary Region**: `eu-central-1` (Frankfurt, Germany) — all production data processing, EKS clusters, and transactional databases.
+    * **Secondary / DR Region**: `eu-west-1` (Dublin, Ireland) — read replicas, backup storage, and warm standby infrastructure.
+  * **Data Perimeter**: Resource Control Policies (RCPs) deny access to S3, KMS, SQS, and Secrets Manager from any principal outside the AWS Organization, preventing cross-border exfiltration or unauthorized third-party access.
+  * **PII Discovery**: AWS Macie is configured in `security-tooling` to continuously scan buckets tagged `DataClassification=confidential` or `DataClassification=restricted` for PII and personal data identifiers.
 
 ---
 
 ## 4. Auditor Evidence Gathering Guide
 
-When requested by compliance auditors (SOC 2, ISO 27001, BSI C5), collect evidence using the following commands:
+When requested by compliance auditors (SOC 2, ISO 27001), collect evidence using the following commands:
 
 ```bash
 # 1. Verify CloudTrail Log File Integrity

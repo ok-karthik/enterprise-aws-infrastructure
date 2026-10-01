@@ -75,7 +75,7 @@ locals {
         ip      = "$.detail.sourceIPAddress"
         time    = "$.time"
       }
-      input_template = "\"ROOT SIGN-IN (console) in account <account> by <who> from <ip> at <time>. If nobody expected this, treat it as an incident (docs/BREAK_GLASS.md).\""
+      input_template = "\"ROOT SIGN-IN (console) in account <account> by <who> from <ip> at <time>. If nobody expected this, treat it as an incident (docs/IDENTITY.md).\""
     }
     root_api_call = {
       description = "An API call was made directly as the root user (not through a role, not an AWS service)"
@@ -94,7 +94,7 @@ locals {
         ip      = "$.detail.sourceIPAddress"
         time    = "$.time"
       }
-      input_template = "\"ROOT API CALL <event> in account <account> from <ip> at <time>. If nobody expected this, treat it as an incident (docs/BREAK_GLASS.md).\""
+      input_template = "\"ROOT API CALL <event> in account <account> from <ip> at <time>. If nobody expected this, treat it as an incident (docs/IDENTITY.md).\""
     }
     scp_change = {
       description = "An Organizations policy (SCP, RCP, tag, backup, declarative) was created, changed, deleted, attached, detached, or a policy type was enabled/disabled"

@@ -43,7 +43,7 @@ Written honestly, because an autonomy table that hides them is worse than none. 
 
 1. **`main` is not protected.** `gh api repos/<owner>/<repo>/branches/main/protection` returns 404 and there are no rulesets (checked
    2026-09-29). So "a PR is required", the per-account required checks and CODEOWNERS review are **described in `docs/CICD.md`
-   and `GOVERNANCE.md` but not enforced by GitHub**. *Owner:* protect `main` (PR required, required checks, code-owner review, no bypass).
+   and `docs/GOVERNANCE.md` but not enforced by GitHub**. *Owner:* protect `main` (PR required, required checks, code-owner review, no bypass).
    Until then, every "a human merges" in this table depends on the human, not on the platform.
 2. **CODEOWNERS does not protect the checks.** `.github/CODEOWNERS` has one global owner (`*`) and no separate entry for
    `.checkov.yaml`, `policy-library-repo/` or the workflows, and code-owner review is not required (gap 1). *Owner:* add those paths and require review.

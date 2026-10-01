@@ -1,6 +1,6 @@
 # ADR 0011: Model Context Protocol (MCP) Server for Autonomous IaC Agents
 
-- Status: accepted
+- Status: draft
 - Date: 2026-09-29
 
 ## Context

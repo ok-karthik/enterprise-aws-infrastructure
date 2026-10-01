@@ -1,7 +1,7 @@
 # Migration: one AWS account to a multi-account organization (2026)
 
 **Status: a design and a set of tools, not yet a completed migration.** This file records what was actually done and what
-it took, from the [execution log](../EXECUTION_LOG.md) and the code. The parts that need a real account (moving state,
+it took, from the execution history and the code. The parts that need a real account (moving state,
 downtime, what broke in AWS) are marked *not yet happened*. The owner adds them when they do; this is the story card
 for PLAN 10.7, and it is the only migration story the repo can honestly tell so far.
 

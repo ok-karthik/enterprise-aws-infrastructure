@@ -1,6 +1,6 @@
 # ADR 0008: AWS Firewall Manager vs WAF per Application Load Balancer
 
-- Status: accepted
+- Status: draft
 - Date: 2026-09-29
 
 ## Context

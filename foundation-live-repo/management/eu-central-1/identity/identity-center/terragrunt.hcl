@@ -13,7 +13,7 @@ include "envcommon" {
 # TODO(owner): the group names must match your IdP's group display names EXACTLY (SCIM syncs them; with
 # manage_groups = false Terraform only reads them and the plan fails if one is missing).
 # Who gets what where: OU => group => permission sets. Elevated sets (PlatformEngineer, BreakGlassAdmin)
-# are refused in Prod, and BreakGlassAdmin everywhere: they are granted just in time (docs/BREAK_GLASS.md).
+# are refused in Prod, and BreakGlassAdmin everywhere: they are granted just in time (docs/IDENTITY.md).
 inputs = {
   groups = ["developers", "platform-engineers", "security-auditors", "finance"]
 

@@ -1,6 +1,6 @@
 # ADR 0010: Terragrunt vs Plain Terraform / OpenTofu
 
-- Status: accepted
+- Status: superseded by ADR 0009
 - Date: 2026-09-29
 
 ## Context

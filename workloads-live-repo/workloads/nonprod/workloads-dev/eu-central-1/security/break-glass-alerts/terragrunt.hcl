@@ -7,7 +7,7 @@ include "envcommon" {
   expose = true
 }
 
-# Tells the account's email address about every BreakGlassAdmin sign-in (docs/BREAK_GLASS.md).
+# Tells the account's email address about every BreakGlassAdmin sign-in (docs/IDENTITY.md).
 # Verify the rules with a real sign-in during the break-glass drill: the event field names come from
 # CloudTrail and are worth confirming once.
 inputs = {}

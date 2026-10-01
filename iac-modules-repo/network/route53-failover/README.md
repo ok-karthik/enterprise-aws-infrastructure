@@ -13,12 +13,12 @@ with the secondary. The secondary has no health check on purpose: it is the last
 - Point `health_check.fqdn` at the **primary endpoint itself** (the ALB name), not at the failover name, or the
   check follows the failover and flaps.
 - This is **automatic** failover of the *front door* only. Databases are not promoted by DNS. For Aurora Global
-  Database, promotion is a separate, human-run step (see `DISASTER_RECOVERY.md`).
+  Database, promotion is a separate, human-run step (see `docs/DISASTER_RECOVERY.md`).
 - **Route 53 Application Recovery Controller (ARC)** for prod: health-check-driven failover can flip on a false
   alarm and cannot be blocked. ARC routing controls put the switch in a human's hands (or an automation with
   safety rules such as "never turn both regions off"), across 5 regional cluster endpoints. It costs roughly
   $2.5 per hour per cluster (about $1,800 a month), which is why this module does not include it. Decide it in
-  the prod ADR, and see `FINOPS.md`.
+  the prod ADR, and see `docs/FINOPS.md`.
 - Route 53 health check metrics live in **us-east-1**, so a CloudWatch alarm on `health_check_id` must be created
   there.
 

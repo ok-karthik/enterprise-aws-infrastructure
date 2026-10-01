@@ -7,7 +7,7 @@ resources. Disabled by default (`enabled = false`).
 
 > ⚠️ **COST WARNING**: Shield Advanced costs **$3,000/month** per AWS Organization
 > (not per account). The subscription covers all accounts once enabled in any one.
-> Only enable when the business case justifies it. See `FINOPS.md`.
+> Only enable when the business case justifies it. See `docs/FINOPS.md`.
 
 ## What it creates (when enabled)
 
@@ -104,7 +104,7 @@ No modules.
 | <a name="input_drt_access_role_arn"></a> [drt\_access\_role\_arn](#input\_drt\_access\_role\_arn) | ARN of the IAM role that grants the Shield Response Team access to your WAF resources. Empty = no DRT access. | `string` | `""` | no |
 | <a name="input_enable_auto_remediation"></a> [enable\_auto\_remediation](#input\_enable\_auto\_remediation) | Enable automatic application-layer DDoS mitigation (WAF rate-based rules created by Shield). | `bool` | `true` | no |
 | <a name="input_enable_proactive_engagement"></a> [enable\_proactive\_engagement](#input\_enable\_proactive\_engagement) | Enable proactive engagement with the AWS Shield Response Team during DDoS events. | `bool` | `false` | no |
-| <a name="input_enabled"></a> [enabled](#input\_enabled) | Enable Shield Advanced subscription. This costs $3,000/month per organization (not per account).<br/>Set to true ONLY for prod OU after reviewing the cost impact in FINOPS.md. | `bool` | `false` | no |
+| <a name="input_enabled"></a> [enabled](#input\_enabled) | Enable Shield Advanced subscription. This costs $3,000/month per organization (not per account).<br/>Set to true ONLY for prod OU after reviewing the cost impact in docs/FINOPS.md. | `bool` | `false` | no |
 | <a name="input_proactive_engagement_contacts"></a> [proactive\_engagement\_contacts](#input\_proactive\_engagement\_contacts) | Contacts for Shield Response Team (SRT) proactive engagement during DDoS events.<br/>Each entry must have email\_address, phone\_number and an optional note. | <pre>list(object({<br/>    email_address = string<br/>    phone_number  = string<br/>    note          = optional(string, "")<br/>  }))</pre> | `[]` | no |
 | <a name="input_protected_resources"></a> [protected\_resources](#input\_protected\_resources) | Map of resource ARNs to protect with Shield Advanced. Each key is a friendly name, each value<br/>is the ARN. Supports CloudFront distributions, ALBs, EIPs, Route 53 hosted zones and<br/>Global Accelerators. | `map(string)` | `{}` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | A map of tags to add to all resources | `map(string)` | `{}` | no |

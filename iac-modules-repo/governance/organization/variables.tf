@@ -61,7 +61,7 @@ variable "aws_service_access_principals" {
 }
 
 variable "enable_centralized_root_access" {
-  description = "Enable centralized root access management (RootCredentialsManagement and RootSessions), so member accounts need no root credentials. See docs/ROOT_ACCESS.md."
+  description = "Enable centralized root access management (RootCredentialsManagement and RootSessions), so member accounts need no root credentials. See docs/IDENTITY.md."
   type        = bool
   default     = true
 }

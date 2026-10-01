@@ -249,7 +249,7 @@ run "deny_root_user_matches_the_literal_root_arn_not_a_break_glass_session" {
 
   assert {
     condition     = jsondecode(aws_organizations_policy.deny_root_user_actions.content).Statement[0].Condition.StringLike["aws:PrincipalArn"] == "arn:*:iam::*:root"
-    error_message = "Root must be matched by the classic :root ARN, which sts:AssumeRoot sessions do not use (docs/ROOT_ACCESS.md)."
+    error_message = "Root must be matched by the classic :root ARN, which sts:AssumeRoot sessions do not use (docs/IDENTITY.md)."
   }
 }
 

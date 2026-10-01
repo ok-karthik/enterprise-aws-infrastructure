@@ -1,6 +1,6 @@
 # ADR 0006: Transit Gateway vs VPC Peering vs Cloud WAN
 
-- Status: accepted
+- Status: draft
 - Date: 2026-09-29
 
 ## Context

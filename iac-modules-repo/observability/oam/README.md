@@ -22,7 +22,7 @@ module's `link` mode is for accounts that do not use the baseline.
 - Logs and metrics can contain personal data. The sink policy limits who can *link*; who can *read* in the
   observability account is an IAM Identity Center decision (least privilege, see `docs/IDENTITY.md`).
 - **Managed Grafana is not created here.** It needs IAM Identity Center or SAML wiring and is a separate decision.
-  `enable_prometheus` only creates the workspace, and it costs per ingested sample: see `FINOPS.md`.
+  `enable_prometheus` only creates the workspace, and it costs per ingested sample: see `docs/FINOPS.md`.
 - Not applied anywhere yet: the observability account has a placeholder id in `_config/accounts.hcl`.
 
 <!-- BEGIN_TF_DOCS -->

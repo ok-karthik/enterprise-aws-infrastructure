@@ -1,7 +1,7 @@
 # ADR 0012: Terragrunt Stacks — not adopted yet
 
-**Status:** Proposed. **Model-written evaluation (PLAN 8.1); the owner confirms or rewrites the decision.** The number is
-0012 only so it does not collide with the ADR numbers reserved for the topics in PLAN 10.1.
+- Status: draft
+- Date: 2026-09-29
 
 ## Context
 

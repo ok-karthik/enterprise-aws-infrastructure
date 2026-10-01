@@ -20,7 +20,7 @@ Per-account budgets are `governance/budgets` (PLAN 2.8); this module is about *s
   (up to 24 h after tagging). Leave `cost_allocation_tags` empty on the first apply, then add `["CostCenter"]`.
 - **Anomaly emails must be real.** The module refuses `@example.com`, so it will not plan until the owner sets a real address.
 - The SCP region allow-list does not apply to the management account, and `ce:*` and `cur:*` are exempt anyway.
-- Nothing here was applied. Numbers for `FINOPS.md` need a real payer account and a month of data.
+- Nothing here was applied. Numbers for `docs/FINOPS.md` need a real payer account and a month of data.
 
 ## Showback query (Athena, after the export has run)
 

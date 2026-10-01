@@ -1,5 +1,7 @@
 # Runbook: blue-green for infrastructure that cannot change in place (PLAN 8.4)
 
+**Status:** 📐 Design-only (architectural plan; never run against live AWS).
+
 Some changes cannot be made to a running resource, or would break everything that depends on it while they happen:
 
 - a **VPC CIDR** change (the CIDR of a VPC cannot be edited, and every subnet, route and peering uses it),
@@ -38,7 +40,7 @@ Before step 6: switch traffic back to blue (step 4 in reverse). After step 6: bl
 
 - [ ] Change cannot be done in place (write down why).
 - [ ] Green has its own CIDR/names and does not touch blue's state.
-- [ ] Cost of running both is known (`FINOPS.md`) and the overlap window is time-boxed.
+- [ ] Cost of running both is known (`docs/FINOPS.md`) and the overlap window is time-boxed.
 - [ ] A rollback trigger is written down (which metric, which threshold).
 - [ ] A second person has read the plan.
 - [ ] Owner is available for the prod approval gate at cutover time, not only at merge time.

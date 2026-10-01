@@ -1,5 +1,7 @@
 # 💰 FinOps & Cost Optimization Strategy
 
+> **Status:** Design, not measured yet. Cost models and savings projections are architectural estimates; real numbers require a production payer account and historical billing data.
+
 This platform is designed with "Cost-Aware Infrastructure" principles, ensuring transparency and efficiency in cloud spending.
 
 ## 📊 Cost Visibility (Infracost)

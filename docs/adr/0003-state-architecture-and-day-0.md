@@ -1,6 +1,6 @@
 # ADR 0003: State Bucket Per Account vs Central State Account & Day-0 in CloudFormation StackSets
 
-- Status: accepted
+- Status: draft
 - Date: 2026-09-29
 
 ## Context

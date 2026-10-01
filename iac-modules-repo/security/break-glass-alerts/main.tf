@@ -1,6 +1,6 @@
 # Alerts for break-glass access: an EventBridge rule per sign-in path, an encrypted SNS topic and email
 # subscriptions. Regional (EventBridge sees the events of its own region); applied in every account, and
-# with the portal rule also in the management account. See docs/BREAK_GLASS.md.
+# with the portal rule also in the management account. See docs/IDENTITY.md.
 #
 # CloudTrail management events must be on for EventBridge to see these events (they are by default).
 
@@ -163,6 +163,6 @@ resource "aws_cloudwatch_event_target" "sns" {
       ip      = "$.detail.sourceIPAddress"
       event   = "$.detail.eventName"
     }
-    input_template = "\"BREAK-GLASS: <event> in account <account> (<region>) by <who> from <ip> at <time>. If nobody asked for this access, treat it as an incident (docs/BREAK_GLASS.md).\""
+    input_template = "\"BREAK-GLASS: <event> in account <account> (<region>) by <who> from <ip> at <time>. If nobody asked for this access, treat it as an incident (docs/IDENTITY.md).\""
   }
 }

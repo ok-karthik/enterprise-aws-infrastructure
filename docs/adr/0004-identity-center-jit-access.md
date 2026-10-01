@@ -1,6 +1,6 @@
 # ADR 0004: Identity Center + Just-In-Time (JIT) Access vs Standing Admin
 
-- Status: accepted
+- Status: draft
 - Date: 2026-09-29
 
 ## Context

@@ -1,5 +1,7 @@
 # 🚑 Disaster Recovery & Failure Modes
 
+> **Status:** Design, not measured yet. RTO/RPO targets and failover procedures reflect architectural targets and will be verified during live drills.
+
 In an enterprise Infrastructure-as-Code (IaC) environment, failures happen. This document explicitly outlines our philosophy on handling failed deployments, state corruption, and rollback strategies.
 
 ## 1. The Rollback Philosophy: "Roll-Forward"
@@ -107,7 +109,7 @@ incident lead has agreed (a health check alarm alone is not enough).
 **Not covered yet:** IAM Identity Center is single-region (the home region), and the organization's central
 log-archive and security-tooling accounts run in the primary region only. During a primary-region outage,
 sign-in through Identity Center and central logging may be degraded. Use the `BreakGlassAdmin` path
-(`docs/BREAK_GLASS.md`).
+(`docs/IDENTITY.md`).
 
 ## 8. RTO and RPO per tier
 
@@ -133,7 +135,7 @@ not happen.
 - [ ] **Scope agreed** in advance: which scenario (lose the primary state bucket, lose the primary region, restore
   a backup), who is incident lead, who observes, start and stop time.
 - [ ] **Prerequisites checked:** replication is on and lag is small; the secondary vault has recent recovery
-  points; the secondary EKS control plane is healthy; the break-glass credentials work (`docs/BREAK_GLASS.md`).
+  points; the secondary EKS control plane is healthy; the break-glass credentials work (`docs/IDENTITY.md`).
 - [ ] **Scenario A, state:** delete (or block access to) a *copy* of a state bucket in the sandbox and recover it
   with section 6. Record: time to a clean plan, imports needed.
 - [ ] **Scenario B, region:** simulate the primary being down (fail the health check on purpose) and run

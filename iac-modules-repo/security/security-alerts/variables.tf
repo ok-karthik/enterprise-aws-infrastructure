@@ -57,7 +57,7 @@ variable "enable_root_sign_in" {
   description = <<-EOT
     Alert on any sign-in or API call as the account's root user (console or CLI). Root sign-in only matters where
     root credentials still exist: the management account (member accounts have theirs removed, PLAN 3.5, and
-    docs/ROOT_ACCESS.md's break-glass root tasks are a separate, already-alerted path via security/break-glass-alerts).
+    docs/IDENTITY.md's break-glass root tasks are a separate, already-alerted path via security/break-glass-alerts).
   EOT
   type        = bool
   default     = false

@@ -27,10 +27,10 @@ secondary's `global_cluster_identifier` input, with `source_region` set to the p
   write-only version in a follow-up change, or add a rotation Lambda per region.
 - **Failover is not automatic.** If the primary region is lost, someone must *promote* the secondary
   (`aws rds failover-global-cluster` for a planned switch, or `remove-from-global-cluster` for an unplanned one)
-  and then update Terraform. The steps are in `DISASTER_RECOVERY.md`. Typical RPO is about 1 second and RTO
+  and then update Terraform. The steps are in `docs/DISASTER_RECOVERY.md`. Typical RPO is about 1 second and RTO
   about 1 minute for the database itself, plus your own DNS and app cutover time.
 - **No burstable classes.** Global Database needs `db.r*` or `db.x*`. The default is `db.r6g.large`, which is
-  the reason this costs far more than `data/postgres` (see `FINOPS.md`).
+  the reason this costs far more than `data/postgres` (see `docs/FINOPS.md`).
 - `engine_version`, `global_cluster_identifier` and `replication_source_identifier` are in `ignore_changes`
   because AWS changes them itself during a failover or a global upgrade.
 

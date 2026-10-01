@@ -1,6 +1,6 @@
 # ADR 0009: Terraform CI/CD Orchestration: GitHub Actions vs Digger vs Atlantis vs Paid SaaS
 
-- Status: accepted
+- Status: draft
 - Date: 2026-09-29
 
 ## Context

@@ -31,7 +31,7 @@ whole organization**. The alarms and metric filters live where the trail's Cloud
 - The metric filters only see events **after** they are created; nothing is back-filled.
 - A filter matches events from all accounts and regions the trail covers, but the alarm does not say *which* account:
   open the filter's log group in CloudWatch Logs Insights and filter on `recipientAccountId`.
-- `BreakGlassUsage` will fire on every legitimate break-glass session. That is the point (`docs/BREAK_GLASS.md`).
+- `BreakGlassUsage` will fire on every legitimate break-glass session. That is the point (`docs/IDENTITY.md`).
 - Not covered: CloudTrail delivery failures and long-open drift. See `docs/SLO.md` for why and where they are tracked.
 
 <!-- BEGIN_TF_DOCS -->

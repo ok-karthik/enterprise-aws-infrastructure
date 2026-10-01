@@ -18,7 +18,7 @@ AWS Backup for one region (PLAN 7.3): an encrypted vault, a daily plan, a tag-ba
 - The vault policy denies deleting recovery points to everyone except a `<name>-break-glass` role. It is not
   Backup Vault Lock (compliance mode cannot be undone, so it is a separate, deliberate decision).
 - A copy needs the destination vault's KMS key to allow the AWS Backup service role of the source account.
-- Cross-region copies cost storage in both regions plus data transfer: see `FINOPS.md`.
+- Cross-region copies cost storage in both regions plus data transfer: see `docs/FINOPS.md`.
 - The org already has `BACKUP_POLICY` enabled (`governance/organization`); this module is the per-account,
   per-region building block that such a policy would target.
 
