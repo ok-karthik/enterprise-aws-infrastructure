@@ -1,7 +1,7 @@
 # Contributing
 
 This is how to change this repository without surprising anyone. It is written for a new teammate and for an agent:
-the review checklist at the end is the same one the Policy Auditor agent uses (`.agents/prompts/auditor.md`).
+the review checklist at the end is the same one the Policy Auditor agent uses (`iac-agents-repo/prompts/auditor.md`).
 
 **Ground rules (from [PLAN.md](PLAN.md)):** nobody runs `apply` from a laptop or an agent; a human approves prod;
 one focused change per PR; conventional commits with the module name as the scope (`feat(vpc): ...`), because

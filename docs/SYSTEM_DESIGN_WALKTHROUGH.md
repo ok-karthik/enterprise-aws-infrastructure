@@ -132,7 +132,7 @@ STAGE 3 (Enterprise: 50+ Teams — Distributed Platform & IDP)
    - **Warm Standby Region**: `eu-west-1` (Dublin) — warm standby EKS cluster (node group scale = 0), Aurora Global Database replication, S3 Cross-Region Replication, and Route 53 DNS failover routing (`docs/DISASTER_RECOVERY.md`).
    - RTO target < 15 minutes, RPO target < 1 minute.
 4. **Autonomous SRE & AI Agentic Operations**:
-   - Automated self-healing CI pipelines (`.agents/scripts/healer_runner.py`) parse execution failures and propose remediations.
+   - Automated self-healing CI pipelines (`iac-agents-repo/ci_healer/healer_runner.py`) parse execution failures and propose remediations.
    - Nightly drift-detection issues trigger ChatOps `/reconcile` bots to align Terraform state with cloud reality.
    - Agent operations are constrained by strict pre-execution guardrails (`.agents/hooks/guard.py`) and read-only MCP servers ([ADR 0011](file:///Users/karthik.orugonda/github/enterprise-aws-infrastructure/docs/adr/0011-agent-mcp-integration.md)).
 

@@ -6,7 +6,7 @@ ADR 11 in the owner's words. These notes are the facts it can stand on.
 
 ## 1. What the agent connected to before (by reading the code, not by running it)
 
-`.agents/scripts/mcp_client.py` posted `tools/call` to `MCP_TERRAFORM_URL` (default `http://localhost:8080/mcp`) with:
+`iac-agents-repo/iac_agent/mcp_client.py` posted `tools/call` to `MCP_TERRAFORM_URL` (default `http://localhost:8080/mcp`) with:
 
 - **no `initialize` handshake and no session ID.** A Streamable-HTTP MCP server expects `initialize`, then
   `notifications/initialized`, then tool calls carrying the `Mcp-Session-Id` it handed out;
@@ -17,12 +17,12 @@ ADR 11 in the owner's words. These notes are the facts it can stand on.
 
 So the most likely truth: **the agent has always used its GitHub raw-docs fallback**, and the "MCP" path never returned
 anything. This is a reading of the code and the docs, not a measurement. To measure it: start the server
-(`docker compose -f .agents/mcp/docker-compose.yml up -d`), then run
-`python3 -c "from mcp_client import MCPClient; print(MCPClient().get_provider_doc('s3_bucket'))"` from `.agents/scripts/`
+(`docker compose -f iac-agents-repo/integrations/mcp/docker-compose.yml up -d`), then run
+`python3 -c "from mcp_client import MCPClient; print(MCPClient().get_provider_doc('s3_bucket'))"` from `iac-agents-repo/iac_agent/`
 against the old and new client and see which returns text.
 
 **Fixed now:** the client does the handshake, sends the session ID, accepts SSE and calls `search_providers` then
-`get_provider_details`. It is tested against a fake local server (`.agents/tests/test_mcp_client.py`). **Still unverified:**
+`get_provider_details`. It is tested against a fake local server (`iac-agents-repo/tests/test_mcp_client.py`). **Still unverified:**
 the *argument names* of those two tools (`provider_name`, `provider_namespace`, `service_slug`, `provider_document_type`,
 `provider_doc_id`) are from memory. HashiCorp's reference gives only "service name" and "provider component ID". If the
 real names differ, the client fails soft (returns nothing) and the agent falls back as before.

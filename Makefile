@@ -63,6 +63,9 @@ test: ## Run OPA policy unit tests, module unit tests and Python unit tests (no 
 		(cd "$$m" && terraform init -backend=false -input=false >/dev/null && terraform test) || exit 1; \
 		ls "$$d"/test_*.py >/dev/null 2>&1 && (cd "$$m" && python3 -m unittest discover -s tests) || true; \
 	done
+	@echo "-> iac-agents-repo tests"
+	python3 -m unittest discover -s iac-agents-repo/tests
+	python3 -m unittest discover -s .agents/tests
 
 .PHONY: docs
 docs: ## Regenerate per-module terraform-docs READMEs

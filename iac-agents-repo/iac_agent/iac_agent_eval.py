@@ -2,7 +2,7 @@
 """
 Eval harness for the IaC Generation Agent's classification step (Phase A4 / PLAN.md).
 
-Runs a fixed set of fixtures (.agents/eval/fixtures.yaml) through the exact same
+Runs a fixed set of fixtures (iac-agents-repo/eval/fixtures.yaml) through the exact same
 catalog-match -> LLM-classify path main() uses in iac_agent.py, and checks the result
 against what each fixture expects. Catalog-hit fixtures are fully offline and
 deterministic (no API key needed, no network call); LLM-fallback fixtures are skipped
@@ -11,7 +11,7 @@ including CI without secrets — and gives a fast regression check when swapping
 (e.g. benchmarking Gemini Flash vs. Groq vs. a local Ollama model) or editing prompts.
 
 Usage:
-  python3 .agents/scripts/iac_agent_eval.py [--provider gemini]
+  python3 iac-agents-repo/iac_agent/iac_agent_eval.py [--provider gemini]
 """
 
 import argparse

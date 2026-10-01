@@ -9,9 +9,9 @@ import tempfile
 import unittest
 
 # Import agent modules
-BASE_DIR = Path(__file__).resolve().parent.parent  # .agents/
+BASE_DIR = Path(__file__).resolve().parent.parent  # iac-agents-repo/
 import sys
-sys.path.insert(0, str(BASE_DIR / "scripts"))
+sys.path.insert(0, str(BASE_DIR / "iac_agent"))
 
 import iac_agent  # noqa: E402
 from mcp_client import MCPClient  # noqa: E402

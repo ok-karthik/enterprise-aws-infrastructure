@@ -2,7 +2,7 @@
 """
 Lightweight MCP (Model Context Protocol) client for the IaC Generation Agent (PLAN 11.3).
 
-Talks to the HashiCorp terraform-mcp-server over Streamable HTTP (.agents/mcp/docker-compose.yml) to read Terraform
+Talks to the HashiCorp terraform-mcp-server over Streamable HTTP (iac-agents-repo/integrations/mcp/docker-compose.yml) to read Terraform
 Registry provider documentation. **Read-only use only**: it calls provider-doc tools of the `registry` toolset and nothing
 that creates or changes anything.
 

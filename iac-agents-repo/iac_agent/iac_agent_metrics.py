@@ -2,7 +2,7 @@
 """
 Health & Telemetry metrics for the IaC Generation Agent (Phase D4 / PLAN.md).
 
-Parses the append-only telemetry log (.agents/metrics/runs.jsonl) to provide
+Parses the append-only telemetry log (iac-agents-repo/metrics/runs.jsonl) to provide
 Platform Engineering and SRE teams with empirical visibility into:
 1. Overall agent success rate and retry efficiency
 2. Golden-path catalog hit rate vs. free-form LLM generation
@@ -36,7 +36,7 @@ def load_metrics(path: Path = METRICS_PATH) -> list[dict]:
 
 def print_summary(records: list[dict]):
     if not records:
-        print("📊 No metrics recorded yet. Runs will log to .agents/metrics/runs.jsonl automatically.")
+        print("📊 No metrics recorded yet. Runs will log to iac-agents-repo/metrics/runs.jsonl automatically.")
         return
 
     total = len(records)

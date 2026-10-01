@@ -10,7 +10,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BASE_DIR / "scripts"))
+REPO_ROOT = BASE_DIR.parent
+sys.path.insert(0, str(REPO_ROOT / ".github" / "scripts"))
+sys.path.insert(0, str(BASE_DIR / "iac_agent"))
 
 import delivery_metrics as dm  # noqa: E402
 import iac_agent  # noqa: E402

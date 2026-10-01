@@ -1,10 +1,10 @@
 # Local Terraform Registry documentation server for the IaC Generation Agent (PLAN 11.3).
-# See .agents/scripts/mcp_client.py and .agents/mcp/README.md (what it is, the terms, and what was NOT verified).
+# See iac-agents-repo/iac_agent/mcp_client.py and iac-agents-repo/integrations/mcp/README.md (what it is, the terms, and what was NOT verified).
 #
 # Optional: iac_agent.py falls back to fetching AWS provider docs from GitHub, so it works with zero extra services.
 #
 # Usage:
-#   docker compose -f .agents/mcp/docker-compose.yml up -d
+#   docker compose -f iac-agents-repo/integrations/mcp/docker-compose.yml up -d
 #   curl http://127.0.0.1:8080/health
 #
 # Terms of use (HashiCorp says: "Do not use the MCP server with untrusted MCP clients or LLMs"):

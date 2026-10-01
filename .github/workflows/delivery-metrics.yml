@@ -35,11 +35,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           WINDOW_DAYS: ${{ inputs.window_days || '28' }}
         run: |
-          python3 .agents/scripts/delivery_metrics.py \
+          python3 .github/scripts/delivery_metrics.py \
             --repo "${{ github.repository }}" \
             --window-days "$WINDOW_DAYS" \
             --markdown delivery-metrics.md \
-            --write-json .agents/metrics/platform_slo.json
+            --write-json iac-agents-repo/metrics/platform_slo.json
           cat delivery-metrics.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: "Upload results"
@@ -48,5 +48,5 @@ jobs:
           name: delivery-metrics
           path: |
             delivery-metrics.md
-            .agents/metrics/platform_slo.json
+            iac-agents-repo/metrics/platform_slo.json
           retention-days: 30

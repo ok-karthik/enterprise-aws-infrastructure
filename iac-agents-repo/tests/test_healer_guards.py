@@ -6,7 +6,7 @@ import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ci_healer"))
 import healer_guards as g  # noqa: E402
 
 OK_PATHS = ["iac-modules-repo/network/vpc/.terraform.lock.hcl", "workloads-live-repo/workloads/nonprod/workloads-dev/eu-central-1/network/vpc/terragrunt.hcl"]
@@ -51,13 +51,13 @@ class Helpers(unittest.TestCase):
         self.assertEqual(g.count_healer_commits(subjects), 2)
 
     def test_the_commit_messages_the_runner_uses_match_the_counter(self):
-        text = (Path(__file__).resolve().parent.parent / "scripts" / "healer_runner.py").read_text()
+        text = (Path(__file__).resolve().parent.parent / "ci_healer" / "healer_runner.py").read_text()
         for message in ("chore(ci): auto-upgrade terraform provider lock files", "chore(ci): auto-remediate pipeline failure"):
             self.assertIn(message, text)
             self.assertTrue(message.startswith(g.HEALER_COMMIT_PREFIX), message)
 
     def test_the_ai_label_is_the_one_the_metrics_use(self):
-        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / ".github" / "scripts"))
         import delivery_metrics
         self.assertEqual(g.AI_LABEL, delivery_metrics.AI_LABEL)
 

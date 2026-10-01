@@ -27,9 +27,9 @@ to the whole organisation.
 
 | Phase | What | Exit test |
 |---|---|---|
-| **0. Guardrails** | Hooks and hard limits for local agents ([`.agents/AGENTS.md`](../.agents/AGENTS.md)), the autonomy table ([AGENT_AUTONOMY.md](AGENT_AUTONOMY.md)), `main` protected, CODEOWNERS on the checks. | The known gaps in the autonomy table are closed or accepted in writing. |
+| **0. Guardrails** | Hooks and hard limits for local agents ([`AGENTS.md`](../../AGENTS.md)), the autonomy table ([AGENT_AUTONOMY.md](AGENT_AUTONOMY.md)), `main` protected, CODEOWNERS on the checks. | The known gaps in the autonomy table are closed or accepted in writing. |
 | **1. One pilot team, read-only use cases, 6-8 weeks** | Explain code, review a diff, draft a runbook, propose a module change as a pull request. No agent commits to a shared branch. | A baseline (lead time, review time, change failure rate) and at least 20 agent PRs, so the weekly summary means something. |
-| **2. A paved road, run as a platform product** | A shared `AGENTS.md`, the hooks, a short list of approved MCP servers (see [`.agents/mcp/README.md`](../.agents/mcp/README.md)), golden-path templates (`.agents/catalog/`), a support channel. | A second team is productive without asking the pilot team. |
+| **2. A paved road, run as a platform product** | A shared `AGENTS.md`, the hooks, a short list of approved MCP servers (see [`integrations/mcp/README.md`](../integrations/mcp/README.md)), golden-path templates (`catalog/`), a support channel. | A second team is productive without asking the pilot team. |
 | **3. Champions and enablement** | One champion per team, a short onboarding session, an office hour, worked examples from real PRs. | Champions can answer "can I use it for X?" without escalating. |
 | **4. Governance** | Review the metrics quarterly, decide level changes with an ADR, audit the agent action trail, keep the approved-tools list current. | The quarterly review has happened twice and changed something. |
 

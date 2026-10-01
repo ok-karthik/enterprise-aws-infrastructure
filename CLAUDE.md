@@ -2,9 +2,9 @@
 
 This repository maintains a consolidated, framework-agnostic AI agent specification and platform engineering guide in:
 
-👉 **[`.agents/AGENTS.md`](.agents/AGENTS.md)**
+👉 **[`AGENTS.md`](AGENTS.md)**
 
-Please refer to [`.agents/AGENTS.md`](.agents/AGENTS.md) for:
+Please refer to [`AGENTS.md`](AGENTS.md) for:
 - Repository layout and the Terragrunt inheritance chain architecture
 - Essential local and CI commands (smoke test, format, lint, plan)
 - Governance gates (OPA/Conftest, Checkov, Infracost; Trivy scans the toolbox image)

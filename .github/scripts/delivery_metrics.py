@@ -25,8 +25,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-SLO_STATUS_PATH = BASE_DIR / "metrics" / "platform_slo.json"
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+SLO_STATUS_PATH = REPO_ROOT / "iac-agents-repo" / "metrics" / "platform_slo.json"
 AI_LABEL = "ai-generated"
 
 # The SLOs (docs/SLO.md). `target` is the share of good events.

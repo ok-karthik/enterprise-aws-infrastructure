@@ -1,4 +1,4 @@
-# Golden-path module catalog for the IaC Generation Agent (.agents/scripts/iac_agent.py).
+# Golden-path module catalog for the IaC Generation Agent (iac-agents-repo/iac_agent/iac_agent.py).
 #
 # Entries with a `template` are fully pre-vetted: iac_agent.py renders them deterministically
 # (no LLM call needed to author the HCL) and only falls back to LLM-generated diffs if the

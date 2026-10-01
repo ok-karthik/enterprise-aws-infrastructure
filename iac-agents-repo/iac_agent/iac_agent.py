@@ -34,9 +34,9 @@ import urllib.error
 import urllib.request
 
 # Local imports
-BASE_DIR = Path(__file__).resolve().parent.parent  # .agents/
+BASE_DIR = Path(__file__).resolve().parent.parent  # iac-agents-repo/
 REPO_ROOT = BASE_DIR.parent
-sys.path.insert(0, str(BASE_DIR / "scripts"))
+sys.path.insert(0, str(BASE_DIR / "iac_agent"))
 PROMPT_PATH = BASE_DIR / "prompts" / "iac_agent.md"
 AUDITOR_PROMPT_PATH = BASE_DIR / "prompts" / "auditor.md"
 GENERATE_MODULE_SCRIPT = REPO_ROOT / "workloads-live-repo" / "scripts" / "generate-module.sh"

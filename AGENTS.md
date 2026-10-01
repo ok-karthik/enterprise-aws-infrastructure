@@ -16,7 +16,7 @@ A directory ending in `-repo` is a separate Git repository in a real company (se
 *   `/workloads-live-repo/`: Platform stacks in workload accounts: `workloads/nonprod/workloads-dev/`, `workloads/prod/workloads-prod/`, `_envcommon/{compute,data,network}/`, its own `root.hcl`, and `scripts/` (smoke test, module generator). The platform team approves changes.
 *   `/foundation-live-repo/_bootstrap/` (inside the foundation repo): Day-0 **CloudFormation** stack `platform-bootstrap` (`cloudformation/account-bootstrap.yaml`: S3 state bucket, GitHub OIDC provider, `github-actions-plan` / `github-actions-apply` roles + permissions boundary) and the `bootstrap.sh` that deploys it. Run once by a human in the management account; member accounts get it through StackSets (PLAN 2.0b). Terragrunt never creates the state bucket: **no command may pass `--backend-bootstrap`**.
 *   `/policy-library-repo/terraform/`: Rego-based OPA compliance rules enforced against Terraform plan JSON.
-*   `/.agents/`: Catalog, prompts, eval fixtures, SRE policies, and scripts for autonomous agents.
+*   `/iac-agents-repo/`: Autonomous IaC platform agent, CI healer, golden-path catalog, SRE policies, and tests.
 
 ---
 
@@ -165,7 +165,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 - Auth is **zero-key OIDC** with two roles per account, straight into the target account (no shared role, no role chaining, no per-environment role variables): plan/governance/drift jobs assume the read-only `arn:aws:iam::<account-id>:role/github-actions-plan` (trusted from PRs and `main`); apply/destroy jobs assume `.../github-actions-apply` (trusted only from that account's GitHub Environment: `management`, `core`, `dev`, `prod`), via `setup-platform`. The account id comes from the registry. No static AWS credentials exist.
 - `drift-detection.yml` — nightly matrix over the account matrix; manages one GitHub Issue per account (create/comment/auto-close) and prompts for ChatOps reconciliation.
 - `chatops_generator.yml` — listens for `/generate` and `/reconcile` issue/PR comments to trigger automated module authoring and PR creation.
-- `pipeline_healer.yml` — triggers on a failed "Terragrunt CI/CD" run and executes `.agents/scripts/healer_runner.py`.
+- `pipeline_healer.yml` — triggers on a failed "Terragrunt CI/CD" run and executes `iac-agents-repo/ci_healer/healer_runner.py`.
 
 ---
 
@@ -204,54 +204,14 @@ Tests: `python3 -m unittest discover -s .agents/tests` (`test_hooks.py`).
 
 ## 8. Agent Registry & Platform Capabilities
 
-### 1. IaC Architect (`.agents/prompts/architect.md`)
-*   **Role**: Senior Cloud Infrastructure Architect.
-*   **Responsibility**: Writes valid Terraform/Terragrunt HCL.
-*   **Directives**: Must use dry-run testing (`-backend=false` init / `terraform validate`) and strictly respect variable declarations under `/workloads-live-repo`.
+The agent registry, autonomy tiers, catalog specs, and CLI instructions are documented in:
 
-### 2. Policy Auditor (`.agents/prompts/auditor.md`)
-*   **Role**: Security & Governance Compliance Officer.
-*   **Responsibility**: Performs independent semantic review and automated compliance checks, returning `STATUS: PASSED/FAILED`.
-*   **Directives**: Enforces Rego policy checks in `/policy-library-repo/terraform/`, Checkov/TFLint standards, and semantic sanity checks (no wildcard IAM, no public ingress on DB/SSH ports).
+👉 **[`iac-agents-repo/README.md`](iac-agents-repo/README.md)**
 
-### 3. Pipeline Healer (`.agents/prompts/ci_healer.md`, `.agents/scripts/healer_runner.py`)
-*   **Role**: Incident & CI/CD Recovery Specialist.
-*   **Responsibility**: Runs automatically on workflow failure (`pipeline_healer.yml`), isolates root cause from GitHub runner logs, auto-resolves provider lock mismatches, or generates a minimal LLM git patch and pushes to the PR branch.
-*   **Directives**: Prioritize minimal diffs. Safe directory config and ephemeral container root execution.
-
-### 4. IaC Generation & Platform Agent (`.agents/prompts/iac_agent.md`, `.agents/scripts/iac_agent.py`)
-*   **Role**: Autonomous Platform Engineering & SRE Agent — provides self-service infrastructure generation, drift reconciliation, and change-risk governance.
-*   **Capabilities**:
-    1.  **Golden-Path Catalog** (`.agents/catalog/golden-paths.yaml`): Deterministic keyword matching renders pre-vetted modules (`data-s3-encrypted`, `data-rds-postgres`) with zero LLM-authored HCL.
-    2.  **Uncatalogued Requests**: LLM classification (`classify_request`) + deterministic scaffolding (`scaffold_skeleton`) + diff-only generation (`generate_diff`) informed by live Rego/Checkov policy digests (`build_policy_digest`).
-    3.  **Semantic Second-Opinion Gate**: Every diff passes independent LLM review via the Policy Auditor persona before validation.
-    4.  **Full Validation Ladder**: Offline validation (`-backend=false`), `tflint`, OPA/Conftest, Checkov, and Infracost cost threshold gating.
-    5.  **Drift-to-Diff Reconciliation** (`--reconcile`): Ingests Terraform plan drift outputs and generates corrective HCL diffs.
-    6.  **ChatOps Trigger** (`.github/workflows/chatops_generator.yml`): Responds to `/generate` and `/reconcile` issue comments.
-    7.  **Multi-Module Graph Decomposition** (`--graph`): Topologically decomposes multi-service requests (VPC + EKS + RDS) with cross-module dependency injection.
-    8.  **Model Context Protocol (MCP) Client** (`.agents/scripts/mcp_client.py`): Direct JSON-RPC doc querying with GitHub raw fallback.
-    9.  **Developer Portal / Backstage Integration** (`.agents/backstage/`): Software templates (`s3-bucket.yaml`, `rds-postgres.yaml`), catalog registration, and CLI runner.
-    10. **SRE Error-Budget Guardrails** (`.agents/sre/error_budgets.yaml`): Blocks unapproved production proposals when the error budget is below 10%.
-    11. **Telemetry & Health Metrics** (`.agents/metrics/runs.jsonl`, `.agents/scripts/iac_agent_metrics.py`): Append-only metrics tracking success rates, ladder failure causes, and high-demand module types.
-*   **Usage**:
-    ```bash
-    # Generate single module (offline dry-run)
-    python3 .agents/scripts/iac_agent.py --request "add an S3 bucket for artifacts" --dry-run
-
-    # Multi-module graph decomposition
-    python3 .agents/scripts/iac_agent.py --request "stand up VPC and RDS" --graph --dry-run
-
-    # Local Platform HTTP API server
-    python3 .agents/scripts/iac_agent.py --serve --port 8000
-
-    # Display health metrics summary
-    python3 .agents/scripts/iac_agent.py --metrics-summary
-
-    # Run eval and test suite
-    python3 .agents/scripts/iac_agent_eval.py
-    python3 -m unittest discover -s .agents/tests
-    ```
-*   **Documentation & Visual Flow**: See **[docs/IAC_PLATFORM_AGENT.md](../docs/IAC_PLATFORM_AGENT.md)** for complete end-to-end architecture flow diagrams, ChatOps triggers, Backstage IDP runner, and setup instructions.
+See also:
+- **Architecture & Workflows**: [`iac-agents-repo/docs/IAC_PLATFORM_AGENT.md`](iac-agents-repo/docs/IAC_PLATFORM_AGENT.md)
+- **Autonomy Controls & Governance**: [`iac-agents-repo/docs/AGENT_AUTONOMY.md`](iac-agents-repo/docs/AGENT_AUTONOMY.md)
+- **Interactive Visualizers**: [`docs/diagrams/ai_agentic_workflows.html`](docs/diagrams/ai_agentic_workflows.html) and [`docs/diagrams/feedback_loops_quality_flywheel.html`](docs/diagrams/feedback_loops_quality_flywheel.html)
 
 ---
 

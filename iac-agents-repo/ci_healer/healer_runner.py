@@ -8,6 +8,7 @@ from typing import Optional
 import requests
 from openai import OpenAI
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from healer_guards import AI_LABEL, count_healer_commits, push_decision
 
 # ==========================================
@@ -245,10 +246,10 @@ def commit_and_push_changes(commit_message: str) -> bool:
         print("⚠️ HEAD_BRANCH env var is not set. Skipping git commit/push.")
         return False
 
-    # The workflow copies main's .agents/ over the checkout so the latest healer code runs. That is for running, not for
-    # committing: put the branch's own .agents/ back so those differences never end up in the fix commit.
-    subprocess.run(["git", "reset", "-q", "HEAD", "--", ".agents"], capture_output=True)
-    subprocess.run(["git", "checkout", "--", ".agents"], capture_output=True)
+    # The workflow copies main's iac-agents-repo/ over the checkout so the latest healer code runs. That is for running, not for
+    # committing: put the branch's own iac-agents-repo/ back so those differences never end up in the fix commit.
+    subprocess.run(["git", "reset", "-q", "HEAD", "--", "iac-agents-repo"], capture_output=True)
+    subprocess.run(["git", "checkout", "--", "iac-agents-repo"], capture_output=True)
 
     # Hard limits first: never main, only a branch with an open PR, at most N healer commits, no protected paths.
     log =subprocess.run(["git", "log", "--format=%s", "origin/main..HEAD"], capture_output=True, text=True)

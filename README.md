@@ -117,7 +117,7 @@ foundation-live-repo/       # The landing zone: management, security, infrastruc
 workloads-live-repo/        # Platform stacks in workload accounts
 └── workloads/<nonprod|prod>/<account>/<region>/<category>/<module>/terragrunt.hcl
 policy-library-repo/        # Rego rules (+ tests) and the policy catalog
-.agents/                    # IaC agent, self-healing CI, delivery metrics
+iac-agents-repo/            # IaC agent, self-healing CI, golden paths, delivery metrics
 .github/                    # Workflows, composite actions, toolbox image
 docs/                       # Architecture, CI/CD, SLOs, runbooks, ADRs, execution log
 ```

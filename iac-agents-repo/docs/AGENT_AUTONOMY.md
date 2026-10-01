@@ -14,25 +14,25 @@ A rule that only says "the agent should not" is not a control. Every cell in the
 | **L4** | Remediate prod | Fixes production on its own. |
 
 **Today every agent is L0, L1 or L2. None is L3 or L4, and none may apply.** No agent code path calls `apply`
-(the only `apply` in `.agents/scripts/` is `git apply`), and no agent workflow assumes an AWS role.
+(the only `apply` in `iac-agents-repo/` is `git apply`), and no agent workflow assumes an AWS role.
 
 Moving an agent up a level needs three things: its numbers from the weekly delivery metrics (`docs/SLO.md`, PLAN 11.5), an ADR,
 and the owner's sign-off. Not a model's opinion.
 
 ## One row per agent
 
-Agents are those in [`.agents/AGENTS.md`](../.agents/AGENTS.md) section 8, plus the two ways of triggering the generation agent
+Agents are those in [`AGENTS.md`](../../AGENTS.md) and [`iac-agents-repo/README.md`](../README.md), plus the two ways of triggering the generation agent
 (drift `/reconcile` and ChatOps `/generate`) and the local coding agents.
 
 | Agent | Level (dev / prod) | What it may do there | The control that enforces it |
 |---|---|---|---|
-| **IaC Architect** (`.agents/prompts/architect.md`) | L1 / L1 | Writes HCL for a human to review. | A prompt, so **no technical control by itself**: it produces text. Its output only reaches the repo through a PR (`.github/CODEOWNERS`, and branch protection once it exists, see gaps). |
-| **Policy Auditor** (`.agents/prompts/auditor.md`) | L0 / L0 | Reads a diff and answers `STATUS: PASSED` or `FAILED`. | Read-only: it has no tools. Its verdict is advice; the blocking gates are Checkov and Rego in CI (`policy-library-repo/POLICIES.md`). |
-| **Pipeline Healer** (`.agents/prompts/ci_healer.md`, `.agents/scripts/healer_runner.py`) | L1 / L1 | Pushes a fix **commit** to the branch of a failed PR run. | `healer_guards.py` (tested): refuses `main`, refuses a branch without an open PR, stops after 3 healer commits, refuses patches that touch protected paths. `pipeline_healer.yml` `permissions:` gives it `contents: write` and `pull-requests: write`, and **no `id-token`, so it cannot assume an AWS role**. |
-| **IaC Generation Agent** (`.agents/scripts/iac_agent.py`) | L2 / L1 | Generates a diff and runs the validation ladder (offline init, tflint, conftest, checkov, Infracost) on its own branch. **Prod: proposals only.** | `check_sre_error_budget()` freezes prod proposals when the measured error budget is below 10% (`.agents/sre/error_budgets.yaml`, `docs/SLO.md`). The plan step needs the read-only `github-actions-plan` role. Nothing in it applies. |
+| **IaC Architect** (`prompts/architect.md`) | L1 / L1 | Writes HCL for a human to review. | A prompt, so **no technical control by itself**: it produces text. Its output only reaches the repo through a PR (`.github/CODEOWNERS`, and branch protection once it exists, see gaps). |
+| **Policy Auditor** (`prompts/auditor.md`) | L0 / L0 | Reads a diff and answers `STATUS: PASSED` or `FAILED`. | Read-only: it has no tools. Its verdict is advice; the blocking gates are Checkov and Rego in CI (`policy-library-repo/POLICIES.md`). |
+| **Pipeline Healer** (`prompts/ci_healer.md`, `ci_healer/healer_runner.py`) | L1 / L1 | Pushes a fix **commit** to the branch of a failed PR run. | `healer_guards.py` (tested): refuses `main`, refuses a branch without an open PR, stops after 3 healer commits, refuses patches that touch protected paths. `pipeline_healer.yml` `permissions:` gives it `contents: write` and `pull-requests: write`, and **no `id-token`, so it cannot assume an AWS role**. |
+| **IaC Generation Agent** (`iac_agent/iac_agent.py`) | L2 / L1 | Generates a diff and runs the validation ladder (offline init, tflint, conftest, checkov, Infracost) on its own branch. **Prod: proposals only.** | `check_sre_error_budget()` freezes prod proposals when the measured error budget is below 10% (`sre/error_budgets.yaml`, `docs/SLO.md`). The plan step needs the read-only `github-actions-plan` role. Nothing in it applies. |
 | **Drift `/reconcile`** (issue comment on a drift issue, `chatops_generator.yml`) | L1 / L1 | Turns the drift plan in the issue into a PR. | `chatops_generator.yml`: only `OWNER`, `MEMBER`, `COLLABORATOR` comments run it; `permissions:` has no `id-token`; the agent runs with `--skip-plan` (no AWS access at all); the PR gets the `ai-generated` label. |
 | **ChatOps `/generate`** (`chatops_generator.yml`) | L1 / L1 | Creates a branch and opens a PR from a comment. | Same as above. A human still reviews and merges. |
-| **Local coding agents** (Claude Code and others, rules in `.agents/AGENTS.md` "Local agent guardrails") | L2 / L2 | Edit code and run the checks (`make verify-module`) on a laptop. | `.claude/settings.json` + `.agents/hooks/guard.py` (tested): blocks apply, destroy, state edits and `run --all` without a read-only command; blocks edits to `.checkov.yaml`, `policy-library-repo/` and the hooks themselves; stops after 3 failed checks on a module. **Advisory: they run on a laptop and can be switched off.** The real control is that the laptop agent holds no apply credentials. |
+| **Local coding agents** (Claude Code and others, rules in `AGENTS.md` "Local agent guardrails") | L2 / L2 | Edit code and run the checks (`make verify-module`) on a laptop. | `.claude/settings.json` + `.agents/hooks/guard.py` (tested): blocks apply, destroy, state edits and `run --all` without a read-only command; blocks edits to `.checkov.yaml`, `policy-library-repo/` and the hooks themselves; stops after 3 failed checks on a module. **Advisory: they run on a laptop and can be switched off.** The real control is that the laptop agent holds no apply credentials. |
 
 Nothing above may assume `github-actions-apply`. Only the `apply` job in `terragrunt.yml` and `destroy.yml` uses it, and only from the
 account's GitHub Environment (manual approval on prod).

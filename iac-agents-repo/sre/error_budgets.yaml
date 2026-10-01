@@ -1,5 +1,5 @@
 # SRE Error Budget Policy & Service Level Objectives
-# Used by .agents/scripts/iac_agent.py (Phase D5 / PLAN.md) for change-risk budgeting.
+# Used by iac-agents-repo/iac_agent/iac_agent.py (Phase D5 / PLAN.md) for change-risk budgeting.
 #
 # If remaining error budget drops below critical_threshold_pct (10%), agent-authored
 # changes to prod are blocked from auto-proposal unless explicitly overridden with

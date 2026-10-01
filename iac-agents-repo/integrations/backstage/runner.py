@@ -6,7 +6,7 @@ Allows Backstage / IDP Scaffolder actions to execute infrastructure generation
 requests deterministically, returning machine-readable JSON results.
 
 Usage:
-  python3 .agents/backstage/runner.py --input-json '{"request": "add an s3 bucket", "env": "dev"}'
+  python3 iac-agents-repo/integrations/backstage/runner.py --input-json '{"request": "add an s3 bucket", "env": "dev"}'
 """
 
 import argparse
@@ -16,8 +16,8 @@ from pathlib import Path
 import subprocess
 import sys
 
-BASE_DIR = Path(__file__).resolve().parent.parent  # .agents/
-sys.path.insert(0, str(BASE_DIR / "scripts"))
+BASE_DIR = Path(__file__).resolve().parent.parent.parent  # iac-agents-repo/
+sys.path.insert(0, str(BASE_DIR / "iac_agent"))
 
 from iac_agent import GenerationRequest, IaCPlatformAgent  # noqa: E402
 

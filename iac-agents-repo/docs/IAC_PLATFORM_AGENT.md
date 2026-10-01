@@ -17,7 +17,7 @@ The **IaC Platform Agent** is an autonomous platform engineering and SRE capabil
 [ 2. SRE Guardrails ] ──► (Check error_budgets.yaml; freeze prod if budget < 10%)
         │
         ▼
-[ 3. Golden-Path First Check ] ──► (Match .agents/catalog/golden-paths.yaml)
+[ 3. Golden-Path First Check ] ──► (Match iac-agents-repo/catalog/golden-paths.yaml)
         │
         ├──► [ MATCH FOUND ] ──► Deterministic Template (0 LLM Tokens / $0 Cost)
         │                                  │
@@ -39,7 +39,7 @@ The **IaC Platform Agent** is an autonomous platform engineering and SRE capabil
         ▼
 [ 5. Delivery & Telemetry ]
         ├── Push Git branch (agent/iac-*) & open compliant Pull Request
-        └── Record append-only telemetry (.agents/metrics/runs.jsonl)
+        └── Record append-only telemetry (iac-agents-repo/metrics/runs.jsonl)
 ```
 
 ---
@@ -70,11 +70,11 @@ The **IaC Platform Agent** is an autonomous platform engineering and SRE capabil
 ## Setup & Prerequisites
 
 ### 1. Python Environment
-The agent requires Python 3.10+ and packages listed in `.agents/requirements.txt`:
+The agent requires Python 3.10+ and packages listed in `iac-agents-repo/requirements.txt`:
 
 ```bash
 # Install dependencies
-pip install -r .agents/requirements.txt
+pip install -r iac-agents-repo/requirements.txt
 ```
 
 ### 2. Model Provider Configuration
@@ -116,38 +116,38 @@ The CLI is the primary local tool for developers and architects.
 #### 1. Dry-Run Verification (Zero Git Side-Effects)
 Safely inspect what the agent would match or scaffold without altering git branches or creating files:
 ```bash
-python3 .agents/scripts/iac_agent.py --request "add an S3 bucket for build artifacts" --dry-run
+python3 iac-agents-repo/iac_agent/iac_agent.py --request "add an S3 bucket for build artifacts" --dry-run
 ```
 
 #### 2. Golden-Path Scaffolding (Deterministic, Zero LLM HCL)
 Pre-vetted modules (`data/s3-encrypted`, `data/rds-postgres`, `data/dynamodb-table`) are rendered deterministically:
 ```bash
 # Generate compliant S3 bucket
-python3 .agents/scripts/iac_agent.py --request "add an S3 bucket for build artifacts" --env dev
+python3 iac-agents-repo/iac_agent/iac_agent.py --request "add an S3 bucket for build artifacts" --env dev
 
 # Generate RDS PostgreSQL instance
-python3 .agents/scripts/iac_agent.py --request "provision an RDS postgres database for orders" --env dev
+python3 iac-agents-repo/iac_agent/iac_agent.py --request "provision an RDS postgres database for orders" --env dev
 
 # Generate DynamoDB table with PITR and encryption
-python3 .agents/scripts/iac_agent.py --request "provision a DynamoDB table for user sessions" --env dev
+python3 iac-agents-repo/iac_agent/iac_agent.py --request "provision a DynamoDB table for user sessions" --env dev
 ```
 
 #### 3. Multi-Module Graph Decomposition (`--graph`)
 Topologically decomposes composite infrastructure requests into ordered steps and injects cross-module dependencies:
 ```bash
-python3 .agents/scripts/iac_agent.py --request "stand up microservice environment: VPC + EKS + RDS" --graph --dry-run
+python3 iac-agents-repo/iac_agent/iac_agent.py --request "stand up microservice environment: VPC + EKS + RDS" --graph --dry-run
 ```
 
 #### 4. Cost-Gated Generation (`--cost-threshold`)
 Blocks generation if projected monthly cost delta exceeds your threshold in USD:
 ```bash
-python3 .agents/scripts/iac_agent.py --request "add large compute cluster" --cost-threshold 50.0
+python3 iac-agents-repo/iac_agent/iac_agent.py --request "add large compute cluster" --cost-threshold 50.0
 ```
 
 #### 5. Local Offline Ollama Provider
 Run the entire loop completely on your machine without external internet or API keys:
 ```bash
-python3 .agents/scripts/iac_agent.py --request "add storage bucket" --provider ollama --skip-plan
+python3 iac-agents-repo/iac_agent/iac_agent.py --request "add storage bucket" --provider ollama --skip-plan
 ```
 
 ---
@@ -176,7 +176,7 @@ The workflow `.github/workflows/chatops_generator.yml` runs inside the hardened 
 Execute infrastructure generation as part of an Internal Developer Portal (Backstage Scaffolder action):
 
 ```bash
-python3 .agents/backstage/runner.py --input-json '{
+python3 iac-agents-repo/integrations/backstage/runner.py --input-json '{
   "request": "create an encrypted s3 bucket for telemetry",
   "env": "dev",
   "region": "eu-central-1",
@@ -193,7 +193,7 @@ Returns structured JSON containing `success`, `branch_name`, `branch_url`, `cata
 Run the agent as a local REST API daemon for integrations and IDE plugins:
 
 ```bash
-python3 .agents/scripts/iac_agent.py --serve --port 8000
+python3 iac-agents-repo/iac_agent/iac_agent.py --serve --port 8000
 ```
 
 > [!NOTE]
@@ -214,7 +214,7 @@ python3 .agents/scripts/iac_agent.py --serve --port 8000
 
 ## Governance & SRE Policies
 
-### Error-Budget Policy (`.agents/sre/error_budgets.yaml`)
+### Error-Budget Policy (`iac-agents-repo/sre/error_budgets.yaml`)
 - **Prod Threshold**: If production error budget drops below 10%, automated changes to `prod` are blocked unless `--bypass-error-budget` is passed with SRE approval.
 - **Change Windows**: Restricts production changes to allowed windows (default: `Mon-Thu 08:00-16:00 UTC`). Can be strictly enforced via `enforce_change_windows: true` or `ENFORCE_CHANGE_WINDOWS=1`.
 
@@ -223,12 +223,12 @@ python3 .agents/scripts/iac_agent.py --serve --port 8000
 ## Testing & Quality Control
 
 ```bash
-# Run unit test suite (11 tests: catalog, change windows, dry-run safety, heuristics)
-python3 -m unittest discover -s .agents/tests
+# Run unit test suite
+python3 -m unittest discover -s iac-agents-repo/tests
 
 # Run classification eval harness (4 offline fixtures)
-python3 .agents/scripts/iac_agent_eval.py
+python3 iac-agents-repo/iac_agent/iac_agent_eval.py
 
 # Display telemetry and run health summary
-python3 .agents/scripts/iac_agent.py --metrics-summary
+python3 iac-agents-repo/iac_agent/iac_agent.py --metrics-summary
 ```

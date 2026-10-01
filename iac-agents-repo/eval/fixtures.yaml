@@ -1,4 +1,4 @@
-# Fixtures for .agents/scripts/iac_agent_eval.py (Phase A4).
+# Fixtures for iac-agents-repo/iac_agent/iac_agent_eval.py (Phase A4).
 #
 # Catalog fixtures (expect_catalog_id) are fully offline/deterministic — no LLM call, no API
 # key needed, always run. LLM fixtures (expect_task_type / expect_module_path_prefix) exercise

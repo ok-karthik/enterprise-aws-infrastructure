@@ -2,7 +2,7 @@
 
 Service level objectives for the *foundation itself*: the pipeline and the guardrails, not the applications on it.
 Each SLO has a definition anyone can recompute, a target, and the data it comes from. The numbers are computed weekly by
-`.agents/scripts/delivery_metrics.py` (workflow `delivery-metrics.yml`).
+`.github/scripts/delivery_metrics.py` (workflow `delivery-metrics.yml`).
 
 **Status: the targets are proposals. Nothing has been measured yet.** The first weekly run fills in the real
 numbers; adjust a target only after seeing them, and write down why.
@@ -25,17 +25,17 @@ Example: 200 applies at 95% allow 10 failures. 4 failures leaves 60%.
 
 ## How it connects to the agent gate
 
-`.agents/scripts/iac_agent.py` freezes prod changes proposed by the agent when the prod error budget drops below the
-`critical_threshold_pct` in `.agents/sre/error_budgets.yaml`. Until now that number was typed into the YAML. Now it
+`iac-agents-repo/iac_agent/iac_agent.py` freezes prod changes proposed by the agent when the prod error budget drops below the
+`critical_threshold_pct` in `iac-agents-repo/sre/error_budgets.yaml`. Until now that number was typed into the YAML. Now it
 is taken, in this order:
 
 1. `SLO_ERROR_BUDGET_REMAINING` in the environment: an explicit human override.
-2. `.agents/metrics/platform_slo.json`, written by the weekly job from SLO 2 (applies on main succeed), **if it is at most
+2. `iac-agents-repo/metrics/platform_slo.json`, written by the weekly job from SLO 2 (applies on main succeed), **if it is at most
    8 days old and has a number**.
 3. The static value in `error_budgets.yaml` (the old behaviour, and what is used until something is measured).
 
 The status file is git-ignored: it is a measurement, not configuration. Run
-`python3 .agents/scripts/delivery_metrics.py --write-json` to refresh it locally (needs `gh`).
+`python3 .github/scripts/delivery_metrics.py --write-json` to refresh it locally (needs `gh`).
 
 ## Guardrail signals (alarms)
 
