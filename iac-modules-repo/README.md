@@ -41,6 +41,7 @@ Every module in this repository is honestly labeled with its operational status:
 | `network` | [`inspection-egress`](network/inspection-egress/) | 📝 plan-only | `foundation-live-repo` | Central egress VPC + AWS Network Firewall stateful domain filtering (cost barrier) |
 | `network` | [`ipam`](network/ipam/) | 📝 plan-only | `foundation-live-repo` | IP Address Manager (IPAM) pools for global, regional, and environment CIDR delegations |
 | `network` | [`route53-failover`](network/route53-failover/) | 📐 design-only | — | Route 53 health-checked active-passive multi-region DNS failover routing |
+| `network` | [`tgw-peering`](network/tgw-peering/) | 📝 plan-only | `foundation-live-repo` | Cross-region Transit Gateway peering (requester and accepter sides); no static routes over it yet |
 | `network` | [`tgw-attachment`](network/tgw-attachment/) | 📐 design-only | — | Spoke VPC Transit Gateway attachment and route table association module |
 | `network` | [`transit-gateway`](network/transit-gateway/) | 📝 plan-only | `foundation-live-repo` | Regional Transit Gateway hub with isolated prod/nonprod/shared/inspection route domains |
 | `network` | [`vpc`](network/vpc/) | 📝 plan-only | `workloads-live-repo` | Multi-AZ VPC with flow logs, deny-all default NACLs, and IPAM/local-NAT options |

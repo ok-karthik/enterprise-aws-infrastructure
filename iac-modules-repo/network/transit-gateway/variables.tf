@@ -51,46 +51,6 @@ variable "auto_accept_shared_attachments" {
 }
 
 # ------------------------------------------------------------------------------
-# Cross-region peering (this module is applied once per region; the two applications coordinate through
-# these variables -- one is the requester, the other the accepter).
-# ------------------------------------------------------------------------------
-variable "peering" {
-  description = <<-EOT
-    Cross-region peering to another region's transit gateway (PLAN 5.2, primary_region <-> secondary_region).
-    role = "none" (default): no peering attachment from this region.
-    role = "requester": creates the peering attachment FROM this region's transit gateway TO
-      peer_transit_gateway_id in peer_region (peer_account_id defaults to this account, i.e. same-account
-      peering, which is what a single network-hub account needs).
-    role = "accepter": accepts a peering attachment created by the OTHER region's requester
-      (accepter_attachment_id -- that region's module output peering_attachment_id, passed in through a
-      Terragrunt dependency).
-  EOT
-  type = object({
-    role                    = optional(string, "none")
-    peer_transit_gateway_id = optional(string)
-    peer_region             = optional(string)
-    peer_account_id         = optional(string)
-    accepter_attachment_id  = optional(string)
-  })
-  default = {}
-
-  validation {
-    condition     = contains(["none", "requester", "accepter"], var.peering.role)
-    error_message = "peering.role must be none, requester or accepter."
-  }
-
-  validation {
-    condition     = var.peering.role != "requester" || (var.peering.peer_transit_gateway_id != null && var.peering.peer_region != null)
-    error_message = "peering.role = \"requester\" needs peer_transit_gateway_id and peer_region."
-  }
-
-  validation {
-    condition     = var.peering.role != "accepter" || var.peering.accepter_attachment_id != null
-    error_message = "peering.role = \"accepter\" needs accepter_attachment_id."
-  }
-}
-
-# ------------------------------------------------------------------------------
 # Hybrid connectivity (PLAN 5.6): optional flags. Module and docs only -- there is no real peer to connect to.
 # ------------------------------------------------------------------------------
 variable "enable_site_to_site_vpn" {

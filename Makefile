@@ -73,6 +73,7 @@ docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/ipam
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/transit-gateway
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/tgw-attachment
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/tgw-peering
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/inspection-egress
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/central-endpoints
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/dns

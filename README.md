@@ -48,7 +48,7 @@ flowchart TB
 
 | Area | Status |
 |---|---|
-| **Code & offline tests** | 40 Terraform modules tested offline (`terraform test` with mock providers), Rego policies (`conftest verify`), and unit tests for Python agents and scripts. Status breakdowns: [iac-modules-repo/README.md](iac-modules-repo/README.md) (27 📝 plan-only, 13 📐 design-only). |
+| **Code & offline tests** | 41 Terraform modules tested offline (`terraform test` with mock providers), Rego policies (`conftest verify`), and unit tests for Python agents and scripts. Status breakdowns: [iac-modules-repo/README.md](iac-modules-repo/README.md) (28 📝 plan-only, 13 📐 design-only). |
 | **Landing zone & live stacks** | Detailed status per account/region in [foundation-live-repo/README.md](foundation-live-repo/README.md) and [workloads-live-repo/README.md](workloads-live-repo/README.md). Placeholder account IDs in `accounts.hcl` keep CI safe until accounts are linked. |
 | **Measured numbers** | Operational metrics (RTO/RPO, foundation costs, SLOs) are architectural models documented in [docs/DISASTER_RECOVERY.md](docs/DISASTER_RECOVERY.md), [docs/FINOPS.md](docs/FINOPS.md), and [docs/SLO.md](docs/SLO.md). |
 

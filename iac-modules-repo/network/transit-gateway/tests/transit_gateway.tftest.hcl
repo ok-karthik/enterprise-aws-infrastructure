@@ -19,12 +19,6 @@ mock_provider "aws" {
       ids = []
     }
   }
-
-  mock_data "aws_caller_identity" {
-    defaults = {
-      account_id = "333344445555"
-    }
-  }
 }
 
 variables {
@@ -94,68 +88,6 @@ run "accept_vpc_attachments_can_be_turned_on_once_the_transit_gateway_exists" {
   assert {
     condition     = length(aws_ec2_transit_gateway_vpc_attachment_accepter.this) == 0
     error_message = "With no pending attachments, nothing is accepted."
-  }
-}
-
-run "no_peering_by_default" {
-  command = plan
-
-  assert {
-    condition     = length(aws_ec2_transit_gateway_peering_attachment.this) == 0 && length(aws_ec2_transit_gateway_peering_attachment_accepter.this) == 0
-    error_message = "peering.role defaults to none: neither side is created."
-  }
-}
-
-run "requester_peering_needs_a_peer_tgw_and_region" {
-  command = plan
-
-  variables {
-    peering = {
-      role                    = "requester"
-      peer_transit_gateway_id = "tgw-9999999999999999"
-      peer_region             = "eu-west-1"
-    }
-  }
-
-  assert {
-    condition     = one(aws_ec2_transit_gateway_peering_attachment.this).peer_transit_gateway_id == "tgw-9999999999999999"
-    error_message = "The requester attachment must target the given peer transit gateway."
-  }
-}
-
-run "requester_peering_without_a_peer_region_is_rejected" {
-  command = plan
-
-  variables {
-    peering = {
-      role                    = "requester"
-      peer_transit_gateway_id = "tgw-9999999999999999"
-    }
-  }
-
-  expect_failures = [var.peering]
-}
-
-run "accepter_peering_needs_an_attachment_id" {
-  command = plan
-
-  variables {
-    peering = { role = "accepter" }
-  }
-
-  expect_failures = [var.peering]
-}
-
-run "accepter_peering_works_with_an_attachment_id" {
-  command = plan
-
-  variables {
-    peering = { role = "accepter", accepter_attachment_id = "tgw-attach-0123456789abcdef0" }
-  }
-
-  assert {
-    condition     = one(aws_ec2_transit_gateway_peering_attachment_accepter.this).transit_gateway_attachment_id == "tgw-attach-0123456789abcdef0"
-    error_message = "The accepter must accept the given attachment id."
   }
 }
 

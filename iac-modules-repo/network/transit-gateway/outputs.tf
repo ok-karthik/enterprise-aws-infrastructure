@@ -18,11 +18,6 @@ output "resource_share_arn" {
   value       = aws_ram_resource_share.this.arn
 }
 
-output "peering_attachment_id" {
-  description = "ID of the peering attachment this region created as requester, or null (used by the other region's accepter, via a Terragrunt dependency)"
-  value       = try(aws_ec2_transit_gateway_peering_attachment.this[0].id, null)
-}
-
 output "accepted_vpc_attachment_ids" {
   description = "IDs of the spoke VPC attachments this leaf discovered and accepted"
   value       = var.accept_vpc_attachments ? data.aws_ec2_transit_gateway_vpc_attachments.pending[0].ids : []

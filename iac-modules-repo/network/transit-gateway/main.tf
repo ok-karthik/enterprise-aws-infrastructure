@@ -1,8 +1,8 @@
 # Transit Gateway (PLAN 5.2), applied in network-hub, per region: default association and propagation OFF
 # (route tables are managed explicitly), four route tables (prod, nonprod, shared, inspection), shared with
-# the Workloads and Infrastructure OUs through RAM. Cross-region peering and hybrid connectivity (PLAN 5.6)
-# are optional. Spoke VPCs attach with network/tgw-attachment, applied in the workload account; the
-# acceptance side is here (var.accept_vpc_attachments).
+# the Workloads and Infrastructure OUs through RAM. Hybrid connectivity (PLAN 5.6) is optional.
+# Cross-region peering is network/tgw-peering. Spoke VPCs attach with network/tgw-attachment, applied in the
+# workload account; the acceptance side is here (var.accept_vpc_attachments).
 
 resource "aws_ec2_transit_gateway" "this" {
   description                     = "Platform transit gateway (PLAN 5.2)"
@@ -79,32 +79,6 @@ resource "aws_ec2_transit_gateway_vpc_attachment_accepter" "this" {
   transit_gateway_attachment_id = each.value
 
   tags = var.tags
-}
-
-# ------------------------------------------------------------------------------
-# Cross-region peering (PLAN 5.2)
-# ------------------------------------------------------------------------------
-resource "aws_ec2_transit_gateway_peering_attachment" "this" {
-  count = var.peering.role == "requester" ? 1 : 0
-
-  transit_gateway_id      = aws_ec2_transit_gateway.this.id
-  peer_transit_gateway_id = var.peering.peer_transit_gateway_id
-  peer_region             = var.peering.peer_region
-  peer_account_id         = coalesce(var.peering.peer_account_id, data.aws_caller_identity.current[0].account_id)
-
-  tags = var.tags
-}
-
-resource "aws_ec2_transit_gateway_peering_attachment_accepter" "this" {
-  count = var.peering.role == "accepter" ? 1 : 0
-
-  transit_gateway_attachment_id = var.peering.accepter_attachment_id
-
-  tags = var.tags
-}
-
-data "aws_caller_identity" "current" {
-  count = var.peering.role == "requester" ? 1 : 0
 }
 
 # ------------------------------------------------------------------------------

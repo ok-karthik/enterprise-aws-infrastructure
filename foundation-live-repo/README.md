@@ -22,8 +22,8 @@ Declarative Terragrunt live configuration for the platform landing zone: AWS Org
 | `security-tooling` | `eu-central-1` | `threat-detection`, `security-alerts`, `access-analyzer`, `auto-remediation`, `org-config` | 📝 plan-only | Delegated admin for GuardDuty, Security Hub, Inspector, Macie (Audit Manager default off) |
 | `security-tooling` | `eu-central-1` | `firewall-manager` | 📝 plan-only | **Cost barrier**: AWS Firewall Manager ($100/policy/region) + AWS WAF rule group costs |
 | `network-hub` | `_global` | `ipam` | 📝 plan-only | Org-wide IPAM pools for top-level and regional CIDR allocations |
-| `network-hub` | `eu-central-1` | `transit-gateway`, `dns` | 📝 plan-only | Regional Transit Gateway hub with prod/nonprod/inspection route domains |
+| `network-hub` | `eu-central-1` | `transit-gateway`, `tgw-peering` (requester), `dns` | 📝 plan-only | Regional Transit Gateway hub with prod/nonprod/inspection route domains |
 | `network-hub` | `eu-central-1` | `inspection-egress` | 📝 plan-only | **Cost barrier**: AWS Network Firewall (~$220/endpoint/month + NAT gateway hourly costs) |
-| `network-hub` | `eu-west-1` (DR) | `transit-gateway`, `dns`, `inspection-egress` | 📝 plan-only | **Cost barrier**: DR secondary standby infrastructure duplicate hourly charges + Network Firewall |
+| `network-hub` | `eu-west-1` (DR) | `transit-gateway`, `tgw-peering` (accepter), `dns`, `inspection-egress` | 📝 plan-only | **Cost barrier**: DR secondary standby infrastructure duplicate hourly charges + Network Firewall |
 | `shared-services` | `eu-central-1` | `central-endpoints` | 📝 plan-only | Central VPC Interface Endpoints and Private Hosted Zones |
 | `observability` | `eu-central-1` | `oam`, `guardrail-signals` | 📝 plan-only | Central CloudWatch OAM monitoring sink and security alarm rules |

@@ -35,3 +35,4 @@ Implement a **regional AWS Transit Gateway (TGW)** in the `network-hub` account 
 - Clean hub-and-spoke network topology with centralized route control.
 - Production and non-production network traffic completely isolated at Layer 3.
 - Foundation established for centralized egress inspection and DNS resolution.
+- Cross-region peering between the two regional transit gateways is its own unit, `iac-modules-repo/network/tgw-peering` (plan-only), so the two transit gateways do not depend on each other. Static routes over the peering attachment are not built yet.
