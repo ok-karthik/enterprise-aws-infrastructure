@@ -83,11 +83,29 @@ def find_account_dir(root: Path, name: str, ou: str) -> Path | None:
     return None
 
 
+LOCAL_REGISTRY = "foundation-live-repo/_config/accounts.local.hcl"
+
+
+def load_accounts(registry_text: str, root: Path = REPO_ROOT) -> dict[str, dict[str, str]]:
+    """Parse base registry and merge accounts.local.hcl if present."""
+    accounts = parse_registry(registry_text)
+    local_path = root / LOCAL_REGISTRY
+    if local_path.is_file():
+        local_accounts = parse_registry(local_path.read_text(encoding="utf-8"))
+        for name, fields in local_accounts.items():
+            if name in accounts:
+                accounts[name].update(fields)
+            else:
+                accounts[name] = fields
+    return accounts
+
+
 def build_matrix(registry_text: str, root: Path = REPO_ROOT) -> tuple[list[dict], list[str]]:
     """Return (matrix entries in apply order, notices for the accounts that were skipped)."""
     entries: list[dict] = []
     notices: list[str] = []
-    for name, fields in parse_registry(registry_text).items():
+    accounts = load_accounts(registry_text, root)
+    for name, fields in accounts.items():
         if fields.get("ci") != "true":
             continue
         account_id = fields.get("id", "")

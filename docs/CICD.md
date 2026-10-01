@@ -75,7 +75,7 @@ Both are Rego v1 (`import rego.v1`, `package main`) and are unit-tested with `co
 
 A matrix job over the same account matrix compares live AWS against state each night and self-manages **one GitHub Issue per account**: creates on new drift, comments while it persists, and auto-closes when resolved. Each account's own read-only `github-actions-plan` role is used.
 
-## Self-healing CI (`pipeline_healer.yml` + `.agents/`)
+## Self-healing CI (`pipeline_healer.yml` + `iac-agents-repo/`)
 
 Triggered on a failed "Terragrunt CI/CD" run:
 
@@ -83,12 +83,12 @@ Triggered on a failed "Terragrunt CI/CD" run:
 2. If it detects a provider-lock mismatch, runs `init -upgrade -backend=false` across all active `.terraform.lock.hcl` files (temporarily mocking `get_aws_account_id()` so parsing works without AWS creds) and commits the result.
 3. Otherwise sends logs + repo tree to a Groq-hosted LLM, extracts a `git diff`, applies it, and pushes a remediation commit to the PR branch.
 
-## Autonomous IaC Platform Agent & ChatOps (`chatops_generator.yml` + `.agents/`)
+## Autonomous IaC Platform Agent & ChatOps (`chatops_generator.yml` + `iac-agents-repo/`)
 
 Provides on-demand self-service infrastructure generation, drift reconciliation, and Backstage IDP integration:
 - Listens for `/generate` and `/reconcile` issue comments.
 - Closed-loop drift reconciliation links nightly drift issues to corrective pull requests.
-- See full architecture flow diagrams and usage guide in **[docs/IAC_PLATFORM_AGENT.md](IAC_PLATFORM_AGENT.md)**.
+- See full architecture flow diagrams and usage guide in **[iac-agents-repo/docs/IAC_PLATFORM_AGENT.md](../iac-agents-repo/docs/IAC_PLATFORM_AGENT.md)**.
 
 ## Dependency automation
 

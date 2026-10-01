@@ -22,38 +22,17 @@ locals {
   is_primary_region = local.aws_region == local.regions.locals.primary_region
 }
 
-# The OTHER region's transit gateway. The primary region's leaf (requester) needs its id to peer to; the
-# secondary region's leaf ignores this dependency's transit_gateway_id and only uses its peering_attachment_id.
-dependency "peer_transit_gateway" {
-  config_path = "${get_terragrunt_dir()}/../../${local.is_primary_region ? local.regions.locals.secondary_region : local.regions.locals.primary_region}/network/transit-gateway"
-
-  mock_outputs = {
-    transit_gateway_id    = "tgw-mock0123456789abcdef"
-    peering_attachment_id = "tgw-attach-mock0123456789"
-  }
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "show"]
-}
-
 inputs = {
   # TODO(owner): replace with the real Workloads / Infrastructure OU ARNs once governance/organization is
   # applied and imported. The module refuses to plan while these are not well-formed OU ARNs.
   workloads_ou_arn      = "arn:aws:organizations::000000000000:ou/o-0000000000/ou-0000-00000000"
   infrastructure_ou_arn = "arn:aws:organizations::000000000000:ou/o-0000000000/ou-0000-11111111"
 
-  # Every key present in both branches (even as null): the ternary's two branches must share one object
-  # shape (HCL type unification), even though the module's own variable type makes each key optional.
-  peering = local.is_primary_region ? {
-    role                    = "requester"
-    peer_transit_gateway_id = dependency.peer_transit_gateway.outputs.transit_gateway_id
-    peer_region             = local.regions.locals.secondary_region
-    peer_account_id         = null
-    accepter_attachment_id  = null
-    } : {
-    role                    = "accepter"
-    peer_transit_gateway_id = null
-    peer_region             = null
-    peer_account_id         = null
-    accepter_attachment_id  = dependency.peer_transit_gateway.outputs.peering_attachment_id
+  # Cross-region peering is disabled by default (role = "none") to avoid Terragrunt DAG dependency cycles
+  # between regional transit gateways (primary <-> secondary). In a live deployment, peer attachment is
+  # established in a second phase after both regional TGWs exist.
+  peering = {
+    role = "none"
   }
 
   tags = {

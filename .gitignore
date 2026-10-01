@@ -18,3 +18,5 @@ __pycache__/
 .agents/metrics/platform_slo.json
 iac-agents-repo/metrics/*.jsonl
 iac-agents-repo/metrics/platform_slo.json
+foundation-live-repo/_config/accounts.local.hcl
+**/accounts.local.hcl

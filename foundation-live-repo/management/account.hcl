@@ -1,7 +1,7 @@
 locals {
   # Must match this account's entry in foundation-live-repo/_config/accounts.hcl
   # (workloads-live-repo/scripts/check-account-registry.sh enforces it).
-  aws_account_id = "954171757349"
+  aws_account_id = "000000000000"
   # IAM account alias: globally unique across AWS, lowercase. TODO(owner): change it if it is taken.
   account_alias = "ok-karthik-management"
   account_name  = "management"

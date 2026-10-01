@@ -1,0 +1,48 @@
+# Example local account configuration (gitignored).
+# Copy this file to foundation-live-repo/_config/accounts.local.hcl and fill in real values.
+# Real IDs and emails override the placeholders in accounts.hcl for local execution and CI.
+
+locals {
+  accounts = {
+    management = {
+      id    = "954171757349"
+      email = "aws+management@example.com"
+      ci    = false
+    }
+    log-archive = {
+      id    = "123456789012"
+      email = "aws+log-archive@example.com"
+      ci    = false
+    }
+    security-tooling = {
+      id    = "123456789013"
+      email = "aws+security@example.com"
+      ci    = false
+    }
+    network-hub = {
+      id    = "123456789014"
+      email = "aws+network@example.com"
+      ci    = false
+    }
+    shared-services = {
+      id    = "123456789015"
+      email = "aws+shared@example.com"
+      ci    = false
+    }
+    observability = {
+      id    = "123456789016"
+      email = "aws+observability@example.com"
+      ci    = false
+    }
+    workloads-dev = {
+      id    = "123456789017"
+      email = "aws+workloads-dev@example.com"
+      ci    = true
+    }
+    workloads-prod = {
+      id    = "123456789018"
+      email = "aws+workloads-prod@example.com"
+      ci    = true
+    }
+  }
+}
