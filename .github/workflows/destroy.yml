@@ -46,6 +46,7 @@ jobs:
         id: account
         env:
           ACCOUNT: ${{ github.event.inputs.account }}
+          ACCOUNTS_LOCAL_HCL: ${{ vars.ACCOUNTS_LOCAL_HCL }}
         run: |
           # The management account holds the organization and the Day-0 bootstrap: it is never torn
           # down from CI (the organization has prevent_destroy, and the apply boundary denies it).
@@ -69,6 +70,9 @@ jobs:
     timeout-minutes: 40
     # The account's GitHub Environment: it holds the approval, and github-actions-apply only trusts it.
     environment: ${{ needs.discover.outputs.github_environment }}
+    env:
+      # Real account ids (not secret) from the ACCOUNTS_LOCAL_HCL repository variable; empty on forks.
+      ACCOUNTS_LOCAL_HCL: ${{ vars.ACCOUNTS_LOCAL_HCL }}
     steps:
       - name: Git Checkout
         uses: actions/checkout@v6

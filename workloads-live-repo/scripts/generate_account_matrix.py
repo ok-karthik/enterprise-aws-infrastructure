@@ -87,11 +87,17 @@ LOCAL_REGISTRY = "foundation-live-repo/_config/accounts.local.hcl"
 
 
 def load_accounts(registry_text: str, root: Path = REPO_ROOT) -> dict[str, dict[str, str]]:
-    """Parse base registry and merge accounts.local.hcl if present."""
+    """Parse base registry and merge the real ids/emails: accounts.local.hcl if it exists, else the text in
+    $ACCOUNTS_LOCAL_HCL (a repository variable in CI). With neither, the placeholders stay and CI skips the accounts."""
     accounts = parse_registry(registry_text)
     local_path = root / LOCAL_REGISTRY
+    local_text = ""
     if local_path.is_file():
-        local_accounts = parse_registry(local_path.read_text(encoding="utf-8"))
+        local_text = local_path.read_text(encoding="utf-8")
+    elif os.environ.get("ACCOUNTS_LOCAL_HCL", "").strip():
+        local_text = os.environ["ACCOUNTS_LOCAL_HCL"]
+    if local_text:
+        local_accounts = parse_registry(local_text)
         for name, fields in local_accounts.items():
             if name in accounts:
                 accounts[name].update(fields)

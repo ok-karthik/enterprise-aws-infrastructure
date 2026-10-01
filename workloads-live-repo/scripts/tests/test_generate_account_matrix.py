@@ -137,6 +137,76 @@ class BuildMatrix(unittest.TestCase):
         self.assertTrue(any("shared-services" in n and "no live folder" in n for n in self.notices))
 
 
+LOCAL_FILE = """
+locals {
+  accounts = {
+    workloads-dev = {
+      id = "888888888888"
+    }
+  }
+}
+"""
+
+BASE = """
+locals {
+  accounts = {
+    workloads-dev = {
+      id = "000000000002"
+      ou = "NonProd"
+      env = "dev"
+      ci = true
+    }
+  }
+}
+"""
+
+
+class LocalRegistry(unittest.TestCase):
+    """Real ids come from accounts.local.hcl, or from $ACCOUNTS_LOCAL_HCL when that file does not exist."""
+
+    def setUp(self):
+        self.root = make_root("workloads-live-repo/workloads/nonprod/workloads-dev")
+        self.saved = os.environ.pop("ACCOUNTS_LOCAL_HCL", None)
+
+    def tearDown(self):
+        os.environ.pop("ACCOUNTS_LOCAL_HCL", None)
+        if self.saved is not None:
+            os.environ["ACCOUNTS_LOCAL_HCL"] = self.saved
+
+    def write_local_file(self, text):
+        path = self.root / gam.LOCAL_REGISTRY
+        path.parent.mkdir(parents=True)
+        path.write_text(text, encoding="utf-8")
+
+    def test_local_file_present(self):
+        self.write_local_file(LOCAL_FILE)
+        entries, _ = gam.build_matrix(BASE, self.root)
+        self.assertEqual([e["account_id"] for e in entries], ["888888888888"])
+
+    def test_env_only(self):
+        os.environ["ACCOUNTS_LOCAL_HCL"] = LOCAL_FILE
+        entries, _ = gam.build_matrix(BASE, self.root)
+        self.assertEqual([e["account_id"] for e in entries], ["888888888888"])
+
+    def test_file_wins_over_env(self):
+        self.write_local_file(LOCAL_FILE)
+        os.environ["ACCOUNTS_LOCAL_HCL"] = LOCAL_FILE.replace("888888888888", "777777777777")
+        entries, _ = gam.build_matrix(BASE, self.root)
+        self.assertEqual([e["account_id"] for e in entries], ["888888888888"])
+
+    def test_neither_keeps_the_placeholder_and_skips_with_a_notice(self):
+        entries, notices = gam.build_matrix(BASE, self.root)
+        self.assertEqual(entries, [])
+        self.assertEqual(len(notices), 1)
+        self.assertIn("placeholder", notices[0])
+
+    def test_empty_env_is_the_same_as_unset(self):
+        os.environ["ACCOUNTS_LOCAL_HCL"] = "  \n"
+        entries, notices = gam.build_matrix(BASE, self.root)
+        self.assertEqual(entries, [])
+        self.assertEqual(len(notices), 1)
+
+
 class Cli(unittest.TestCase):
     def test_github_output_and_single_account(self):
         root = make_root("workloads-live-repo/workloads-dev")

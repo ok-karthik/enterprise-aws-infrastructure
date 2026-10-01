@@ -46,6 +46,9 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 20
+    env:
+      # Real account ids (not secret) from the ACCOUNTS_LOCAL_HCL repository variable; empty on forks.
+      ACCOUNTS_LOCAL_HCL: ${{ vars.ACCOUNTS_LOCAL_HCL }}
     steps:
       - name: "Git Checkout"
         uses: actions/checkout@v6
@@ -133,6 +136,9 @@ jobs:
       actions: read
       pull-requests: write
       security-events: write
+    env:
+      # Real account ids (not secret) from the ACCOUNTS_LOCAL_HCL repository variable; empty on forks.
+      ACCOUNTS_LOCAL_HCL: ${{ vars.ACCOUNTS_LOCAL_HCL }}
     steps:
       - name: "Git Checkout"
         uses: actions/checkout@v6
@@ -198,6 +204,9 @@ jobs:
       contents: read
       pull-requests: write
       security-events: write
+    env:
+      # Real account ids (not secret) from the ACCOUNTS_LOCAL_HCL repository variable; empty on forks.
+      ACCOUNTS_LOCAL_HCL: ${{ vars.ACCOUNTS_LOCAL_HCL }}
     steps:
       - name: "Git Checkout"
         uses: actions/checkout@v6
