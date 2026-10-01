@@ -3,14 +3,14 @@
 ## The big picture (PLAN 10.2)
 
 > [!TIP]
-> **Interactive Visualizer & Diagrams**:
-> - Open **[`docs/visualizer.html`](visualizer.html)** in any browser for the complete interactive multi-view architecture explorer with simulated workflow animations and node inspection.
+> **Interactive Visualizer & Diagrams (Published via GitHub Pages)**:
+> - **[🌐 Interactive Architecture Visualizer](https://ok-karthik.github.io/enterprise-aws-infrastructure/)** ([local source](visualizer.html)): Multi-view architecture explorer with workflow animations and node inspection.
 > - Dedicated standalone diagrams:
->   - [🏢 Multi-Account AWS & Active-Passive DR](diagrams/multi_account_aws_infra.html)
->   - [🤖 AI Agentic Workflows Architecture](diagrams/ai_agentic_workflows.html)
->   - [🔄 3-Tier Feedback Loops & Quality Flywheel](diagrams/feedback_loops_quality_flywheel.html)
->   - [🔌 IDP Integration & Discovery Contract](diagrams/idp_integration.html)
->   - [🛡️ CI/CD Pipeline & Policy Gates](diagrams/ci_cd_policy_gates.html)
+>   - [🏢 Multi-Account AWS & Active-Passive DR](https://ok-karthik.github.io/enterprise-aws-infrastructure/diagrams/multi_account_aws_infra.html)
+>   - [🤖 AI Agentic Workflows Architecture](https://ok-karthik.github.io/enterprise-aws-infrastructure/diagrams/ai_agentic_workflows.html)
+>   - [🔄 3-Tier Feedback Loops & Quality Flywheel](https://ok-karthik.github.io/enterprise-aws-infrastructure/diagrams/feedback_loops_quality_flywheel.html)
+>   - [🔌 IDP Integration & Discovery Contract](https://ok-karthik.github.io/enterprise-aws-infrastructure/diagrams/idp_integration.html)
+>   - [🛡️ CI/CD Pipeline & Policy Gates](https://ok-karthik.github.io/enterprise-aws-infrastructure/diagrams/ci_cd_policy_gates.html)
 
 One AWS Organization, one OU tree, one account per job. Solid arrows are what the code in this repo builds. The diagram is the design the code and its offline tests implement.
 

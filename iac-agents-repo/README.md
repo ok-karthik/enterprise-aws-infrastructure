@@ -5,8 +5,8 @@ Autonomous engineering tooling for the Enterprise AWS Platform: an on-demand **I
 ## Architecture & Visual Flows
 
 Interactive and static visual diagrams are maintained in `docs/diagrams/` and published to GitHub Pages:
-- **[🤖 AI Agentic Workflows Architecture](../docs/diagrams/ai_agentic_workflows.html)**: Scaffolding, drift reconciliation, second-opinion gates, and MCP integration.
-- **[🔄 3-Tier Feedback Loops & Quality Flywheel](../docs/diagrams/feedback_loops_quality_flywheel.html)**: Fast local feedback, PR policy enforcement, and live health telemetry.
+- **[🤖 AI Agentic Workflows Architecture](https://ok-karthik.github.io/enterprise-aws-infrastructure/diagrams/ai_agentic_workflows.html)** ([local source](../docs/diagrams/ai_agentic_workflows.html)): Scaffolding, drift reconciliation, second-opinion gates, and MCP integration.
+- **[🔄 3-Tier Feedback Loops & Quality Flywheel](https://ok-karthik.github.io/enterprise-aws-infrastructure/diagrams/feedback_loops_quality_flywheel.html)** ([local source](../docs/diagrams/feedback_loops_quality_flywheel.html)): Fast local feedback, PR policy enforcement, and live health telemetry.
 
 ---
 
