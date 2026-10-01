@@ -1,5 +1,7 @@
 # edge/cloudfront
 
+**Status:** 📐 Design-only (tested offline; not wired into a live stack)
+
 Hardened CloudFront distribution module (PLAN 6.3): a **tenant-facing capability**
 and an internal platform module. Backed by an S3 origin with Origin Access Control
 (OAC), minimum TLSv1.2_2021, standard logging, WAF association and a response

@@ -14,8 +14,14 @@ if [ -z "$MODULE_PATH" ]; then
     exit 1
 fi
 
-# Account-first layout: one folder per account, named workloads-<env> (dev | staging | prod).
-TARGET_DIR="workloads-live-repo/workloads-$ENV/$REGION/$MODULE_PATH"
+# Account-first layout: workloads-live-repo/workloads/<nonprod|prod>/workloads-<env>/<region>/<category>/<name>.
+# Use the existing account folder for the env; if there is none, say so instead of creating a stray folder.
+ACCOUNT_DIR=$(find workloads-live-repo/workloads -mindepth 2 -maxdepth 2 -type d -name "workloads-$ENV" 2>/dev/null | head -n 1)
+if [ -z "$ACCOUNT_DIR" ]; then
+    echo "❌ Error: no account folder workloads-live-repo/workloads/*/workloads-$ENV. Add the account (registry + account.hcl) first."
+    exit 1
+fi
+TARGET_DIR="$ACCOUNT_DIR/$REGION/$MODULE_PATH"
 
 if [ -d "$TARGET_DIR" ]; then
     echo "⚠️ Warning: Module already exists at $TARGET_DIR"

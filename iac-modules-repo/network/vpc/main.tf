@@ -16,6 +16,16 @@ locals {
   # address space (network/ipam's top_level_cidr default). Defense in depth: security groups, not this NACL,
   # are the primary control.
   default_network_acl_allow_cidr = var.default_network_acl_allow_cidr != "" ? var.default_network_acl_allow_cidr : (var.cidr != "" ? var.cidr : "10.0.0.0/8")
+
+  private_subnet_tags = merge(
+    {
+      "kubernetes.io/role/internal-elb" = 1
+    },
+    var.cluster_name != "" ? {
+      "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+      "karpenter.sh/discovery"                    = var.cluster_name
+    } : {}
+  )
 }
 
 module "vpc" {
@@ -48,12 +58,7 @@ module "vpc" {
     "kubernetes.io/role/elb" = 1
   }
 
-  private_subnet_tags = merge(
-    {
-      "kubernetes.io/role/internal-elb" = 1
-    },
-    var.cluster_name != "" ? { "kubernetes.io/cluster/${var.cluster_name}" = "shared" } : {}
-  )
+  private_subnet_tags = local.private_subnet_tags
 
   # --- GOVERNANCE: Mandatory Tagging ---
   tags = merge(
@@ -144,39 +149,4 @@ resource "aws_vpc_block_public_access_exclusion" "public_subnets" {
 
   subnet_id                       = module.vpc.public_subnets[tonumber(each.key)]
   internet_gateway_exclusion_mode = "allow-bidirectional"
-}
-
-# --- DISCOVERY CONTRACT (Phase 18.1): SSM Parameter Store Service Catalog ---
-resource "aws_ssm_parameter" "vpc_id" {
-  #checkov:skip=CKV2_AWS_34: "Platform discovery catalog parameter contains non-sensitive metadata"
-  count       = var.publish_ssm_parameters && var.env != "" && var.region != "" ? 1 : 0
-  name        = "/platform/${var.env}/${var.region}/vpc/id"
-  description = "Platform Discovery Contract: VPC ID for ${var.env} in ${var.region}"
-  type        = "String"
-  value       = module.vpc.vpc_id
-
-  tags = merge(
-    {
-      Service   = "network-vpc"
-      ManagedBy = "Terragrunt-Wrapper"
-    },
-    var.tags
-  )
-}
-
-resource "aws_ssm_parameter" "database_subnets" {
-  #checkov:skip=CKV2_AWS_34: "Platform discovery catalog parameter contains non-sensitive metadata"
-  count       = var.publish_ssm_parameters && var.env != "" && var.region != "" && length(module.vpc.database_subnets) > 0 ? 1 : 0
-  name        = "/platform/${var.env}/${var.region}/vpc/database_subnets"
-  description = "Platform Discovery Contract: Database Subnet IDs for ${var.env} in ${var.region}"
-  type        = "StringList"
-  value       = join(",", module.vpc.database_subnets)
-
-  tags = merge(
-    {
-      Service   = "network-vpc"
-      ManagedBy = "Terragrunt-Wrapper"
-    },
-    var.tags
-  )
 }

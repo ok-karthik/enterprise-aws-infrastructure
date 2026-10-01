@@ -27,3 +27,18 @@ output "detective_graph_arn" {
   description = "ARN of the Detective behavior graph, or null when enable_detective (or is_primary_region) is false"
   value       = try(aws_detective_graph.this[0].graph_arn, null)
 }
+
+output "auditmanager_account_registration_id" {
+  description = "ID of the Audit Manager account registration, or null if disabled"
+  value       = try(aws_auditmanager_account_registration.this[0].id, null)
+}
+
+output "auditmanager_soc2_assessment_arn" {
+  description = "ARN of the Audit Manager SOC 2 assessment, or null if disabled"
+  value       = try(aws_auditmanager_assessment.soc2[0].arn, null)
+}
+
+output "auditmanager_iso27001_assessment_arn" {
+  description = "ARN of the Audit Manager ISO 27001 assessment, or null if disabled"
+  value       = try(aws_auditmanager_assessment.iso27001[0].arn, null)
+}

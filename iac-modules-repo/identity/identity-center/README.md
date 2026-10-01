@@ -1,11 +1,13 @@
 # identity/identity-center
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 IAM Identity Center for humans, applied from the **management account**: the permission-set catalog, the groups, and the account assignments **OU → group → permission set**, expanded to accounts with the account registry. The IdP (Okta / Entra ID / Google) and SCIM are set up by hand: see [`docs/IDENTITY.md`](../../../docs/IDENTITY.md).
 
 **Catalog:** `ReadOnly`, `Developer`, `PlatformEngineer`, `SecurityAudit`, `Billing`, `BreakGlassAdmin`. Sessions are 1 hour for the elevated sets (`PlatformEngineer`, `BreakGlassAdmin`) and 8 hours for the rest.
 
 - **No standing admin.** `AdministratorAccess` is only in `BreakGlassAdmin`, which cannot be assigned statically (`allow_static_break_glass` is a deliberate exception). `PlatformEngineer` is PowerUser plus IAM on `role/platform/*` only, only for roles that carry `platform-workload-boundary`, and it cannot attach admin policies.
-- **Just in time in Prod.** Elevated sets cannot be assigned statically in the OUs in `jit_only_ous` (Prod); use [`docs/BREAK_GLASS.md`](../../../docs/BREAK_GLASS.md). `Developer` is only assignable in `developer_ous` (NonProd, Sandbox, Policy-Staging); use `ReadOnly` in Prod.
+- **Just in time in Prod.** Elevated sets cannot be assigned statically in the OUs in `jit_only_ous` (Prod); use [`docs/IDENTITY.md`](../../../docs/IDENTITY.md). `Developer` is only assignable in `developer_ous` (NonProd, Sandbox, Policy-Staging); use `ReadOnly` in Prod.
 - **Developer** = customer-managed policy `platform-developer` + permissions boundary `platform-workload-boundary`, both attached **by name**: they must exist in every assigned account, which `governance/account-baseline` guarantees.
 - **ABAC:** `team` and `cost_center` become session tags (`aws:PrincipalTag/...`). The attribute paths depend on the IdP (`abac_attributes`).
 - **Groups** are read from the SCIM-synced identity store by default (names must match the IdP exactly); `manage_groups = true` creates them when there is no external IdP.

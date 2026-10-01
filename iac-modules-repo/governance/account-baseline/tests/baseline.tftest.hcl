@@ -360,3 +360,35 @@ run "vpc_block_public_access_can_be_switched_off" {
     error_message = "enable_vpc_block_public_access = false must create nothing."
   }
 }
+
+run "no_observability_link_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(aws_oam_link.observability) == 0
+    error_message = "No OAM link unless observability_sink_arn is set."
+  }
+}
+
+run "observability_link_when_a_sink_is_given" {
+  command = plan
+
+  variables {
+    observability_sink_arn = "arn:aws:oam:eu-central-1:111122223333:sink/0123abcd-4567-89ef-0123-456789abcdef"
+  }
+
+  assert {
+    condition     = length(aws_oam_link.observability) == 1
+    error_message = "A sink ARN creates the link."
+  }
+}
+
+run "bad_sink_arn_is_rejected" {
+  command = plan
+
+  variables {
+    observability_sink_arn = "not-an-arn"
+  }
+
+  expect_failures = [var.observability_sink_arn]
+}

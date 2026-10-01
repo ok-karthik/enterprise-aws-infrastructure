@@ -14,5 +14,7 @@ locals {
     org_cloudtrail      = "org-cloudtrail-v1.0.0"
     security_alerts     = "security-alerts-v1.0.0"
     data_perimeter      = "data-perimeter-v1.0.0"
+    billing             = "billing-v1.0.0"
+    guardrail_signals   = "guardrail-signals-v1.0.0"
   }
 }

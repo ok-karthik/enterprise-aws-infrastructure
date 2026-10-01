@@ -33,12 +33,7 @@ output "vpc_cidr_block" {
   value       = module.vpc.vpc_cidr_block
 }
 
-output "ssm_vpc_id_parameter" {
-  description = "SSM Parameter Store name for VPC ID"
-  value       = try(aws_ssm_parameter.vpc_id[0].name, null)
-}
-
-output "ssm_database_subnets_parameter" {
-  description = "SSM Parameter Store name for database subnets"
-  value       = try(aws_ssm_parameter.database_subnets[0].name, null)
+output "private_subnet_tags" {
+  description = "Tags applied to private subnets, including EKS and Karpenter discovery tags"
+  value       = local.private_subnet_tags
 }

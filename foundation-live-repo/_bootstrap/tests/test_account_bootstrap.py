@@ -1,12 +1,16 @@
 """Offline tests for the Day-0 bootstrap template (no AWS access): the apply role's permissions boundary
 and the CI roles. Needs PyYAML, which cfn-lint installs."""
 import json
+import os
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
 import yaml
 
 TEMPLATE = Path(__file__).resolve().parents[1] / "cloudformation" / "account-bootstrap.yaml"
+SCRIPT = Path(__file__).resolve().parents[1] / "bootstrap.sh"
 POLICY_SIZE_LIMIT = 6144  # AWS: a managed policy may have at most 6,144 non-whitespace characters
 
 
@@ -164,6 +168,100 @@ class CiRoles(unittest.TestCase):
         self.assertEqual(bucket["UpdateReplacePolicy"], "Retain")
         for name, output in template["Outputs"].items():
             self.assertNotIn("Export", output, f"an export would lock {name}")
+
+
+class StateReplication(unittest.TestCase):
+    """PLAN 7.2: optional one-way copy of the state bucket to the secondary region."""
+
+    def test_replication_is_off_unless_a_replica_arn_is_given(self):
+        template = load()
+        self.assertEqual(template["Parameters"]["ReplicaRegion"]["Default"], "")
+        self.assertEqual(template["Resources"]["StateReplicationRole"]["Condition"], "ReplicateState")
+        config = template["Resources"]["StateBucket"]["Properties"]["ReplicationConfiguration"]
+        self.assertEqual(config["!If"][0], "ReplicateState")
+        self.assertEqual(config["!If"][2], {"!Ref": "AWS::NoValue"})
+
+    def test_deletes_are_not_replicated_and_the_role_is_scoped(self):
+        template = load()
+        rule = template["Resources"]["StateBucket"]["Properties"]["ReplicationConfiguration"]["!If"][1]["Rules"][0]
+        self.assertEqual(rule["DeleteMarkerReplication"]["Status"], "Disabled", "the replica must survive a mistaken delete")
+        role = template["Resources"]["StateReplicationRole"]["Properties"]
+        text = json.dumps(role["Policies"])
+        self.assertNotIn('"*"', text.replace('"/*"', ""), "no wildcard resource or action on the replication role")
+        self.assertNotIn("s3:*", text)
+        self.assertNotIn("!GetAtt", text, "using the bucket name (not GetAtt) avoids a circular dependency")
+
+    def test_the_replica_regions_stack_creates_only_the_bucket_side(self):
+        """Global IAM (OIDC provider, boundary, CI roles) must not be created a second time in the replica region."""
+        template = load()
+        for name in ["GitHubOidcProvider", "ApplyBoundary", "PlanRole", "ApplyRole"]:
+            self.assertEqual(template["Resources"][name].get("Condition"), "CreateGlobalResources", name)
+        for name in ["PlanRoleArn", "ApplyRoleArn", "OidcProviderArn"]:
+            self.assertEqual(template["Outputs"][name].get("Condition"), "CreateGlobalResources", name)
+        self.assertNotIn("Condition", template["Resources"]["StateBucket"], "the bucket exists in every region")
+
+
+class ExpectedAccountLookup(unittest.TestCase):
+    """bootstrap.sh --print-expected-account: where the preflight gets the management account id. No AWS calls."""
+
+    LOCAL = """locals {
+  accounts = {
+    log-archive = {
+      id    = "222222222222"
+    }
+    management = {
+      id    = "111111111111"
+      email = "aws+management@example.com"
+    }
+  }
+}
+"""
+
+    def run_script(self, local_hcl: str | None, env_id: str | None = None):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "accounts.local.hcl"
+            if local_hcl is not None:
+                path.write_text(local_hcl, encoding="utf-8")
+            env = {k: v for k, v in os.environ.items() if k != "EXPECTED_ACCOUNT_ID"}
+            env["ACCOUNTS_LOCAL_HCL_FILE"] = str(path)
+            if env_id is not None:
+                env["EXPECTED_ACCOUNT_ID"] = env_id
+            return subprocess.run(["bash", str(SCRIPT), "--print-expected-account"], env=env, capture_output=True, text=True)
+
+    def test_reads_the_management_block_only(self):
+        result = self.run_script(self.LOCAL)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), "111111111111", "must not pick up log-archive's id, which comes first in the file")
+
+    def test_env_override_wins_over_the_local_file(self):
+        result = self.run_script(self.LOCAL, env_id="999999999999")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), "999999999999")
+
+    def test_placeholder_in_the_local_file_is_rejected(self):
+        result = self.run_script(self.LOCAL.replace("111111111111", "000000000000"))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("placeholder", result.stderr)
+
+    def test_placeholder_in_the_env_override_is_rejected(self):
+        result = self.run_script(self.LOCAL, env_id="000000000000")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("placeholder", result.stderr)
+
+    def test_an_id_that_is_not_12_digits_is_rejected(self):
+        result = self.run_script(self.LOCAL, env_id="12345")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("12-digit", result.stderr)
+
+    def test_no_file_and_no_env_fails_with_a_clear_message(self):
+        result = self.run_script(None)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("EXPECTED_ACCOUNT_ID", result.stderr)
+
+    def test_a_local_file_without_a_management_block_fails(self):
+        result = self.run_script(self.LOCAL.replace("management = {", "other = {"))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("No management account id", result.stderr)
 
 
 if __name__ == "__main__":

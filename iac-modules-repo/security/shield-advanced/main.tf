@@ -1,7 +1,7 @@
 # Shield Advanced (PLAN 6.4): optional DDoS protection for prod-tier resources.
 # Applied per account (or centrally from the FMS admin when FMS Shield policy is used).
 #
-# ⚠️  COST WARNING: Shield Advanced costs $3,000/month per organization. See FINOPS.md.
+# ⚠️  COST WARNING: Shield Advanced costs $3,000/month per organization. See docs/FINOPS.md.
 # The subscription covers ALL accounts in the organization once enabled in ANY account.
 # Only enable this when the business case justifies the cost (>$3k/month in potential DDoS damage).
 

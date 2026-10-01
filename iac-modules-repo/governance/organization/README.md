@@ -1,5 +1,7 @@
 # governance/organization
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 The AWS Organization foundation, applied from the **management account** by the owner: the organization itself (trusted service access and policy types), the OU tree, and the baseline SCP guardrails.
 
 - **OUs** come from `var.organizational_units` (two levels). Default: Security, Infrastructure, Workloads (with Prod and NonProd), Sandbox, Policy-Staging, Suspended. Output `organizational_unit_ids` is a map of OU name to ID, used by `account-factory` and the bootstrap StackSets.

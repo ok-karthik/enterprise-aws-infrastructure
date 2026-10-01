@@ -1,5 +1,7 @@
 # identity/ack-cross-account
 
+**Status:** 📐 Design-only (tested offline; not wired into a live stack)
+
 ACK (AWS Controllers for Kubernetes) cross-account trust, applied **per account** (the spoke): the role the hub cluster's ACK controllers assume, a scoped inline policy (S3 buckets with a prefix, IAM roles under a path, only with the `ack-tenant-boundary` permissions boundary), the boundary itself, and the discovery parameter for the role ARN. Split out of `governance/organization`, which is applied in the management account only.
 
 <!-- BEGIN_TF_DOCS -->

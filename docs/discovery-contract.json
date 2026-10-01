@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.1.0",
+  "namespace_prefix": "/platform/{env}/{region}/",
+  "parameters": [
+    {
+      "key": "vpc/id",
+      "type": "String",
+      "description": "VPC ID for workload deployment",
+      "since_version": "v1.0.0",
+      "owner_module": "governance/discovery-publisher"
+    },
+    {
+      "key": "vpc/database_subnets",
+      "type": "String",
+      "description": "Comma-delimited database subnet IDs for database workloads",
+      "since_version": "v1.0.0",
+      "owner_module": "governance/discovery-publisher"
+    },
+    {
+      "key": "eks/cluster_name",
+      "type": "String",
+      "description": "EKS Cluster Name",
+      "since_version": "v1.0.0",
+      "owner_module": "governance/discovery-publisher"
+    },
+    {
+      "key": "eks/oidc_provider_arn",
+      "type": "String",
+      "description": "EKS OIDC Provider ARN for IRSA and Pod Identity",
+      "since_version": "v1.0.0",
+      "owner_module": "governance/discovery-publisher"
+    },
+    {
+      "key": "eks/cluster_endpoint",
+      "type": "String",
+      "description": "EKS Kubernetes API endpoint URL",
+      "since_version": "v1.1.0",
+      "owner_module": "governance/discovery-publisher"
+    },
+    {
+      "key": "eks/cluster_ca_data",
+      "type": "String",
+      "description": "Base64-encoded EKS cluster root certificate authority data",
+      "since_version": "v1.1.0",
+      "owner_module": "governance/discovery-publisher"
+    },
+    {
+      "key": "eks/karpenter_node_role",
+      "type": "String",
+      "description": "IAM role name (not ARN) for Karpenter provisioned EC2 worker nodes",
+      "since_version": "v1.1.0",
+      "owner_module": "governance/discovery-publisher"
+    },
+    {
+      "key": "eks/karpenter_queue_name",
+      "type": "String",
+      "description": "SQS queue name for Karpenter spot interruption notifications",
+      "since_version": "v1.1.0",
+      "owner_module": "governance/discovery-publisher"
+    },
+    {
+      "key": "ack/cross_account_role_arn",
+      "type": "String",
+      "description": "ACK controller cross-account role ARN for multi-account vending",
+      "since_version": "v1.0.0",
+      "owner_module": "governance/discovery-publisher"
+    },
+    {
+      "key": "account/id",
+      "type": "String",
+      "description": "12-digit AWS Account ID",
+      "since_version": "v1.0.0",
+      "owner_module": "governance/account-baseline"
+    },
+    {
+      "key": "account/ou",
+      "type": "String",
+      "description": "AWS Organizations Organizational Unit name",
+      "since_version": "v1.0.0",
+      "owner_module": "governance/account-baseline"
+    },
+    {
+      "key": "kms/general_key_arn",
+      "type": "String",
+      "description": "Customer-managed KMS Key ARN for internal data encryption",
+      "since_version": "v1.0.0",
+      "owner_module": "governance/account-baseline"
+    },
+    {
+      "key": "kms/confidential_key_arn",
+      "type": "String",
+      "description": "Customer-managed KMS Key ARN for confidential and PII data encryption",
+      "since_version": "v1.0.0",
+      "owner_module": "governance/account-baseline"
+    },
+    {
+      "key": "iam/workload_boundary_arn",
+      "type": "String",
+      "description": "ARN of the platform-workload-boundary permissions boundary",
+      "since_version": "v1.0.0",
+      "owner_module": "governance/account-baseline"
+    },
+    {
+      "key": "iam/developer_policy_arn",
+      "type": "String",
+      "description": "ARN of the platform-developer customer-managed policy",
+      "since_version": "v1.0.0",
+      "owner_module": "governance/account-baseline"
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 # data/postgres
 
+**Status:** 📐 Design-only (tested offline; consumed by internal-developer-platform)
+
 Tenant-facing capability module for provisioning dedicated PostgreSQL databases. Consumed by `internal-developer-platform` catalog templates.
 
 Enforces non-negotiable security guardrails:

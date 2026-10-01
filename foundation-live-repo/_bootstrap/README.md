@@ -1,6 +1,6 @@
 # 🚀 Day-0 Bootstrap (CloudFormation)
 
-Everything Terraform needs before it can run: a state bucket, the GitHub OIDC trust, and the two IAM roles CI assumes. It is one CloudFormation template, deployed once by a human into the **management account** (`954171757349`). Member accounts get the same template through StackSets (PLAN 2.0b).
+Everything Terraform needs before it can run: a state bucket, the GitHub OIDC trust, and the two IAM roles CI assumes. It is one CloudFormation template, deployed once by a human into the **management account** (your management account id, from `accounts.local.hcl`). Member accounts get the same template through StackSets (PLAN 2.0b).
 
 Why CloudFormation and not Terraform/Terragrunt: Terraform cannot create the bucket that holds its own state, and Terragrunt's `--backend-bootstrap` creates that bucket *outside any state*, so nobody could plan or drift-check its settings. CloudFormation keeps its own state inside AWS, and StackSets deploy it to every new account automatically. Organizations, OUs, SCPs and everything after Day-0 stay in Terraform.
 
@@ -70,7 +70,7 @@ export AWS_DEFAULT_REGION="eu-central-1"
 ```
 
 The script:
-1. **Preflight.** Reads the expected account from `foundation-live-repo/management/account.hcl` (`954171757349`) and aborts if your credentials belong to a different account (safeguards against running in the wrong browser/profile session).
+1. **Preflight.** Reads the expected account id from the `EXPECTED_ACCOUNT_ID` environment variable, or from the `management` block of `foundation-live-repo/_config/accounts.local.hcl` (gitignored; `account.hcl` only holds a placeholder), and aborts if your credentials belong to a different account (safeguards against running in the wrong browser/profile session).
 2. Verifies the AWS Organization exists and enables StackSets trusted access (`aws cloudformation activate-organizations-access`).
 3. Creates a **change set**, renders an ASCII preview of resources to create, and prompts for confirmation (`--yes` skips).
 4. Deploys the stack, turns on termination protection, applies [`cloudformation/stack-policy.json`](cloudformation/stack-policy.json), and prints the GitHub role ARNs.
@@ -96,7 +96,7 @@ It never touches GitHub. Do the printed steps yourself.
 
 ```bash
 export AWS_PROFILE=<management-admin-profile> AWS_REGION=eu-central-1
-# 1. Preflight: must print 954171757349
+# 1. Preflight: must print your management account id (from accounts.local.hcl)
 aws sts get-caller-identity --query Account --output text
 
 # 2. Organization (all features) + StackSets trusted access. Safe to run again.
@@ -138,15 +138,17 @@ Once the CloudFormation stack is deployed, wire GitHub Actions to the created ro
 # 1. Create the management environment (add yourself as required reviewer in the UI)
 gh api -X PUT repos/ok-karthik/enterprise-aws-infrastructure/environments/management
 
-# 2. The only repository variable. There are no per-environment role variables: every CI job builds its
-#    role ARN from the account id in foundation-live-repo/_config/accounts.hcl.
+# 2. Two repository variables. There are no per-environment role variables: every CI job builds its
+#    role ARN from the account id in the registry. The real ids live in accounts.local.hcl (gitignored), so
+#    CI gets that file's text as ACCOUNTS_LOCAL_HCL (account ids are not secrets).
 gh variable set AWS_REGION --body "eu-central-1"
+gh variable set ACCOUNTS_LOCAL_HCL < foundation-live-repo/_config/accounts.local.hcl
 ```
 
 ### Via GitHub Web Console:
 
 1. **GitHub Environment**: Go to **Settings** → **Environments** → click **New environment** → name it `management`. Under **Environment protection rules**, check **Required reviewers** and add yourself as a reviewer. Create `dev`, `prod` (with required reviewers) and `core` the same way when their accounts exist.
-2. **Repository Variable**: Go to **Settings** → **Secrets and variables** → **Actions** → **Variables** tab (not Secrets): `AWS_REGION` = `eu-central-1`.
+2. **Repository Variables**: Go to **Settings** → **Secrets and variables** → **Actions** → **Variables** tab (not Secrets): `AWS_REGION` = `eu-central-1`, and `ACCOUNTS_LOCAL_HCL` = the full text of your local `foundation-live-repo/_config/accounts.local.hcl`. Without it CI skips every account (placeholder ids).
 
 > [!IMPORTANT]
 > The old `AWS_DEV_PLAN_ROLE_ARN`, `AWS_PROD_PLAN_ROLE_ARN`, `AWS_DEV_APPLY_ROLE_ARN` and `AWS_PROD_APPLY_ROLE_ARN` variables are no longer read and can be deleted. The pipeline runs an account only once the registry says `ci = true`, the account has a live folder and it has a real (non-placeholder) id. For `management`, set `ci = true` after the organization stack is imported and the placeholders are replaced.

@@ -1,5 +1,7 @@
 # identity/workload-iam
 
+**Status:** 📐 Design-only (tested offline; consumed by internal-developer-platform)
+
 Tenant-facing capability module interface for workload identity. Consumed by `internal-developer-platform` catalog templates.
 
 Currently a documented stub: produces valid Terraform that plans cleanly while the cross-capability dependency wiring (OIDC issuer / Pod Identity association) is resolved.

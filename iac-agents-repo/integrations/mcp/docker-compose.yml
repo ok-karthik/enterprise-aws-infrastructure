@@ -1,0 +1,34 @@
+# Local Terraform Registry documentation server for the IaC Generation Agent (PLAN 11.3).
+# See iac-agents-repo/iac_agent/mcp_client.py and iac-agents-repo/integrations/mcp/README.md (what it is, the terms, and what was NOT verified).
+#
+# Optional: iac_agent.py falls back to fetching AWS provider docs from GitHub, so it works with zero extra services.
+#
+# Usage:
+#   docker compose -f iac-agents-repo/integrations/mcp/docker-compose.yml up -d
+#   curl http://127.0.0.1:8080/health
+#
+# Terms of use (HashiCorp says: "Do not use the MCP server with untrusted MCP clients or LLMs"):
+#   - the image tag is PINNED (bump it on purpose, after reading the release notes),
+#   - it is published on 127.0.0.1 only, never on the network,
+#   - there is NO TFE_TOKEN / TFE_ADDRESS: this setup reads the public registry and cannot touch HCP Terraform,
+#   - ENABLE_TF_OPERATIONS stays unset (default false), so the tools that create or change anything are off,
+#   - the client calls only two read-only registry tools (search_providers, get_provider_details).
+#
+# TODO(owner): also restrict the server itself to the registry toolset with --toolsets=registry. HashiCorp's README and
+# reference page disagree on whether registry, registry-private and terraform toolsets are on by default, so this is
+# not left to the default. It was not added here because the container's exact command line was not verified (no image
+# pull was done). Check: `docker run --rm hashicorp/terraform-mcp-server:1.2.0 --help`, then add `command:` below.
+#
+# Not included on purpose: a Terragrunt docs server. Gruntwork's own MCP server is hosted and needs a paid account; the
+# community image (olofdevopsninja/terragrunt-mcp-server:latest) is a single-maintainer project on an unpinned tag.
+
+services:
+  terraform-mcp:
+    image: hashicorp/terraform-mcp-server:1.2.0 # latest at the time of writing is 1.3.0 (2026-08-26): upgrade deliberately
+    environment:
+      - TRANSPORT_MODE=streamable-http
+      - TRANSPORT_HOST=0.0.0.0 # inside the container; the published port below is what limits access
+      - MCP_CORS_MODE=strict
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped

@@ -1,5 +1,7 @@
 # governance/account-factory
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 Creates and places the member accounts listed in the **account registry** (`foundation-live-repo/_config/accounts.hcl`), applied from the **management account** by the owner. Only registry entries with `create = true` are passed in, so placeholders and the management account are never vended.
 
 - Each account is an `aws_organizations_account` with `close_on_deletion = false`, `lifecycle { prevent_destroy = true }` and IAM billing access allowed, placed in the OU named in the registry. **Terraform never closes an account.**

@@ -2,9 +2,12 @@ package main
 
 import rego.v1
 
-# No security group may open these ports to the internet. 22 SSH, 3389 RDP, 5432 Postgres,
-# 3306 MySQL, 6379 Redis, 27017 MongoDB, 9200 Elasticsearch/OpenSearch.
-sensitive_ports := {22, 3389, 5432, 3306, 6379, 27017, 9200}
+# No security group may open a datastore port to the internet: 5432 Postgres, 3306 MySQL, 6379 Redis,
+# 27017 MongoDB, 9200 Elasticsearch/OpenSearch (PLAN 8.10).
+#
+# SSH (22) and RDP (3389) are enforced by Checkov (CKV_AWS_24, CKV_AWS_25), and "all ports" by CKV_AWS_277, so they
+# are not repeated here. Checkov has no built-in check for the datastore ports, which is why this rule stays.
+sensitive_ports := {5432, 3306, 6379, 27017, 9200}
 
 open_cidrs := {"0.0.0.0/0", "::/0"}
 

@@ -122,24 +122,6 @@ variable "cluster_name" {
   default     = ""
 }
 
-variable "env" {
-  description = "Target environment for naming and discovery contract (e.g. dev, prod)"
-  type        = string
-  default     = ""
-}
-
-variable "region" {
-  description = "AWS region for naming and discovery contract (e.g. eu-central-1)"
-  type        = string
-  default     = ""
-}
-
-variable "publish_ssm_parameters" {
-  description = "Whether to publish discovery contract parameters to SSM Parameter Store"
-  type        = bool
-  default     = false
-}
-
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)

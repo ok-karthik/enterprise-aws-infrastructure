@@ -1,5 +1,7 @@
 # network/tgw-attachment
 
+**Status:** 📐 Design-only (tested offline; not wired into a live stack)
+
 Spoke-side transit gateway attachment (PLAN 5.2), applied in a **workload account**. Requests an attachment to the RAM-shared transit gateway in network-hub (`var.transit_gateway_id`, `network/transit-gateway`'s output), and associates/propagates it into exactly **one** route table (`var.route_table_id` — `prod` or `nonprod`, never both: they cannot route to each other).
 
 The attachment stays `pendingAcceptance` until `network/transit-gateway`'s `accept_vpc_attachments` runs in network-hub (that module's README explains why that only happens after the transit gateway's first apply, not during it).

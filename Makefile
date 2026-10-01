@@ -33,10 +33,6 @@ lint: ## Run TFLint recursively
 validate: ## Full local validation suite (compliance, fmt, init/validate, tflint)
 	./workloads-live-repo/scripts/smoke-test.sh
 
-.PHONY: security
-security: ## Trivy security scan of the repo
-	trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --tf-exclude-downloaded-modules
-
 .PHONY: checkov
 checkov: ## Checkov with the CI settings (.checkov.yaml); the same result as the CI check
 	./workloads-live-repo/scripts/run-checkov.sh --compact --quiet
@@ -47,6 +43,12 @@ image-scan: ## Build the toolbox image and scan it with Trivy (needs Docker), li
 	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 		public.ecr.aws/aquasecurity/trivy:$$(sed -n 's/^ARG TRIVY_VERSION=//p' .github/docker/Dockerfile | head -n 1) \
 		image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 infrastructure-toolchain:scan
+
+.PHONY: verify-module
+verify-module: ## Check ONE module with the CI tools, no AWS credentials: make verify-module MODULE=storage/s3
+	@test -n "$(MODULE)" || { echo "usage: make verify-module MODULE=<category/name>"; exit 2; }
+	@mkdir -p "$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}"
+	TF_PLUGIN_CACHE_DIR="$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}" python3 workloads-live-repo/scripts/verify_module.py $(MODULE) $(VERIFY_ARGS)
 
 .PHONY: plan
 plan: ## Plan one workload account: make plan ENV=nonprod/workloads-dev
@@ -61,6 +63,9 @@ test: ## Run OPA policy unit tests, module unit tests and Python unit tests (no 
 		(cd "$$m" && terraform init -backend=false -input=false >/dev/null && terraform test) || exit 1; \
 		ls "$$d"/test_*.py >/dev/null 2>&1 && (cd "$$m" && python3 -m unittest discover -s tests) || true; \
 	done
+	@echo "-> iac-agents-repo tests"
+	python3 -m unittest discover -s iac-agents-repo/tests
+	python3 -m unittest discover -s .agents/tests
 
 .PHONY: docs
 docs: ## Regenerate per-module terraform-docs READMEs
@@ -68,6 +73,7 @@ docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/ipam
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/transit-gateway
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/tgw-attachment
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/tgw-peering
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/inspection-egress
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/central-endpoints
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/dns
@@ -97,3 +103,8 @@ docs: ## Regenerate per-module terraform-docs READMEs
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/firewall-manager
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/waf-logging
 	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/security/shield-advanced
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/data/aurora-postgres
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/data/backup
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/network/route53-failover
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/governance/billing
+	terraform-docs markdown table --output-file README.md --output-mode inject iac-modules-repo/observability/guardrail-signals

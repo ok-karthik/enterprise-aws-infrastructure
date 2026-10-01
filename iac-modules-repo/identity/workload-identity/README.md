@@ -1,5 +1,7 @@
 # identity/workload-identity
 
+**Status:** 📐 Design-only (tested offline; consumed by internal-developer-platform)
+
 Workload identity module providing EKS Pod Identity associations as the primary mechanism, with IRSA (IAM Roles for Service Accounts) as the documented fallback for Fargate and external workloads.
 
 <!-- BEGIN_TF_DOCS -->

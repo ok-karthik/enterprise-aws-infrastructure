@@ -150,3 +150,69 @@ resource "aws_detective_organization_configuration" "this" {
   graph_arn   = aws_detective_graph.this[0].graph_arn
   auto_enable = true
 }
+
+# ------------------------------------------------------------------------------
+# Audit Manager (optional, PLAN 4.8)
+# ------------------------------------------------------------------------------
+resource "aws_auditmanager_account_registration" "this" {
+  count = var.enable_audit_manager && var.is_primary_region ? 1 : 0
+
+  deregister_on_destroy = true
+  kms_key               = var.audit_manager_kms_key_arn
+}
+
+resource "aws_auditmanager_assessment" "soc2" {
+  count = var.enable_audit_manager && var.is_primary_region && var.audit_manager_soc2_framework_id != null ? 1 : 0
+
+  name         = "SOC-2-Continuous-Assessment"
+  description  = "Continuous evidence collection for SOC 2 Type II controls"
+  framework_id = var.audit_manager_soc2_framework_id
+
+  dynamic "roles" {
+    for_each = var.audit_manager_assessment_role_arn != null ? [var.audit_manager_assessment_role_arn] : []
+    content {
+      role_arn  = roles.value
+      role_type = "PROCESS_OWNER"
+    }
+  }
+
+  dynamic "assessment_reports_destination" {
+    for_each = var.audit_manager_reports_destination_s3_bucket != null ? [var.audit_manager_reports_destination_s3_bucket] : []
+    content {
+      destination      = assessment_reports_destination.value
+      destination_type = "S3"
+    }
+  }
+
+  tags = local.tags
+
+  depends_on = [aws_auditmanager_account_registration.this]
+}
+
+resource "aws_auditmanager_assessment" "iso27001" {
+  count = var.enable_audit_manager && var.is_primary_region && var.audit_manager_iso27001_framework_id != null ? 1 : 0
+
+  name         = "ISO-27001-Continuous-Assessment"
+  description  = "Continuous evidence collection for ISO/IEC 27001 controls"
+  framework_id = var.audit_manager_iso27001_framework_id
+
+  dynamic "roles" {
+    for_each = var.audit_manager_assessment_role_arn != null ? [var.audit_manager_assessment_role_arn] : []
+    content {
+      role_arn  = roles.value
+      role_type = "PROCESS_OWNER"
+    }
+  }
+
+  dynamic "assessment_reports_destination" {
+    for_each = var.audit_manager_reports_destination_s3_bucket != null ? [var.audit_manager_reports_destination_s3_bucket] : []
+    content {
+      destination      = assessment_reports_destination.value
+      destination_type = "S3"
+    }
+  }
+
+  tags = local.tags
+
+  depends_on = [aws_auditmanager_account_registration.this]
+}

@@ -83,21 +83,3 @@ variable "api_allowed_cidrs" {
     error_message = "cluster_endpoint_public_access is true but api_allowed_cidrs is empty. Provide explicit CIDRs (never fall back to 0.0.0.0/0) or set cluster_endpoint_public_access = false."
   }
 }
-
-variable "env" {
-  description = "Target environment for naming and discovery contract (e.g. dev, prod)"
-  type        = string
-  default     = ""
-}
-
-variable "region" {
-  description = "AWS region for naming and discovery contract (e.g. eu-central-1)"
-  type        = string
-  default     = ""
-}
-
-variable "publish_ssm_parameters" {
-  description = "Whether to publish discovery contract parameters to SSM Parameter Store"
-  type        = bool
-  default     = false
-}

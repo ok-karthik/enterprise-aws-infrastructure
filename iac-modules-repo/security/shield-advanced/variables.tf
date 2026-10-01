@@ -1,7 +1,7 @@
 variable "enabled" {
   description = <<-EOT
     Enable Shield Advanced subscription. This costs $3,000/month per organization (not per account).
-    Set to true ONLY for prod OU after reviewing the cost impact in FINOPS.md.
+    Set to true ONLY for prod OU after reviewing the cost impact in docs/FINOPS.md.
   EOT
   type        = bool
   default     = false

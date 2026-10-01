@@ -8,15 +8,18 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
-  id-token: write
+  # No id-token: this workflow never assumes an AWS role (the agent runs with --skip-plan), so it must not be able to.
 
 jobs:
   chatops:
     name: "⚡ Process ChatOps Command"
-    # Only run on comments starting with /generate or /reconcile
+    # Only run on comments starting with /generate or /reconcile, and only from people with write access.
+    # This repo is public and the job holds LLM API secrets and a write token: without the author check, any GitHub
+    # user could spend the API quota or push branches by commenting (PLAN 11.4).
     if: |
-      startsWith(github.event.comment.body, '/generate') ||
-      startsWith(github.event.comment.body, '/reconcile')
+      (startsWith(github.event.comment.body, '/generate') ||
+      startsWith(github.event.comment.body, '/reconcile')) &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
 
     container:
@@ -79,7 +82,7 @@ jobs:
           echo "Parsed Request: $REQUEST_PROMPT"
           echo "Target Env: $ENV, Region: $REGION"
 
-          python3 -m pip install --break-system-packages -r .agents/requirements.txt
+          python3 -m pip install --break-system-packages -r iac-agents-repo/requirements.txt
 
           # Run IaC Agent
           if [[ "$CMD" =~ ^/reconcile ]]; then
@@ -91,9 +94,9 @@ jobs:
             if [ ! -s "$PLAN_FILE" ]; then
               cp /tmp/issue-body.txt "$PLAN_FILE"
             fi
-            python3 .agents/scripts/iac_agent.py --request "$REQUEST_PROMPT" --reconcile "$PLAN_FILE" --env "$ENV" --region "$REGION" --provider "$PROVIDER" --skip-plan
+            python3 iac-agents-repo/iac_agent/iac_agent.py --request "$REQUEST_PROMPT" --reconcile "$PLAN_FILE" --env "$ENV" --region "$REGION" --provider "$PROVIDER" --skip-plan
           else
-            python3 .agents/scripts/iac_agent.py --request "$REQUEST_PROMPT" --env "$ENV" --region "$REGION" --provider "$PROVIDER" --skip-plan
+            python3 iac-agents-repo/iac_agent/iac_agent.py --request "$REQUEST_PROMPT" --env "$ENV" --region "$REGION" --provider "$PROVIDER" --skip-plan
           fi
 
           CURRENT_BRANCH=$(git branch --show-current)
@@ -108,9 +111,13 @@ jobs:
         run: |
           git push -u origin "$BRANCH_NAME"
 
+          # The label used to measure agent changes (PLAN 11.5). `gh pr create --label` fails if it does not exist yet.
+          gh label create "ai-generated" --description "Created by an AI agent" --color "8A63D2" 2>/dev/null || true
+
           PR_URL=$(gh pr create \
             --base main \
             --head "$BRANCH_NAME" \
+            --label "ai-generated" \
             --title "feat(iac-agent): automated proposal for issue #${ISSUE_NUMBER}" \
             --body "Autonomous IaC Platform Agent proposal responding to ChatOps command on issue #${ISSUE_NUMBER}.\n\nCloses #${ISSUE_NUMBER}")
 

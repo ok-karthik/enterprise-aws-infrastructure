@@ -151,6 +151,12 @@
       "component": "transit-gateway",
       "tag-separator": "-"
     },
+    "iac-modules-repo/network/tgw-peering": {
+      "release-type": "terraform-module",
+      "package-name": "tgw-peering",
+      "component": "tgw-peering",
+      "tag-separator": "-"
+    },
     "iac-modules-repo/network/tgw-attachment": {
       "release-type": "terraform-module",
       "package-name": "tgw-attachment",
@@ -197,6 +203,42 @@
       "release-type": "terraform-module",
       "package-name": "shield-advanced",
       "component": "shield-advanced",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/data/aurora-postgres": {
+      "release-type": "terraform-module",
+      "package-name": "aurora-postgres",
+      "component": "aurora-postgres",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/data/backup": {
+      "release-type": "terraform-module",
+      "package-name": "backup",
+      "component": "backup",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/network/route53-failover": {
+      "release-type": "terraform-module",
+      "package-name": "route53-failover",
+      "component": "route53-failover",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/observability/oam": {
+      "release-type": "terraform-module",
+      "package-name": "oam",
+      "component": "oam",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/governance/billing": {
+      "release-type": "terraform-module",
+      "package-name": "billing",
+      "component": "billing",
+      "tag-separator": "-"
+    },
+    "iac-modules-repo/observability/guardrail-signals": {
+      "release-type": "terraform-module",
+      "package-name": "guardrail-signals",
+      "component": "guardrail-signals",
       "tag-separator": "-"
     }
   }

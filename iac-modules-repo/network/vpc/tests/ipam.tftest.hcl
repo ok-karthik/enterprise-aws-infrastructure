@@ -220,3 +220,36 @@ run "public_subnets_can_be_excluded_from_account_bpa" {
     error_message = "The exclusion mode must match account-baseline's block-bidirectional default."
   }
 }
+
+run "karpenter_discovery_tag_added_when_cluster_name_set" {
+  command = plan
+
+  variables {
+    cidr         = "10.0.0.0/16"
+    cluster_name = "test-cluster"
+  }
+
+  assert {
+    condition     = output.private_subnet_tags["karpenter.sh/discovery"] == "test-cluster"
+    error_message = "Private subnets must have karpenter.sh/discovery tag set to the cluster name."
+  }
+
+  assert {
+    condition     = output.private_subnet_tags["kubernetes.io/cluster/test-cluster"] == "shared"
+    error_message = "Private subnets must have kubernetes.io/cluster/<cluster_name> set to shared."
+  }
+}
+
+run "karpenter_discovery_tag_omitted_when_cluster_name_empty" {
+  command = plan
+
+  variables {
+    cidr         = "10.0.0.0/16"
+    cluster_name = ""
+  }
+
+  assert {
+    condition     = !can(output.private_subnet_tags["karpenter.sh/discovery"])
+    error_message = "Private subnets must not have karpenter.sh/discovery tag when cluster_name is empty."
+  }
+}

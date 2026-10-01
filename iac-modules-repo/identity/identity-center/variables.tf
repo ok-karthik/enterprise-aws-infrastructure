@@ -48,7 +48,7 @@ variable "assignments" {
 
   validation {
     condition     = var.allow_static_break_glass || !anytrue(flatten([for _, groups in var.assignments : [for _, sets in groups : contains(sets, "BreakGlassAdmin")]]))
-    error_message = "BreakGlassAdmin is never assigned statically: it is granted just in time (docs/BREAK_GLASS.md). Set allow_static_break_glass only for a deliberate exception."
+    error_message = "BreakGlassAdmin is never assigned statically: it is granted just in time (docs/IDENTITY.md). Set allow_static_break_glass only for a deliberate exception."
   }
 
   validation {
@@ -57,7 +57,7 @@ variable "assignments" {
         !contains(var.jit_only_ous, ou) || length(setintersection(toset(sets), toset(var.elevated_permission_sets))) == 0
       ]
     ]))
-    error_message = "Elevated permission sets (PlatformEngineer, BreakGlassAdmin) cannot be assigned statically in the OUs listed in jit_only_ous (Prod): use just-in-time access (docs/BREAK_GLASS.md)."
+    error_message = "Elevated permission sets (PlatformEngineer, BreakGlassAdmin) cannot be assigned statically in the OUs listed in jit_only_ous (Prod): use just-in-time access (docs/IDENTITY.md)."
   }
 
   validation {

@@ -1,5 +1,7 @@
 # security/access-analyzer
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 Organization-wide **IAM Access Analyzer**, created in the account that is the **delegated administrator** for `access-analyzer.amazonaws.com` (`security-tooling`; the organization module registers the delegation). Two analyzers cover every account in the organization:
 
 - **External access:** resources (S3 buckets, IAM roles, KMS keys, ...) that can be reached from outside the organization.

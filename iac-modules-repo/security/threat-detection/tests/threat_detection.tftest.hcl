@@ -199,3 +199,52 @@ run "unknown_securityhub_standard_is_rejected" {
 
   expect_failures = [var.securityhub_standards]
 }
+
+run "audit_manager_is_off_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(aws_auditmanager_account_registration.this) == 0
+    error_message = "Audit Manager must be off by default."
+  }
+}
+
+run "audit_manager_can_be_enabled_with_assessments_in_primary_region" {
+  command = plan
+
+  variables {
+    enable_audit_manager                = true
+    audit_manager_soc2_framework_id     = "soc2-standard-uuid"
+    audit_manager_iso27001_framework_id = "iso27001-standard-uuid"
+    audit_manager_assessment_role_arn   = "arn:aws:iam::222233334444:role/AuditManagerProcessOwner"
+  }
+
+  assert {
+    condition     = length(aws_auditmanager_account_registration.this) == 1
+    error_message = "Audit Manager registration must be created when enable_audit_manager is true in primary region."
+  }
+
+  assert {
+    condition     = length(aws_auditmanager_assessment.soc2) == 1
+    error_message = "Audit Manager SOC 2 assessment must be created when soc2 framework ID is supplied."
+  }
+
+  assert {
+    condition     = length(aws_auditmanager_assessment.iso27001) == 1
+    error_message = "Audit Manager ISO 27001 assessment must be created when iso27001 framework ID is supplied."
+  }
+}
+
+run "audit_manager_is_not_created_outside_primary_region" {
+  command = plan
+
+  variables {
+    enable_audit_manager = true
+    is_primary_region    = false
+  }
+
+  assert {
+    condition     = length(aws_auditmanager_account_registration.this) == 0
+    error_message = "Audit Manager must only be registered in the primary region."
+  }
+}

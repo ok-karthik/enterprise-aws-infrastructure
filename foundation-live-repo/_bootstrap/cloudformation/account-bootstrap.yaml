@@ -40,10 +40,26 @@ Parameters:
     Default: 90
     MinValue: 30
     Description: Days before old (noncurrent) versions of state files are deleted.
+  ReplicaRegion:
+    Type: String
+    Default: ""
+    AllowedPattern: '^([a-z]{2}(-[a-z]+)+-[0-9])?$'
+    Description: >-
+      Optional (PLAN 7.2). Region whose state bucket (tg-state-<this account>-<region>, made by this same
+      template there) receives a copy of every state file, for disaster recovery. Deploy the stack in
+      that region FIRST, because the destination bucket must exist. Empty = no replication. Setting it to the stack's own region also means no replication.
 
 Conditions:
   DenyOrganizations: !Equals [!Ref AllowOrganizationsAdmin, "false"]
   DenyIdentityCenter: !Equals [!Ref AllowIdentityCenterAdmin, "false"]
+  # Replicate only when a replica region is set AND it is not this region (the replica region's own stack
+  # gets the same parameter value from the StackSet and must not replicate to itself).
+  # The replica region's stack (ReplicaRegion == its own region) is only a state bucket: the OIDC provider,
+  # the boundary and the CI roles are global IAM and already exist from the primary region's stack.
+  CreateGlobalResources: !Not [!Equals [!Ref ReplicaRegion, !Ref "AWS::Region"]]
+  ReplicateState: !And
+    - !Not [!Equals [!Ref ReplicaRegion, ""]]
+    - !Not [!Equals [!Ref ReplicaRegion, !Ref "AWS::Region"]]
 
 Resources:
   # ---------------------------------------------------------------------------
@@ -66,6 +82,22 @@ Resources:
               Added in PLAN 2.2. State access is already recorded by CloudTrail.
     Properties:
       BucketName: !Sub "tg-state-${AWS::AccountId}-${AWS::Region}"
+      ReplicationConfiguration: !If
+        - ReplicateState
+        - Role: !GetAtt StateReplicationRole.Arn
+          Rules:
+            - Id: state-to-secondary-region
+              Status: Enabled
+              Priority: 1
+              Filter:
+                Prefix: ""
+              # A deleted state file is NOT deleted in the replica: the copy is the way back from a mistake.
+              DeleteMarkerReplication:
+                Status: Disabled
+              Destination:
+                Bucket: !Sub "arn:${AWS::Partition}:s3:::tg-state-${AWS::AccountId}-${ReplicaRegion}"
+                StorageClass: STANDARD
+        - !Ref AWS::NoValue
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
@@ -91,6 +123,37 @@ Resources:
             Status: Enabled
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 7
+
+  # Lets S3 copy state files to the replica bucket (PLAN 7.2). Uses the bucket NAME, not !GetAtt, so the
+  # role and the bucket do not depend on each other.
+  StateReplicationRole:
+    Type: AWS::IAM::Role
+    Condition: ReplicateState
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref AWS::AccountId
+      Policies:
+        - PolicyName: replicate-state
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ["s3:GetReplicationConfiguration", "s3:ListBucket"]
+                Resource: !Sub "arn:${AWS::Partition}:s3:::tg-state-${AWS::AccountId}-${AWS::Region}"
+              - Effect: Allow
+                Action: ["s3:GetObjectVersionForReplication", "s3:GetObjectVersionAcl", "s3:GetObjectVersionTagging"]
+                Resource: !Sub "arn:${AWS::Partition}:s3:::tg-state-${AWS::AccountId}-${AWS::Region}/*"
+              - Effect: Allow
+                Action: ["s3:ReplicateObject", "s3:ReplicateTags", "s3:ObjectOwnerOverrideToBucketOwner"]
+                Resource: !Sub "arn:${AWS::Partition}:s3:::tg-state-${AWS::AccountId}-${ReplicaRegion}/*"
 
   StateBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -129,6 +192,7 @@ Resources:
   # ---------------------------------------------------------------------------
   GitHubOidcProvider:
     Type: AWS::IAM::OIDCProvider
+    Condition: CreateGlobalResources
     Properties:
       Url: https://token.actions.githubusercontent.com
       ClientIdList:
@@ -144,6 +208,7 @@ Resources:
   # ---------------------------------------------------------------------------
   ApplyBoundary:
     Type: AWS::IAM::ManagedPolicy
+    Condition: CreateGlobalResources
     Properties:
       ManagedPolicyName: github-actions-apply-boundary
       Description: >-
@@ -306,6 +371,7 @@ Resources:
   # ---------------------------------------------------------------------------
   PlanRole:
     Type: AWS::IAM::Role
+    Condition: CreateGlobalResources
     Properties:
       RoleName: github-actions-plan
       Description: "GitHub Actions: terragrunt plan (read-only)"
@@ -358,6 +424,7 @@ Resources:
   # ---------------------------------------------------------------------------
   ApplyRole:
     Type: AWS::IAM::Role
+    Condition: CreateGlobalResources
     Properties:
       RoleName: github-actions-apply
       Description: "GitHub Actions: terragrunt apply/destroy (one GitHub Environment only)"
@@ -384,11 +451,14 @@ Outputs:
     Description: Terraform state bucket for this account and region
     Value: !Ref StateBucket
   PlanRoleArn:
+    Condition: CreateGlobalResources
     Description: Role CI assumes to plan in this account (CI builds the ARN from the account id, no variable needed)
     Value: !GetAtt PlanRole.Arn
   ApplyRoleArn:
+    Condition: CreateGlobalResources
     Description: Role CI assumes to apply in this account (only from this account's GitHub Environment)
     Value: !GetAtt ApplyRole.Arn
   OidcProviderArn:
+    Condition: CreateGlobalResources
     Description: GitHub OIDC provider in this account
     Value: !Ref GitHubOidcProvider

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IDP Integration & Dynamic Discovery Contract Architecture</title>
+  <style>
+    :root {
+      --bg-base: #080C14;
+      --bg-surface: #0E1626;
+      --bg-elevated: #162032;
+      --border-subtle: #1E293B;
+      --border-strong: #334155;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --accent-purple: #A855F7;
+      --accent-cyan: #38BDF8;
+      --accent-emerald: #10B981;
+      --accent-amber: #F59E0B;
+      --accent-rose: #F43F5E;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      max-width: 1100px;
+      width: 100%;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
+    p { color: var(--text-muted); font-size: 0.95rem; margin-top: 0.4rem; max-width: 800px; }
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .canvas-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 1100px;
+      width: 100%;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+    }
+    svg { width: 100%; height: auto; min-height: 600px; }
+    .node rect { transition: all 0.2s ease; cursor: pointer; }
+    .node:hover rect {
+      stroke: var(--accent-cyan) !important;
+      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4));
+    }
+    .flow-line {
+      fill: none;
+      stroke-width: 2;
+      stroke-dasharray: 6, 6;
+      animation: dash 25s linear infinite;
+    }
+    @keyframes dash { from { stroke-dashoffset: 500; } to { stroke-dashoffset: 0; } }
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+      max-width: 1100px;
+      width: 100%;
+    }
+    .info-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .info-card h3 {
+      font-size: 1.05rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .info-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .code-box {
+      background: #060A10;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 0.6rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #E2E8F0;
+      margin-top: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <span class="badge">TENANT PLATFORM ENGINEERING</span>
+      <h1>IDP Integration & Discovery Contract</h1>
+      <p>
+        Tenant applications consume AWS capabilities via Backstage, OpenChoreo, or CLI scaffolders without ever hardcoding AWS IDs. Foundation stacks publish parameters to SSM Parameter Store, and tenant Terraform queries them dynamically.
+      </p>
+    </div>
+    <div>
+      <a href="../visualizer.html" style="color: var(--accent-cyan); text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+        ← Back to Visualizer Portal
+      </a>
+    </div>
+  </header>
+
+  <div class="canvas-card">
+    <svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg">
+      <!-- Section 1: IDP Scaffolder Layer -->
+      <rect x="20" y="40" width="300" height="540" rx="14" fill="#0C1424" stroke="#A855F7" stroke-width="1.5"/>
+      <text x="40" y="75" fill="#A855F7" font-size="13" font-weight="700">1. DEVELOPER PLATFORM (IDP)</text>
+
+      <g class="node">
+        <rect x="40" y="100" width="260" height="130" rx="8" fill="#162032" stroke="#A855F7" stroke-width="1.5"/>
+        <text x="60" y="130" fill="#F8FAFC" font-size="13" font-weight="700">Backstage / OpenChoreo</text>
+        <text x="60" y="152" fill="#94A3B8" font-size="10">Internal Developer Portal (IDP)</text>
+        <text x="60" y="170" fill="#94A3B8" font-size="10">Service Catalog & Scaffolder</text>
+        <text x="60" y="190" fill="#C084FC" font-size="11">Selects Capability: postgres / s3 / iam</text>
+        <text x="60" y="210" fill="#94A3B8" font-size="10">Generates tenant.yaml + manifest</text>
+      </g>
+
+      <g class="node">
+        <rect x="40" y="250" width="260" height="130" rx="8" fill="#162032" stroke="#38BDF8" stroke-width="1.5"/>
+        <text x="60" y="280" fill="#38BDF8" font-size="13" font-weight="700">Pinned Git Module URL</text>
+        <text x="60" y="302" fill="#94A3B8" font-size="9" font-family="monospace">git::https://github.com/ok-karthik/</text>
+        <text x="60" y="318" fill="#94A3B8" font-size="9" font-family="monospace">enterprise-aws-infrastructure.git//</text>
+        <text x="60" y="334" fill="#94A3B8" font-size="9" font-family="monospace">iac-modules-repo/data/postgres</text>
+        <text x="60" y="354" fill="#38BDF8" font-size="11">?ref=postgres-v1.0.0</text>
+      </g>
+
+      <g class="node">
+        <rect x="40" y="400" width="260" height="120" rx="8" fill="#162032" stroke="#F59E0B" stroke-width="1.5"/>
+        <text x="60" y="430" fill="#F59E0B" font-size="13" font-weight="700">CLI & GitOps Engines</text>
+        <text x="60" y="452" fill="#94A3B8" font-size="10">Argo CD / Crossplane / Terragrunt</text>
+        <text x="60" y="470" fill="#94A3B8" font-size="10">Orchestrates tenant lifecycle</text>
+        <text x="60" y="490" fill="#FCD34D" font-size="10">Assumes tenant-scoped role</text>
+      </g>
+
+      <!-- Section 2: Discovery Contract (SSM Store) -->
+      <rect x="350" y="40" width="310" height="540" rx="14" fill="#0C1424" stroke="#38BDF8" stroke-width="1.5"/>
+      <text x="370" y="75" fill="#38BDF8" font-size="13" font-weight="700">2. DISCOVERY CONTRACT (SSM)</text>
+
+      <g class="node">
+        <rect x="370" y="100" width="270" height="290" rx="10" fill="#0A182E" stroke="#38BDF8" stroke-width="2"/>
+        <text x="390" y="130" fill="#38BDF8" font-size="14" font-weight="700">SSM Parameter Store</text>
+        <text x="390" y="152" fill="#94A3B8" font-size="10">Standardized Hierarchical Contract:</text>
+
+        <rect x="390" y="165" width="230" height="145" rx="6" fill="#060F1E" stroke="#1E293B"/>
+        <text x="405" y="185" fill="#E2E8F0" font-size="10" font-family="monospace">/platform/${env}/${region}/</text>
+        <text x="405" y="205" fill="#A7F3D0" font-size="10" font-family="monospace">├─ vpc/id</text>
+        <text x="405" y="225" fill="#A7F3D0" font-size="10" font-family="monospace">├─ vpc/database_subnets</text>
+        <text x="405" y="245" fill="#A7F3D0" font-size="10" font-family="monospace">├─ eks/cluster_name</text>
+        <text x="405" y="265" fill="#A7F3D0" font-size="10" font-family="monospace">├─ eks/oidc_provider_arn</text>
+        <text x="405" y="285" fill="#A7F3D0" font-size="10" font-family="monospace">└─ ack/cross_account_role</text>
+
+        <text x="390" y="332" fill="#94A3B8" font-size="10">Published by discovery-publisher</text>
+        <text x="390" y="350" fill="#38BDF8" font-size="10">Published by account-baseline</text>
+        <text x="390" y="368" fill="#10B981" font-size="10">Contracts validated in CI</text>
+      </g>
+
+      <g class="node">
+        <rect x="370" y="410" width="270" height="120" rx="8" fill="#162032" stroke="#818CF8" stroke-width="1.5"/>
+        <text x="390" y="438" fill="#818CF8" font-size="13" font-weight="700">ACK Cross-Account Hub</text>
+        <text x="390" y="460" fill="#94A3B8" font-size="10">AWS Controllers for K8s (shared-services)</text>
+        <text x="390" y="478" fill="#94A3B8" font-size="10">Assumes spoke role in tenant account</text>
+        <text x="390" y="498" fill="#818CF8" font-size="10">Protected by ack-tenant-boundary</text>
+      </g>
+
+      <!-- Section 3: Tenant Workload Account -->
+      <rect x="685" y="40" width="295" height="540" rx="14" fill="#0C1424" stroke="#10B981" stroke-width="1.5"/>
+      <text x="705" y="75" fill="#10B981" font-size="13" font-weight="700">3. TENANT WORKLOAD STACK</text>
+
+      <g class="node">
+        <rect x="705" y="100" width="255" height="180" rx="8" fill="#162032" stroke="#10B981" stroke-width="1.5"/>
+        <text x="725" y="130" fill="#10B981" font-size="13" font-weight="700">Tenant Module Apply</text>
+        <text x="725" y="152" fill="#94A3B8" font-size="10">Ingests SSM parameters dynamically:</text>
+        <rect x="725" y="165" width="215" height="40" rx="4" fill="#060F1E"/>
+        <text x="735" y="182" fill="#E2E8F0" font-size="9" font-family="monospace">data "aws_ssm_parameter" "vpc"</text>
+        <text x="735" y="196" fill="#A7F3D0" font-size="9" font-family="monospace">name = "/platform/dev/.../vpc/id"</text>
+        <text x="725" y="225" fill="#F8FAFC" font-size="11" font-weight="600">Provisioned Target:</text>
+        <text x="725" y="242" fill="#94A3B8" font-size="10">• Encrypted RDS in Private Subnets</text>
+        <text x="725" y="258" fill="#94A3B8" font-size="10">• Secrets Manager auto rotation</text>
+      </g>
+
+      <g class="node">
+        <rect x="705" y="300" width="255" height="120" rx="8" fill="#162032" stroke="#F59E0B" stroke-width="1.5"/>
+        <text x="725" y="330" fill="#F59E0B" font-size="13" font-weight="700">platform-workload-boundary</text>
+        <text x="725" y="352" fill="#94A3B8" font-size="10">Mandatory IAM Permissions Boundary</text>
+        <text x="725" y="370" fill="#94A3B8" font-size="10">Attached to all tenant workload roles</text>
+        <text x="725" y="390" fill="#FCD34D" font-size="10">Blocks privilege escalation & IAM tampering</text>
+      </g>
+
+      <!-- Connecting Lines -->
+      <path d="M 300 165 L 370 165" class="flow-line" stroke="#A855F7"/>
+      <path d="M 640 165 L 705 165" class="flow-line" stroke="#38BDF8"/>
+    </svg>
+  </div>
+
+  <div class="details-grid">
+    <div class="info-card">
+      <h3 style="color: var(--accent-purple);">📦 Versioned Capability Modules</h3>
+      <p>
+        Capabilities (<code>postgres</code>, <code>s3</code>, <code>workload-iam</code>) are tagged and versioned independently via Google's <code>release-please</code> (e.g. <code>postgres-v1.0.0</code>). IDPs consume standard release tags with pinned semantic versions.
+      </p>
+      <div class="code-box">
+git::...//iac-modules-repo/data/postgres?ref=postgres-v1.0.0
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 style="color: var(--accent-cyan);">🔍 The SSM Discovery Contract</h3>
+      <p>
+        Tenant configurations never require manual copy-pasting of VPC IDs or subnet CIDRs. The <code>discovery-publisher</code> module creates a unified catalog in AWS Systems Manager Parameter Store within each workload account.
+      </p>
+      <div class="code-box">
+docs/DISCOVERY_CONTRACT.md
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 style="color: var(--accent-emerald);">🛡️ Hardened Tenant Isolation</h3>
+      <p>
+        Tenant applications run strictly in private subnets with no public IPv4 addresses. Every role assumed by tenant services or ACK controllers must carry the <code>platform-workload-boundary</code> IAM permissions boundary.
+      </p>
+      <div class="code-box">
+arn:aws:iam::...:policy/platform-workload-boundary
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

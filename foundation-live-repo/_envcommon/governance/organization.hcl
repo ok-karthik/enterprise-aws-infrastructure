@@ -21,11 +21,14 @@ locals {
   # security/threat-detection assumes this registration already happened).
   registry = read_terragrunt_config("${get_repo_root()}/foundation-live-repo/_config/accounts.hcl")
   delegated_administrator_accounts = {
-    "access-analyzer.amazonaws.com" = "security-tooling"
-    "guardduty.amazonaws.com"       = "security-tooling"
-    "securityhub.amazonaws.com"     = "security-tooling"
-    "inspector2.amazonaws.com"      = "security-tooling"
-    "macie.amazonaws.com"           = "security-tooling"
+    "access-analyzer.amazonaws.com"          = "security-tooling"
+    "guardduty.amazonaws.com"                = "security-tooling"
+    "securityhub.amazonaws.com"              = "security-tooling"
+    "inspector2.amazonaws.com"               = "security-tooling"
+    "macie.amazonaws.com"                    = "security-tooling"
+    "config.amazonaws.com"                   = "security-tooling"
+    "config-multiaccountsetup.amazonaws.com" = "security-tooling"
+    "auditmanager.amazonaws.com"             = "security-tooling"
   }
   delegated_administrators = {
     for service, account in local.delegated_administrator_accounts : service => local.registry.locals.accounts[account].id

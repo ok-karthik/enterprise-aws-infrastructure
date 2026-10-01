@@ -4,11 +4,11 @@ All jobs run inside a purpose-built toolchain container (`ghcr.io/ok-karthik/inf
 
 ## Pipeline (`terragrunt.yml` + `reusable-terragrunt.yml`)
 
-1. **Static analysis** (parallel with planning): `terraform fmt -check`, `terraform validate`, TFLint, Checkov (HCL and workflows, blocking; run by `workloads-live-repo/scripts/run-checkov.sh`, the same wrapper as `make checkov` and pre-commit), Trivy (`trivy config`, until PLAN 8.9 step 5 removes it). Results upload as SARIF to the GitHub Security tab.
+1. **Static analysis** (parallel with planning): `terraform fmt -check`, `terraform validate`, TFLint, Checkov (HCL and workflows, blocking; run by `workloads-live-repo/scripts/run-checkov.sh`, the same wrapper as `make checkov` and pre-commit). Results upload as SARIF to the GitHub Security tab.
 2. **Plan** per account (a matrix generated from the account registry, see below): `terragrunt run --all plan` produces `tfplan.bin`, converted to `tfplan.json` and uploaded as an artifact.
 3. **Governance gates** consume the plan JSON:
    - **OPA/Conftest** against `policy-library-repo/terraform/` — mandatory tagging, no legacy instance families.
-   - **Checkov** on **every** `tfplan.json` (one run per plan, SARIF merged into one file per account) and **Trivy** (CRITICAL/HIGH) as blocking gates. A run with no plan file fails instead of passing.
+   - **Checkov** on **every** `tfplan.json` (one run per plan, SARIF merged into one file per account) as a blocking gate, and **conftest** on the same plans. A run with no plan file fails instead of passing.
 
 | Tool | Its one job | Locally | In CI |
 |---|---|---|---|
@@ -17,7 +17,6 @@ All jobs run inside a purpose-built toolchain container (`ghcr.io/ok-karthik/inf
 | conftest / Rego | This organization's own rules | `make test` | plan stage |
 | Trivy | Toolbox image has no known fixable CVEs | `make image-scan` | `publish-toolchain.yml`, before the push |
 
-   (`trivy config` on Terraform also still runs, until PLAN 8.9 step 5.)
 4. **Cost** — Infracost posts a per-module breakdown as a PR comment (`tf-summarize` adds a change summary).
 5. **Apply** — on push to `main`, `apply-dev` runs, then `apply-prod`, which is gated by a protected GitHub **Environment** requiring manual approval.
 
@@ -76,7 +75,7 @@ Both are Rego v1 (`import rego.v1`, `package main`) and are unit-tested with `co
 
 A matrix job over the same account matrix compares live AWS against state each night and self-manages **one GitHub Issue per account**: creates on new drift, comments while it persists, and auto-closes when resolved. Each account's own read-only `github-actions-plan` role is used.
 
-## Self-healing CI (`pipeline_healer.yml` + `.agents/`)
+## Self-healing CI (`pipeline_healer.yml` + `iac-agents-repo/`)
 
 Triggered on a failed "Terragrunt CI/CD" run:
 
@@ -84,12 +83,12 @@ Triggered on a failed "Terragrunt CI/CD" run:
 2. If it detects a provider-lock mismatch, runs `init -upgrade -backend=false` across all active `.terraform.lock.hcl` files (temporarily mocking `get_aws_account_id()` so parsing works without AWS creds) and commits the result.
 3. Otherwise sends logs + repo tree to a Groq-hosted LLM, extracts a `git diff`, applies it, and pushes a remediation commit to the PR branch.
 
-## Autonomous IaC Platform Agent & ChatOps (`chatops_generator.yml` + `.agents/`)
+## Autonomous IaC Platform Agent & ChatOps (`chatops_generator.yml` + `iac-agents-repo/`)
 
 Provides on-demand self-service infrastructure generation, drift reconciliation, and Backstage IDP integration:
 - Listens for `/generate` and `/reconcile` issue comments.
 - Closed-loop drift reconciliation links nightly drift issues to corrective pull requests.
-- See full architecture flow diagrams and usage guide in **[docs/IAC_PLATFORM_AGENT.md](IAC_PLATFORM_AGENT.md)**.
+- See full architecture flow diagrams and usage guide in **[iac-agents-repo/docs/IAC_PLATFORM_AGENT.md](../iac-agents-repo/docs/IAC_PLATFORM_AGENT.md)**.
 
 ## Dependency automation
 

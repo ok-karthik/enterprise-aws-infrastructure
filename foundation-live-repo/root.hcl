@@ -15,14 +15,27 @@ locals {
   account_alias = local.account_vars.locals.account_name
   cluster_name  = local.env_vars.locals.cluster_name
 
-  # 3. The account this stack is DECLARED to belong to (account.hcl).
-  # Do not use get_aws_account_id() here: it returns whatever account the caller is logged
-  # in to, so `allowed_account_ids` would compare the caller with itself and never fail.
-  account_id = local.account_vars.locals.aws_account_id
+  # 3. The account this stack is DECLARED to belong to.
+  # Read the account registry which merges accounts.local.hcl (real IDs/emails) if present.
+  registry      = read_terragrunt_config("${get_repo_root()}/foundation-live-repo/_config/accounts.hcl")
+  account_entry = try(local.registry.locals.accounts[local.account_alias], {})
+
+  # Real account ID from registry (or accounts.local.hcl), falling back to account.hcl
+  account_id = try(local.account_entry.id, local.account_vars.locals.aws_account_id)
   owner      = local.account_vars.locals.owner
   data_class = local.account_vars.locals.data_classification
 }
 
+
+# Wait for a held state lock instead of failing at once (PLAN 8.3). State is split per account, region and
+# component, so a lock is only ever held by another run on the SAME unit; 5 minutes covers a normal apply
+# without hiding a stuck lock for long. Applies to every command that takes the lock.
+terraform {
+  extra_arguments "lock_timeout" {
+    commands  = ["plan", "apply", "destroy", "import", "refresh"]
+    arguments = ["-lock-timeout=5m"]
+  }
+}
 
 # Generate an AWS provider block
 generate "provider" {

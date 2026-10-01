@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Account AWS Infrastructure & Disaster Recovery Architecture</title>
+  <style>
+    :root {
+      --bg-base: #080C14;
+      --bg-surface: #0E1626;
+      --bg-elevated: #162032;
+      --border-subtle: #1E293B;
+      --border-strong: #334155;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --accent-purple: #A855F7;
+      --accent-cyan: #38BDF8;
+      --accent-emerald: #10B981;
+      --accent-amber: #F59E0B;
+      --accent-rose: #F43F5E;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      max-width: 1100px;
+      width: 100%;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
+    p { color: var(--text-muted); font-size: 0.95rem; margin-top: 0.4rem; max-width: 800px; }
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .canvas-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 1100px;
+      width: 100%;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+    }
+    svg { width: 100%; height: auto; min-height: 600px; }
+    .node rect { transition: all 0.2s ease; cursor: pointer; }
+    .node:hover rect {
+      stroke: var(--accent-cyan) !important;
+      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4));
+    }
+    .flow-line {
+      fill: none;
+      stroke-width: 2;
+      stroke-dasharray: 6, 6;
+      animation: dash 25s linear infinite;
+    }
+    @keyframes dash { from { stroke-dashoffset: 500; } to { stroke-dashoffset: 0; } }
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+      max-width: 1100px;
+      width: 100%;
+    }
+    .info-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .info-card h3 {
+      font-size: 1.05rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .info-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .code-box {
+      background: #060A10;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 0.6rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #E2E8F0;
+      margin-top: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <span class="badge">AWS ORGANIZATIONS & NETWORKING FOUNDATION</span>
+      <h1>Multi-Account AWS & Active-Passive DR</h1>
+      <p>
+        Multi-account architecture governed by AWS Organizations OUs, hub-and-spoke Transit Gateway, central inspection Network Firewall, central VPC interface endpoints, and cross-region warm standby disaster recovery.
+      </p>
+    </div>
+    <div>
+      <a href="../visualizer.html" style="color: var(--accent-cyan); text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+        ← Back to Visualizer Portal
+      </a>
+    </div>
+  </header>
+
+  <div class="canvas-card">
+    <svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gMgmt" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#1E293B"/>
+          <stop offset="100%" stop-color="#0F172A"/>
+        </linearGradient>
+        <linearGradient id="gHub" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0284C7" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#0369A1" stop-opacity="0.1"/>
+        </linearGradient>
+        <linearGradient id="gActive" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#10B981" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#047857" stop-opacity="0.08"/>
+        </linearGradient>
+        <linearGradient id="gStandby" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#B45309" stop-opacity="0.08"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Outer Org Border -->
+      <rect x="20" y="20" width="960" height="580" rx="16" fill="rgba(15, 23, 42, 0.4)" stroke="#1E293B" stroke-width="1.5"/>
+      <text x="45" y="48" fill="#94A3B8" font-size="12" font-weight="700" letter-spacing="0.05em">AWS ORGANIZATION (ROOT)</text>
+
+      <!-- Management Account -->
+      <g class="node">
+        <rect x="50" y="70" width="260" height="110" rx="10" fill="url(#gMgmt)" stroke="#38BDF8" stroke-width="1.5"/>
+        <text x="70" y="98" fill="#38BDF8" font-size="14" font-weight="700">management (Root)</text>
+        <text x="70" y="118" fill="#94A3B8" font-size="10">IAM Identity Center (SSO)</text>
+        <text x="70" y="134" fill="#94A3B8" font-size="10">SCPs & RCP Data Perimeters</text>
+        <text x="70" y="150" fill="#94A3B8" font-size="10">Day-0 CloudFormation StackSets</text>
+      </g>
+
+      <!-- Security OU -->
+      <rect x="50" y="200" width="260" height="240" rx="10" fill="rgba(30, 41, 59, 0.4)" stroke="#334155" stroke-dasharray="4,4"/>
+      <text x="65" y="222" fill="#818CF8" font-size="11" font-weight="700">SECURITY OU</text>
+
+      <g class="node">
+        <rect x="65" y="235" width="230" height="85" rx="8" fill="#162032" stroke="#475569" stroke-width="1"/>
+        <text x="80" y="260" fill="#E2E8F0" font-size="13" font-weight="600">log-archive</text>
+        <text x="80" y="280" fill="#94A3B8" font-size="10">Object Lock COMPLIANCE S3 (400d)</text>
+        <text x="80" y="296" fill="#94A3B8" font-size="10">Central Flow, ALB & Trail Storage</text>
+      </g>
+
+      <g class="node">
+        <rect x="65" y="335" width="230" height="90" rx="8" fill="#162032" stroke="#475569" stroke-width="1"/>
+        <text x="80" y="360" fill="#E2E8F0" font-size="13" font-weight="600">security-tooling</text>
+        <text x="80" y="380" fill="#94A3B8" font-size="10">Security Hub Aggregator + GuardDuty</text>
+        <text x="80" y="396" fill="#94A3B8" font-size="10">Inspector v2 & Macie Auto-Discovery</text>
+        <text x="80" y="412" fill="#94A3B8" font-size="10">Auto-Remediation Lambda (SSH/RDP)</text>
+      </g>
+
+      <!-- Observability Account -->
+      <g class="node">
+        <rect x="50" y="460" width="260" height="110" rx="10" fill="#162032" stroke="#818CF8" stroke-width="1.2"/>
+        <text x="70" y="488" fill="#818CF8" font-size="14" font-weight="700">observability</text>
+        <text x="70" y="508" fill="#94A3B8" font-size="10">CloudWatch OAM Telemetry Sink</text>
+        <text x="70" y="524" fill="#94A3B8" font-size="10">Managed Prometheus Workspace</text>
+        <text x="70" y="540" fill="#94A3B8" font-size="10">Central Guardrail Alarms Dashboard</text>
+      </g>
+
+      <!-- Infrastructure OU: Central Network Hub -->
+      <g class="node">
+        <rect x="340" y="70" width="300" height="250" rx="12" fill="url(#gHub)" stroke="#38BDF8" stroke-width="2"/>
+        <text x="360" y="98" fill="#38BDF8" font-size="14" font-weight="700">network-hub (Transit Gateway)</text>
+        <rect x="360" y="112" width="260" height="60" rx="6" fill="#0B132B" stroke="#0284C7"/>
+        <text x="375" y="134" fill="#E2E8F0" font-size="12" font-weight="600">AWS Network Firewall (Egress)</text>
+        <text x="375" y="152" fill="#38BDF8" font-size="10">STRICT_ORDER Stateful Domain Drop</text>
+
+        <text x="360" y="190" fill="#94A3B8" font-size="10">• RAM-Shared Transit Gateway</text>
+        <text x="360" y="208" fill="#94A3B8" font-size="10">• Separate Prod / NonProd Route Tables</text>
+        <text x="360" y="226" fill="#94A3B8" font-size="10">• Route 53 Resolver Inbound/Outbound</text>
+        <text x="360" y="244" fill="#94A3B8" font-size="10">• Global IPAM Pool Allocation</text>
+      </g>
+
+      <!-- Shared Services -->
+      <g class="node">
+        <rect x="340" y="340" width="300" height="230" rx="12" fill="url(#gMgmt)" stroke="#818CF8" stroke-width="1.5"/>
+        <text x="360" y="368" fill="#818CF8" font-size="14" font-weight="700">shared-services</text>
+        <text x="360" y="392" fill="#E2E8F0" font-size="12" font-weight="600">Central VPC Interface Endpoints</text>
+        <text x="360" y="410" fill="#94A3B8" font-size="10">(ECR, STS, SSM, KMS, Secrets, Logs)</text>
+        <text x="360" y="432" fill="#E2E8F0" font-size="12" font-weight="600">ACK Hub Controller Cluster</text>
+        <text x="360" y="450" fill="#94A3B8" font-size="10">Cross-Account Spoke Provisioner</text>
+        <text x="360" y="472" fill="#94A3B8" font-size="10">• Route 53 Private Hosted Zones</text>
+      </g>
+
+      <!-- Workloads OU: Primary Active Region -->
+      <g class="node">
+        <rect x="670" y="70" width="290" height="250" rx="12" fill="url(#gActive)" stroke="#10B981" stroke-width="2"/>
+        <text x="690" y="98" fill="#10B981" font-size="14" font-weight="700">workloads-prod (Primary)</text>
+        <text x="690" y="118" fill="#A7F3D0" font-size="10" font-weight="600">REGION: eu-central-1 (ACTIVE)</text>
+
+        <rect x="690" y="132" width="250" height="48" rx="6" fill="#064E3B" stroke="#059669"/>
+        <text x="705" y="152" fill="#ECFDF5" font-size="12" font-weight="600">Production EKS (Multi-AZ)</text>
+        <text x="705" y="168" fill="#6EE7B7" font-size="10">IMDSv2 Hop 1, Private Endpoints</text>
+
+        <text x="690" y="200" fill="#94A3B8" font-size="10">• Aurora Global Database (Primary)</text>
+        <text x="690" y="218" fill="#94A3B8" font-size="10">• S3 Bucket with Cross-Region Repl.</text>
+        <text x="690" y="236" fill="#94A3B8" font-size="10">• Spoke TGW Attachment (Prod RT)</text>
+        <text x="690" y="254" fill="#94A3B8" font-size="10">• SSM Parameter Discovery Contract</text>
+      </g>
+
+      <!-- Workloads OU: DR Secondary Region (Warm Standby) -->
+      <g class="node">
+        <rect x="670" y="340" width="290" height="230" rx="12" fill="url(#gStandby)" stroke="#F59E0B" stroke-width="2"/>
+        <text x="690" y="368" fill="#F59E0B" font-size="14" font-weight="700">workloads-prod (DR Standby)</text>
+        <text x="690" y="388" fill="#FDE68A" font-size="10" font-weight="600">REGION: eu-west-1 (WARM STANDBY)</text>
+
+        <rect x="690" y="402" width="250" height="48" rx="6" fill="#451A03" stroke="#D97706"/>
+        <text x="705" y="422" fill="#FEF3C7" font-size="12" font-weight="600">Standby EKS (Node Group: 0)</text>
+        <text x="705" y="438" fill="#FCD34D" font-size="10">Zero Cost Idle Compute / Instant Scale</text>
+
+        <text x="690" y="470" fill="#94A3B8" font-size="10">• Aurora Global Replica (RPO < 1s)</text>
+        <text x="690" y="488" fill="#94A3B8" font-size="10">• S3 Cross-Region Replica Bucket</text>
+        <text x="690" y="506" fill="#94A3B8" font-size="10">• AWS Backup Cross-Region Vault</text>
+        <text x="690" y="524" fill="#94A3B8" font-size="10">• Route 53 Active-Passive Failover</text>
+      </g>
+
+      <!-- Connecting Lines -->
+      <line x1="640" y1="180" x2="670" y2="180" class="flow-line" stroke="#38BDF8"/>
+      <line x1="640" y1="420" x2="670" y2="420" class="flow-line" stroke="#38BDF8"/>
+      <path d="M 815 320 L 815 340" class="flow-line" stroke="#F59E0B" stroke-width="3"/>
+    </svg>
+  </div>
+
+  <div class="details-grid">
+    <div class="info-card">
+      <h3 style="color: var(--accent-cyan);">🌐 Central Network Hub & Firewall</h3>
+      <p>
+        Outbound internet egress is routed through AWS Network Firewall inside <code>network-hub</code>. Dedicated route tables in Transit Gateway enforce tenant network boundaries without cross-tenant VPC peering.
+      </p>
+      <div class="code-box">
+iac-modules-repo/network/inspection-egress
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 style="color: var(--accent-amber);">🚨 Active-Passive Disaster Recovery</h3>
+      <p>
+        The platform provisions a standby stack in <code>eu-west-1</code> with node groups scaled to zero. Aurora Global Database provides sub-second RPO, and Route 53 DNS failover diverts traffic on primary region outage.
+      </p>
+      <div class="code-box">
+docs/DISASTER_RECOVERY.md
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 style="color: var(--accent-emerald);">🔑 Zero-Key OIDC Architecture</h3>
+      <p>
+        No static AWS credentials exist anywhere. GitHub Actions authenticates through AWS IAM OIDC directly into <code>github-actions-plan</code> (read-only) and <code>github-actions-apply</code> roles bounded by explicit permission ceilings.
+      </p>
+      <div class="code-box">
+foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,5 +1,7 @@
 # network/inspection-egress
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS — Network Firewall cost barrier)
+
 The central egress/inspection VPC (PLAN 5.3), applied in **network-hub**, per region: NAT gateways (one per AZ) behind AWS Network Firewall. Spoke VPCs (`network/vpc` with `egress_mode = "central"`, attached with `network/tgw-attachment`'s `egress_route_cidr`) send `0.0.0.0/0` here instead of using their own NAT gateways.
 
 ## Topology
@@ -22,7 +24,7 @@ Alert and flow logs (the firewall's own) go to `var.log_archive_bucket_name` (`s
 
 ## Cost
 
-See `FINOPS.md` for the cost comparison against `egress_mode = "local-nat"`. Roughly: one Network Firewall endpoint per AZ (~$395/month per endpoint, `us-east-1` pricing, at the time this was written — check current pricing before applying) plus data processing, versus a NAT gateway per spoke VPC (~$35/month plus data). Centralizing is worth it once there are enough spoke VPCs that shared NAT + firewall costs less than every VPC's own NAT, and it is the only way to get one enforced domain allow-list for every spoke.
+See `docs/FINOPS.md` for the cost comparison against `egress_mode = "local-nat"`. Roughly: one Network Firewall endpoint per AZ (~$395/month per endpoint, `us-east-1` pricing, at the time this was written — check current pricing before applying) plus data processing, versus a NAT gateway per spoke VPC (~$35/month plus data). Centralizing is worth it once there are enough spoke VPCs that shared NAT + firewall costs less than every VPC's own NAT, and it is the only way to get one enforced domain allow-list for every spoke.
 
 ## Not verified offline
 

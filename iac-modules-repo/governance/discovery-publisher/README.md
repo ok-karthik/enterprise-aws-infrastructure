@@ -1,5 +1,7 @@
 # governance/discovery-publisher
 
+**Status:** 📝 Plan-only (wired into `workloads-live-repo`; not applied to AWS)
+
 Writes the platform **discovery contract** into one account, with the same parameter names in every workload account (`/platform/<env>/<region>/...`), so tenant Terraform reads its own account whatever account the underlying resource lives in (for example a VPC shared from a network hub). Only keys of the contract are accepted; see [`docs/DISCOVERY_CONTRACT.md`](../../../docs/DISCOVERY_CONTRACT.md).
 
 The values come from the outputs of the stacks that own them (VPC, EKS, ...), passed in by the live leaf. This module is the **single owner** of those names: the VPC and EKS blueprints set `publish_ssm_parameters = false`, or two resources would fight over one name. The `account/*`, `kms/*` and `iam/*` keys are published by `governance/account-baseline`.

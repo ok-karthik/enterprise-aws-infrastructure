@@ -34,7 +34,7 @@ locals {
       managed_policies = ["${local.aws_managed}/job-function/Billing"]
     }
     BreakGlassAdmin = {
-      description      = "Emergency administrator access. 1-hour sessions. Never assigned statically: granted just in time (docs/BREAK_GLASS.md)."
+      description      = "Emergency administrator access. 1-hour sessions. Never assigned statically: granted just in time (docs/IDENTITY.md)."
       managed_policies = ["${local.aws_managed}/AdministratorAccess"]
     }
   }

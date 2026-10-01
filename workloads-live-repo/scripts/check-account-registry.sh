@@ -13,12 +13,14 @@ cd "$(git rev-parse --show-toplevel)"
 REGISTRY="foundation-live-repo/_config/accounts.hcl"
 [[ -f "$REGISTRY" ]] || { echo "❌ Registry not found: $REGISTRY" >&2; exit 1; }
 
-# One line per registry account: "<name> <id> <ou> <env>"
+# One line per registry account: "<name> <id> <ou> <env> <local_id>"
 registry=$(python3 -c '
 import re, sys
 from pathlib import Path
 
-text = Path(sys.argv[1]).read_text()
+base_path = Path(sys.argv[1])
+text = base_path.read_text()
+accounts = {}
 for match in re.finditer(r"^    ([A-Za-z0-9_-]+) = \{\n(.*?)^    \}", text, re.M | re.S):
     name, body = match.groups()
     fields = {}
@@ -26,7 +28,23 @@ for match in re.finditer(r"^    ([A-Za-z0-9_-]+) = \{\n(.*?)^    \}", text, re.M
         m = re.match(r"^\s+(\w+)\s*=\s*(?:\"([^\"]*)\"|([^\s#]+))", line)
         if m:
             fields[m.group(1)] = m.group(2) if m.group(2) is not None else m.group(3)
-    print(name, fields.get("id", ""), fields.get("ou", ""), fields.get("env", ""))
+    accounts[name] = fields
+
+local_path = base_path.parent / "accounts.local.hcl"
+local_accounts = {}
+if local_path.is_file():
+    for match in re.finditer(r"^    ([A-Za-z0-9_-]+) = \{\n(.*?)^    \}", local_path.read_text(), re.M | re.S):
+        name, body = match.groups()
+        fields = {}
+        for line in body.splitlines():
+            m = re.match(r"^\s+(\w+)\s*=\s*(?:\"([^\"]*)\"|([^\s#]+))", line)
+            if m:
+                fields[m.group(1)] = m.group(2) if m.group(2) is not None else m.group(3)
+        local_accounts[name] = fields
+
+for name, fields in accounts.items():
+    local_id = local_accounts.get(name, {}).get("id", "")
+    print(name, fields.get("id", ""), fields.get("ou", ""), fields.get("env", ""), local_id)
 ' "$REGISTRY")
 [[ -n "$registry" ]] || { echo "❌ No accounts found in $REGISTRY" >&2; exit 1; }
 
@@ -56,8 +74,10 @@ while IFS= read -r file; do
     fail "$file: account '$name' is not in $REGISTRY"
     continue
   fi
-  read -r _ reg_id reg_ou reg_env <<<"$entry"
-  [[ "$id" == "$reg_id" ]] || fail "$file: aws_account_id $id differs from the registry ($reg_id)"
+  read -r _ reg_id reg_ou reg_env local_id <<<"$entry"
+  if [[ "$id" != "$reg_id" && "$id" != "$local_id" ]]; then
+    fail "$file: aws_account_id $id differs from the registry ($reg_id)"
+  fi
   [[ "$ou" == "$reg_ou" ]] || fail "$file: ou '$ou' differs from the registry ('$reg_ou')"
   [[ "$env" == "$reg_env" ]] || fail "$file: env '$env' differs from the registry ('$reg_env')"
 

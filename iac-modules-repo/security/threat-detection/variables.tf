@@ -98,6 +98,42 @@ variable "enable_detective" {
   default     = false
 }
 
+variable "enable_audit_manager" {
+  description = "Enable AWS Audit Manager registration and continuous compliance assessments in the primary region (PLAN 4.8)."
+  type        = bool
+  default     = false
+}
+
+variable "audit_manager_kms_key_arn" {
+  description = "KMS CMK ARN used by AWS Audit Manager to encrypt customer data. If null, Audit Manager uses default AWS managed encryption."
+  type        = string
+  default     = null
+}
+
+variable "audit_manager_soc2_framework_id" {
+  description = "Framework ID for SOC 2 continuous evidence assessment. If provided and enable_audit_manager is true, provisions aws_auditmanager_assessment.soc2."
+  type        = string
+  default     = null
+}
+
+variable "audit_manager_iso27001_framework_id" {
+  description = "Framework ID for ISO/IEC 27001 continuous evidence assessment. If provided and enable_audit_manager is true, provisions aws_auditmanager_assessment.iso27001."
+  type        = string
+  default     = null
+}
+
+variable "audit_manager_assessment_role_arn" {
+  description = "IAM Role ARN designated as PROCESS_OWNER for Audit Manager assessments."
+  type        = string
+  default     = null
+}
+
+variable "audit_manager_reports_destination_s3_bucket" {
+  description = "S3 destination URI for exported Audit Manager assessment reports (e.g. s3://my-audit-bucket)."
+  type        = string
+  default     = null
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)

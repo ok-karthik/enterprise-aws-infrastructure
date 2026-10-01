@@ -1,5 +1,7 @@
 # network/central-endpoints
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 Shared VPC interface endpoints (PLAN 5.4), applied once in a **shared-services** account: one interface endpoint per service in `var.services` (ECR api/dkr, STS, SSM, SSM Messages, EC2 Messages, CloudWatch Logs, KMS, Secrets Manager, EKS), and one **private hosted zone per service**, so every spoke VPC that associates with these zones resolves the same shared endpoint — instead of every VPC paying for (and managing) its own copy.
 
 **Gateway endpoints (S3, DynamoDB) are not here.** They're free, and stay local to each VPC.

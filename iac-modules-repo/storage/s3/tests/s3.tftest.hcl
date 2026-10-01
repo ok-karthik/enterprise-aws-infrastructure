@@ -41,3 +41,35 @@ run "guardrails_stay_on" {
     error_message = "Versioning must be enabled."
   }
 }
+
+run "replication_is_off_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(aws_s3_bucket_replication_configuration.this) == 0 && length(aws_iam_role.replication) == 0
+    error_message = "No replication resources unless replication_destination_bucket_arn is set."
+  }
+}
+
+run "replication_when_a_destination_is_given" {
+  command = plan
+
+  variables {
+    replication_destination_bucket_arn = "arn:aws:s3:::payments-ledger-dr-abc123"
+  }
+
+  assert {
+    condition     = one(aws_s3_bucket_replication_configuration.this[0].rule).status == "Enabled" && one(one(aws_s3_bucket_replication_configuration.this[0].rule).delete_marker_replication).status == "Disabled"
+    error_message = "Replication must be enabled and must not copy deletes."
+  }
+}
+
+run "bad_destination_arn_is_rejected" {
+  command = plan
+
+  variables {
+    replication_destination_bucket_arn = "not-an-arn"
+  }
+
+  expect_failures = [var.replication_destination_bucket_arn]
+}

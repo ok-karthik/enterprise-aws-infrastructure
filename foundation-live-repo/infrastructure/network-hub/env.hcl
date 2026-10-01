@@ -6,6 +6,7 @@ locals {
   module_versions = {
     ipam              = "ipam-v1.0.0"
     transit_gateway   = "transit-gateway-v1.0.0"
+    tgw_peering       = "tgw-peering-v1.0.0"
     inspection_egress = "inspection-egress-v1.0.0"
     dns               = "dns-v1.0.0"
   }

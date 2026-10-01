@@ -112,11 +112,17 @@ resource "aws_subnet" "this" {
 }
 
 resource "aws_security_group" "endpoints" {
-  name        = "${var.name}-endpoints"
+  name_prefix = "${var.name}-endpoints-"
   description = "Allows HTTPS from the platform's address space to the shared interface endpoints"
   vpc_id      = aws_vpc.this.id
 
   tags = local.tags
+
+  # PLAN 8.4: name_prefix gives a replacement a different name, so it can be created before the old one is
+  # destroyed. Without it a change that forces replacement fails on "already exists" or drops traffic.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_vpc_security_group_ingress_rule" "https" {

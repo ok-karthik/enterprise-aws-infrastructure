@@ -28,10 +28,26 @@ inputs:
     description: 'Version of tf-summarize to install'
     required: false
     default: 'latest'
+  accounts_local_hcl:
+    description: 'Raw HCL content for foundation-live-repo/_config/accounts.local.hcl (real IDs/emails)'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
   steps:
+    - name: Write Local Accounts Configuration
+      shell: bash
+      env:
+        LOCAL_HCL_INPUT: ${{ inputs.accounts_local_hcl }}
+      run: |
+        CONTENT="${LOCAL_HCL_INPUT:-${ACCOUNTS_LOCAL_HCL:-}}"
+        if [[ -n "$CONTENT" ]]; then
+          echo "Writing foundation-live-repo/_config/accounts.local.hcl from ACCOUNTS_LOCAL_HCL..."
+          mkdir -p foundation-live-repo/_config
+          printf "%s\n" "$CONTENT" > foundation-live-repo/_config/accounts.local.hcl
+        fi
+
     - name: Pre-validate Inputs
       shell: bash
       run: |

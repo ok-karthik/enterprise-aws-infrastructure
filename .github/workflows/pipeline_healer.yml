@@ -14,6 +14,7 @@ jobs:
     permissions:
       actions: read     # download the logs of the failed run
       contents: write   # push the remediation commit to the PR branch
+      pull-requests: write # find the branch's open PR (it refuses to push without one) and label it ai-generated
     # Run inside the platform toolchain container to access terragrunt/terraform
     container:
       image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
@@ -35,7 +36,7 @@ jobs:
           git config --system --add safe.directory '*' || true
           git config --global --add safe.directory '*' || true
           git fetch origin main
-          git checkout origin/main -- .agents
+          git checkout origin/main -- iac-agents-repo
 
       - name: Install Dependencies
         run: |
@@ -47,4 +48,4 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           FAILED_RUN_ID: ${{ github.event.workflow_run.id }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
-        run: python3 .agents/scripts/healer_runner.py
+        run: python3 iac-agents-repo/ci_healer/healer_runner.py

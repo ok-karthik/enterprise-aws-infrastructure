@@ -1,0 +1,4 @@
+# Becomes <org>/iac-agents — extract with: git subtree split -P iac-agents-repo -b iac-agents
+# Autonomous IaC platform agent, CI healer, golden-path catalog, and platform integrations.
+
+*   @ok-karthik

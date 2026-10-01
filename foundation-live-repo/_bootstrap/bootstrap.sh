@@ -5,7 +5,8 @@ set -euo pipefail
 #
 # Deploys the CloudFormation stack `platform-bootstrap`: the Terraform state bucket, the GitHub
 # OIDC provider and the two CI roles. Steps (PLAN 2.0a-2):
-#   1. Preflight: are these credentials for the account in foundation-live-repo/management/account.hcl?
+#   1. Preflight: are these credentials for the management account? Its id comes from EXPECTED_ACCOUNT_ID,
+#      or from foundation-live-repo/_config/accounts.local.hcl (gitignored; account.hcl holds a placeholder).
 #   2. Make sure the AWS Organization exists (all features) and StackSets trusted access is on.
 #   3. Deploy through a reviewed change set (you are shown it and asked before it runs).
 #   4. Turn on termination protection, set the stack policy, print the outputs.
@@ -15,12 +16,14 @@ set -euo pipefail
 #   AWS_PROFILE=<management-admin-profile> ./foundation-live-repo/_bootstrap/bootstrap.sh
 #
 # Usage: bootstrap.sh [--yes]     (--yes skips the confirmation prompts)
+#        bootstrap.sh --print-expected-account   (prints the management account id it would check, then exits)
 
 STACK_NAME="platform-bootstrap"
 TEMPLATE="foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml"
 STACK_POLICY="foundation-live-repo/_bootstrap/cloudformation/stack-policy.json"
 ACCOUNT_HCL="foundation-live-repo/management/account.hcl"
 REGION_HCL="foundation-live-repo/management/_global/region.hcl"
+LOCAL_ACCOUNTS_HCL="${ACCOUNTS_LOCAL_HCL_FILE:-foundation-live-repo/_config/accounts.local.hcl}"
 GITHUB_ENVIRONMENT="management"
 GITHUB_REPO="${GITHUB_REPOSITORY:-ok-karthik/enterprise-aws-infrastructure}"
 
@@ -30,11 +33,13 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 AUTO_YES=false
+PRINT_ACCOUNT_ONLY=false
 case "${1:-}" in
   "") ;;
   --yes) AUTO_YES=true ;;
+  --print-expected-account) PRINT_ACCOUNT_ONLY=true ;;
   *)
-    echo "Usage: $0 [--yes]" >&2
+    echo "Usage: $0 [--yes | --print-expected-account]" >&2
     exit 2
     ;;
 esac
@@ -56,17 +61,38 @@ hcl_value() {
   sed -n "s/^[[:space:]]*$2[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p" "$1" | head -n 1
 }
 
+# Reads `id = "<value>"` from the `management = { ... }` block of accounts.local.hcl only. hcl_value takes the
+# first match in the whole file, which would be another account's id if the blocks are in a different order.
+management_id_from_local() {
+  [[ -f "$1" ]] || return 0
+  awk '
+    /^[[:space:]]*management[[:space:]]*=[[:space:]]*\{/ { in_block = 1; next }
+    in_block && /^[[:space:]]*\}/ { exit }
+    in_block { print }
+  ' "$1" | sed -n 's/^[[:space:]]*id[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1
+}
+
 cd "$(dirname "$0")/../.."
 export AWS_PAGER=""
 
-EXPECTED_ACCOUNT=$(hcl_value "$ACCOUNT_HCL" aws_account_id)
+# account.hcl holds a placeholder id on purpose (real ids are not committed), so the expected account is
+# EXPECTED_ACCOUNT_ID, or the management id in accounts.local.hcl.
+EXPECTED_ACCOUNT="${EXPECTED_ACCOUNT_ID:-$(management_id_from_local "$LOCAL_ACCOUNTS_HCL")}"
 OWNER=$(hcl_value "$ACCOUNT_HCL" owner)
 DATA_CLASSIFICATION=$(hcl_value "$ACCOUNT_HCL" data_classification)
 REGION=$(hcl_value "$REGION_HCL" aws_region)
 
-[[ "$EXPECTED_ACCOUNT" =~ ^[0-9]{12}$ ]] || fail "Could not read a 12-digit aws_account_id from ${ACCOUNT_HCL}"
+[[ -n "$EXPECTED_ACCOUNT" ]] ||
+  fail "No management account id. Set EXPECTED_ACCOUNT_ID, or put the management id in ${LOCAL_ACCOUNTS_HCL} (copy accounts.local.hcl.example)."
+[[ "$EXPECTED_ACCOUNT" =~ ^[0-9]{12}$ && "$EXPECTED_ACCOUNT" != "000000000000" ]] ||
+  fail "The management account id '${EXPECTED_ACCOUNT}' is not a real 12-digit account id (000000000000 is the placeholder)."
 [[ -n "$OWNER" && -n "$DATA_CLASSIFICATION" && -n "$REGION" ]] ||
   fail "Missing owner, data_classification or aws_region in ${ACCOUNT_HCL} / ${REGION_HCL}"
+
+if [[ "$PRINT_ACCOUNT_ONLY" == true ]]; then
+  echo "$EXPECTED_ACCOUNT"
+  exit 0
+fi
 
 export AWS_REGION="$REGION" AWS_DEFAULT_REGION="$REGION"
 
@@ -81,7 +107,7 @@ ACTUAL_ACCOUNT=$(aws sts get-caller-identity --query Account --output text 2>/de
 if [[ "$ACTUAL_ACCOUNT" != "$EXPECTED_ACCOUNT" ]]; then
   echo -e "${RED}❌ Wrong AWS account.${NC}" >&2
   echo "   Logged in to : ${ACTUAL_ACCOUNT}" >&2
-  echo "   Expected     : ${EXPECTED_ACCOUNT} (${ACCOUNT_HCL})" >&2
+  echo "   Expected     : ${EXPECTED_ACCOUNT} (EXPECTED_ACCOUNT_ID or ${LOCAL_ACCOUNTS_HCL})" >&2
   echo "   Nothing was changed." >&2
   exit 1
 fi
@@ -219,11 +245,13 @@ NEXT STEPS: wire GitHub to the roles (nothing below has been run for you)
    gh api -X PUT repos/${GITHUB_REPO}/environments/prod     # add yourself as required reviewer
    gh api -X PUT repos/${GITHUB_REPO}/environments/core
 
-2. One repository variable. There are no per-environment role variables any more: every CI job
-   builds its role ARN from the account id in foundation-live-repo/_config/accounts.hcl
-   (arn:aws:iam::<account-id>:role/github-actions-plan and .../github-actions-apply):
+2. Two repository variables. There are no per-environment role variables any more: every CI job
+   builds its role ARN from the account id in the registry (arn:aws:iam::<account-id>:role/github-actions-plan
+   and .../github-actions-apply). The real ids live in your local accounts.local.hcl (gitignored), so CI
+   gets a copy of that file's text as the ACCOUNTS_LOCAL_HCL variable (account ids are not secrets):
 
    gh variable set AWS_REGION --repo ${GITHUB_REPO} --body "${REGION}"
+   gh variable set ACCOUNTS_LOCAL_HCL --repo ${GITHUB_REPO} < foundation-live-repo/_config/accounts.local.hcl
 
    The old AWS_DEV_PLAN_ROLE_ARN, AWS_PROD_PLAN_ROLE_ARN, AWS_DEV_APPLY_ROLE_ARN and
    AWS_PROD_APPLY_ROLE_ARN variables are no longer read and can be deleted.

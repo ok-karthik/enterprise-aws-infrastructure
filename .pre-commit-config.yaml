@@ -38,14 +38,6 @@ repos:
         # Run it by hand meanwhile: pre-commit run platform-smoke-test --hook-stage manual
         stages: [manual]
 
-      - id: trivy-security-scan
-        name: 🛡️ Trivy Security Scan (HCL)
-        # Runs the same scan as Gate 1 in your CI pipeline
-        entry: trivy config . --severity CRITICAL,HIGH --ignorefile .trivyignore --format table
-        language: system
-        pass_filenames: false
-        always_run: true
-
       - id: checkov
         name: 🔒 Checkov (same settings as CI)
         # ./workloads-live-repo/scripts/run-checkov.sh runs `checkov --config-file .checkov.yaml`, the

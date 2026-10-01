@@ -47,12 +47,6 @@ inputs = {
   cluster_endpoint_public_access = length(local.env_vars.locals.api_allowed_cidrs) > 0
   api_allowed_cidrs              = local.env_vars.locals.api_allowed_cidrs
 
-  # Discovery contract: published by the governance/discovery-publisher stack (one owner per name),
-  # so the module must not publish the same parameters itself.
-  env                    = local.env
-  region                 = local.aws_region
-  publish_ssm_parameters = false
-
   tags = {
     Environment = title(local.env)
   }

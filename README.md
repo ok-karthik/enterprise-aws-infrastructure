@@ -2,153 +2,103 @@
 
 [![Terragrunt](https://img.shields.io/badge/Terragrunt-1.0.3-blue?logo=terraform)](https://terragrunt.gruntwork.io/)
 [![Terraform](https://img.shields.io/badge/Terraform-1.15.1-623CE4?logo=terraform)](https://www.terraform.io/)
+[![Security: Checkov](https://img.shields.io/badge/Security-Checkov-1904DA)](https://www.checkov.io/)
 [![Policy: OPA](https://img.shields.io/badge/Policy-OPA%2FConftest-F7931E)](https://www.openpolicyagent.org/)
-[![Security: Trivy · Checkov](https://img.shields.io/badge/Security-Trivy_·_Checkov-1904DA)](https://github.com/aquasecurity/trivy)
-[![FinOps: Infracost](https://img.shields.io/badge/FinOps-Infracost-0080FF)](https://www.infracost.io/)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-A production-grade, multi-environment AWS platform built with **Terragrunt + Terraform** — fully DRY, policy-governed, and shipped through a self-healing GitHub Actions pipeline. Built to demonstrate senior/Staff-level Infrastructure-as-Code patterns end to end.
+A multi-account AWS foundation (landing zone) built with Terragrunt + Terraform, featuring least-privilege zero-key OIDC pipelines, centralized logging, and strict policy enforcement across Organizational Units. Every infrastructure change evaluates against Checkov, OPA/Rego, and Infracost gates before manual approval promotes code into production environments. This repository provides the underlying cloud foundation, identity boundaries, and SSM discovery parameters consumed by the [`internal-developer-platform`](https://github.com/ok-karthik/internal-developer-platform).
 
-> **Deploy → validate → tear down.** This platform was deployed to a real AWS account and validated through the full pipeline, then scaled to zero (prod runs at `desired_size = 0`) and torn down via the automated `destroy` workflow to control cost. The FinOps controls below are part of *why* that's cheap and safe to do.
+## Architecture
 
----
-
-## Why this repo is worth a look
-
-| Capability | How it's done |
-| :--- | :--- |
-| **100% DRY multi-env config** | Hierarchical Terragrunt blueprint — `root.hcl` generates provider + backend; `_envcommon/` holds shared module inputs; leaf files are ~10 lines. |
-| **Policy-as-code governance** | OPA/Rego gates run on the **Terraform plan JSON** — mandatory tagging, no legacy instance families. Unit-tested with `conftest verify`. |
-| **Multi-layer security scanning** | TFLint · Trivy · Checkov as blocking CI gates, plus module-level hardening (KMS, deny-all NACLs, Flow Logs). |
-| **Zero-key auth** | GitHub Actions OIDC assumes short-lived IAM roles. No static AWS credentials exist anywhere. |
-| **Self-healing CI** | On pipeline failure an agent pulls the failed logs, auto-upgrades provider locks or generates a fix diff, and pushes it to the PR branch. |
-| **Cost governance** | Infracost posts a per-module cost breakdown on every PR; spot + scale-to-zero keep non-prod near $0. |
-| **Nightly drift detection** | Matrix job compares live AWS vs. state and self-manages one GitHub Issue per environment. |
-| **Zero-touch deps** | Renovate tracks Terraform modules, toolchain binaries, and GitHub Actions with grouped PRs. |
-
----
-
-## Architecture at a glance
-
-Strict separation of a generic **blueprint library** (`iac-modules-repo/`) from **live config** (`foundation-live-repo/` for the landing zone, `workloads-live-repo/` for platform stacks), keeping configuration fully DRY. A single leaf module inherits everything from the layers above it.
-
-```text
-# A directory ending in -repo is a separate Git repository in a real company (docs/adr/0001).
-iac-modules-repo/           # Reusable, versioned Terraform (hardened VPC, EKS, organization)
-foundation-live-repo/       # Landing zone (management account)
-├── root.hcl                #   generates provider.tf + backend.tf, injects default_tags
-├── _bootstrap/             #   Day-0 CloudFormation: S3 state bucket, OIDC provider, CI plan/apply roles
-├── _envcommon/governance/  #   blueprints for organization + bootstrap StackSets
-└── _global/                #   organization, bootstrap StackSets
-workloads-live-repo/        # Platform stacks in workload accounts
-├── root.hcl                #   same root, own copy
-├── _envcommon/             #   shared module inputs + cross-module wiring
-├── scripts/                #   smoke test, module generator
-└── <account>/<region|_global>/<cat>/<module>/terragrunt.hcl   # ~10-line leaf: includes + overrides
-    #   one folder per AWS account (workloads-dev, workloads-prod, ...); foundation-live-repo/management is the management account
-policy-library-repo/terraform/         # OPA/Rego governance rules (+ unit tests)
-.agents/                    # Self-healing CI agent
-.github/                    # Workflows, composite actions, toolchain image
-```
-
-See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the full inheritance model.
-
----
-
-## CI/CD Pipeline
+> 🌐 **Interactive Diagram**: Explore the full system with live animation flows on **[GitHub Pages Architecture Visualizer](https://ok-karthik.github.io/enterprise-aws-infrastructure/)** or read **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 ```mermaid
-graph LR
-    PR["PR / Push to main"] --> SA["Static Analysis\nTFLint · Trivy · Checkov"]
-    PR --> PD["Plan: dev"]
-    PR --> PP["Plan: prod"]
-    PD --> GD["OPA + Cost: dev"]
-    PP --> GP["OPA + Cost: prod"]
-    SA & GD -->|all gates pass| AD["Apply: dev"]
-    AD -->|promote| AP["Approve → Apply: prod"]
-    SA & GP -->|all gates pass| AP
-    AP --> AWS["AWS"]
+flowchart TB
+    GH["GitHub Actions<br/>(OIDC, zero static keys)"]
+
+    subgraph ORG["AWS Organization (management owns OU tree, SCPs/RCPs, Identity Center)"]
+        direction TB
+        MGMT["management<br/>org, SCPs/RCPs, Identity Center,<br/>CloudTrail, billing (CUR 2.0)"]
+
+        subgraph SEC["OU: Security"]
+            LOGA["log-archive<br/>S3 + KMS: CloudTrail, Config,<br/>WAF, flow logs"]
+            SECT["security-tooling<br/>GuardDuty / Security Hub / Config<br/>delegated admin, auto-remediation"]
+        end
+
+        subgraph INF["OU: Infrastructure"]
+            NET["network-hub<br/>Transit Gateway,<br/>central egress"]
+            SHR["shared-services<br/>VPC endpoints, DNS"]
+            OBS["observability<br/>OAM sink, dashboards"]
+        end
+
+        subgraph WL["OU: Workloads"]
+            DEV["workloads-dev (NonProd)<br/>VPC, EKS"]
+            PRD["workloads-prod (Prod)<br/>eu-central-1 primary,<br/>eu-west-1 warm standby"]
+        end
+    end
+
+    GH -- "PR: github-actions-plan<br/>main: github-actions-apply" --> MGMT & SEC & INF & WL
+    MGMT -- "CloudTrail" --> LOGA
+    WL -- "findings & alerts" --> SECT
+    WL == "TGW attachment" ==> NET
+    SHR == "TGW attachment" ==> NET
+    WL & MGMT -- "metrics (OAM)" --> OBS
 ```
 
-Parallel governance gates, sequential environment promotion, and a protected GitHub Environment requiring **manual approval** before any prod apply. Full detail in **[docs/CICD.md](docs/CICD.md)**.
+## What is real, and what is not
 
----
+| Area | Status |
+|---|---|
+| **Code & offline tests** | 41 Terraform modules tested offline (`terraform test` with mock providers), Rego policies (`conftest verify`), and unit tests for Python agents and scripts. Status breakdowns: [iac-modules-repo/README.md](iac-modules-repo/README.md) (28 📝 plan-only, 13 📐 design-only). |
+| **Landing zone & live stacks** | Detailed status per account/region in [foundation-live-repo/README.md](foundation-live-repo/README.md) and [workloads-live-repo/README.md](workloads-live-repo/README.md). Placeholder account IDs in `accounts.hcl` keep CI safe until accounts are linked. |
+| **Measured numbers** | Operational metrics (RTO/RPO, foundation costs, SLOs) are architectural models documented in [docs/DISASTER_RECOVERY.md](docs/DISASTER_RECOVERY.md), [docs/FINOPS.md](docs/FINOPS.md), and [docs/SLO.md](docs/SLO.md). |
 
-## Autonomous AI IaC Platform & SRE Agent
+## Applied, with proof
 
-This repository features a fully autonomous Platform Engineering agent that converts natural-language requests and nightly drift alerts into compliant Terragrunt modules.
+| Component | Target Account | Evidence & Proof | Verified Date | Notes |
+|---|---|---|---|---|
+| *Day-0 Bootstrap* | `management` | *Applied, proof pending* | *pending* | State bucket, OIDC provider, CI roles created |
+| *Foundational Stacks* | *Sandbox* | *Pending live apply in S5* | *Pending* | Tracked via module status tables |
 
-![Autonomous AI Infrastructure Platform Architecture](docs/images/ai_platform_arch.jpg)
+## Key Design Decisions
 
-### Key Capabilities:
-- **Golden-Path First (Deterministic & $0 Cost):** Standard modules (encrypted S3, RDS PostgreSQL, DynamoDB) match pre-vetted templates with **zero LLM tokens and zero hallucination risk**. Uncatalogued requests route to the LLM scaffolding engine.
-- **Semantic Second-Opinion Gate:** Every generated diff passes an independent review by the Policy Auditor persona before validation.
-- **5-Stage Verification Ladder:** Every proposal must pass offline `-backend=false` init, TFLint, Conftest/OPA Rego rules, Trivy/Checkov security scans, and Infracost FinOps budgets.
-- **Closed-Loop Drift Healing:** Responds to `/reconcile` issue comments to reverse-engineer AWS drift into an exact GitOps pull request.
-- **SRE Error-Budget Guardrails:** Automatically freezes production proposals if the environment error budget is below 10%.
+- **Terraform-native Organizations & Day-0 StackSets** over Control Tower / AFT to ensure fast, deterministic, version-controlled account vending without recurring licensing overhead ([ADR 0002](docs/adr/0002-terraform-native-organizations.md), [ADR 0003](docs/adr/0003-state-architecture-and-day-0.md)).
+- **Zero standing administrator access** via IAM Identity Center external IdP federation, ABAC session tags, and short-lived break-glass workflows ([ADR 0004](docs/adr/0004-identity-center-jit-access.md), [docs/IDENTITY.md](docs/IDENTITY.md)).
+- **Multi-account Transit Gateway hub-and-spoke networking** with dedicated inspection routing and optional central Network Firewall egress ([ADR 0006](docs/adr/0006-transit-gateway-network-topology.md), [ADR 0007](docs/adr/0007-central-egress-network-firewall.md)).
 
-See **[docs/IAC_PLATFORM_AGENT.md](docs/IAC_PLATFORM_AGENT.md)** for complete end-to-end setup, Backstage IDP templates, and CLI guides.
+## Repository Layout
 
----
+A directory ending in `-repo` is treated as a separate repository in production ([ADR 0001](docs/adr/0001-repository-topology.md)):
 
-## Self-Healing CI
+- `iac-modules-repo/`: Reusable, versioned Terraform modules published independently via semantic release tags.
+- `foundation-live-repo/`: Landing zone live stacks (management, security, infrastructure OUs) and Day-0 bootstrap.
+- `workloads-live-repo/`: Platform stacks for workload accounts (`workloads-dev`, `workloads-prod`).
+- `policy-library-repo/`: Rego compliance rules evaluated with Conftest against Terraform plan JSON.
+- `iac-agents-repo/`: Autonomous IaC Platform Agent, self-healing CI bot, golden paths, and delivery metrics.
 
-When the main pipeline fails, a dedicated workflow (`pipeline_healer.yml`) triggers an agent (`.agents/scripts/healer_runner.py`) that:
+## Running Checks
 
-1. Downloads logs for the **failed jobs only** (GitHub Jobs API) to stay within LLM token limits.
-2. Detects common classes of failure — e.g. a Terraform **provider-lock mismatch** — and fixes them deterministically by running `init -upgrade` across all lock files, then commits the result.
-3. For other failures, sends the logs + repo tree to an LLM, extracts a `git diff`, applies it, and pushes the remediation commit to the PR branch.
-
-This turns a red pipeline into an auto-generated fix proposal instead of a manual investigation.
-
----
-
-## Quickstart
+All checks run offline without requiring AWS credentials:
 
 ```bash
-# Prereqs: terraform >=1.15, terragrunt >=1.0.3, tflint, trivy, conftest, aws-cli v2
-git clone https://github.com/ok-karthik/enterprise-aws-infrastructure.git
-cd enterprise-aws-infrastructure
-
-make install        # install the pre-commit hook (fmt + smoke-test + trivy)
-make validate       # full local validation suite (compliance, fmt, init/validate, tflint)
-make test           # run the OPA policy unit tests
+make validate    # Full local validation (formatting, compliance, init/validate, tflint)
+make test        # Offline policy, module, and agent unit tests
+make checkov     # CI-parity security scan (.checkov.yaml)
 ```
 
-Run `make help` for the full command surface. Plan a single account with `make plan ENV=dev` (folder `workloads-live-repo/workloads-dev`).
+## Autonomous IaC Platform Agents
 
-**Day-0 bootstrap** (first-time only, CloudFormation stack `platform-bootstrap`) provisions the S3 state bucket, the OIDC provider and the two CI roles (plan / apply) — see [foundation-live-repo/_bootstrap/README.md](foundation-live-repo/_bootstrap/README.md).
+This platform includes an on-demand **IaC Platform Agent** for self-service module scaffolding, drift reconciliation, and change-risk governance, alongside an autonomous **Pipeline Healer** that remediates broken CI builds. See **[iac-agents-repo/README.md](iac-agents-repo/README.md)** for autonomy tiers, guardrails, and local execution guides.
 
----
+## Documentation Index
 
-## Security & governance highlights
-
-- **Policy gates on plan JSON** (not just HCL): mandatory tags (incl. `Owner` / `DataClassification`), no legacy instance families, no admin-policy attachments outside the CI apply / break-glass roles, no public S3, no internet ingress on sensitive ports, no `*`/`*` IAM policies, encryption at rest — see `policy-library-repo/terraform/`, unit-tested via `conftest verify`.
-- **Least-privilege CI**: a read-only plan role for PRs and drift detection, and a separate apply role only the `dev` / `prod` GitHub Environments can assume (permissions-boundary capped). Stacks refuse to run in any AWS account other than the one in `account.hcl`.
-- **Module hardening**: VPC ships a deny-all default NACL, a black-hole default SG, and Flow Logs → CloudWatch; EKS encrypts secrets with a dedicated KMS key and enables full control-plane logging.
-- **State backend**: S3 versioning (point-in-time rollback), native S3 lock files (`use_lockfile`), block-public-access, TLS 1.2+ only, SSE at rest. The bucket is created by the Day-0 CloudFormation stack, not by Terragrunt.
-
-Full tagging/IAM policy in [GOVERNANCE.md](GOVERNANCE.md).
-
----
-
-## Documentation
-
-| Doc | What's inside |
-| :--- | :--- |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Terragrunt inheritance model, module layout, state design |
-| [docs/CICD.md](docs/CICD.md) | Pipeline stages, governance gates, drift detection, self-healing CI |
-| [docs/IAC_PLATFORM_AGENT.md](docs/IAC_PLATFORM_AGENT.md) | Autonomous IaC Platform Agent visual flow, ChatOps, IDP & setup guide |
-| [GOVERNANCE.md](GOVERNANCE.md) | Tagging policy, IAM, branch protection |
-| [FINOPS.md](FINOPS.md) | Cost strategy: spot, scale-to-zero, teardown |
-| [DISASTER_RECOVERY.md](DISASTER_RECOVERY.md) | Runbooks for state corruption, locks, partial applies |
-
----
-
-## Tech stack
-
-Terragrunt · Terraform · GitHub Actions · OPA/Conftest · Infracost · Trivy · Checkov · TFLint · Renovate · AWS EKS · AWS VPC · Docker (toolchain image)
+- **Architecture & Inheritance**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- **CI/CD & Gate Enforcement**: [docs/CICD.md](docs/CICD.md)
+- **Identity & Privileged Access**: [docs/IDENTITY.md](docs/IDENTITY.md)
+- **Disaster Recovery & Failure Modes**: [docs/DISASTER_RECOVERY.md](docs/DISASTER_RECOVERY.md)
+- **FinOps & Cost Strategy**: [docs/FINOPS.md](docs/FINOPS.md)
+- **Governance & Policy Catalog**: [docs/GOVERNANCE.md](docs/GOVERNANCE.md), [policy-library-repo/POLICIES.md](policy-library-repo/POLICIES.md)
+- **Runbooks & Failure Drills**: [docs/runbooks/](docs/runbooks/)
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache 2.0, see [LICENSE](LICENSE).

@@ -1,5 +1,7 @@
 # security/waf-logging
 
+**Status:** 📐 Design-only (tested offline; not wired into a live stack)
+
 WAF logging pipeline (PLAN 6.2): Kinesis Data Firehose delivery stream that ships
 WAFv2 logs to the central **log-archive** S3 bucket with GZIP compression and
 redaction of sensitive HTTP request fields.
