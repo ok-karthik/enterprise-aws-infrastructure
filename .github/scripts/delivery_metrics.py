@@ -8,10 +8,10 @@ Reads GitHub history (PRs, workflow runs, drift issues) through the `gh` CLI and
   Human vs agent       every number above split by the `ai-generated` PR label, with sample sizes (11.5)
 
 Outputs a Markdown summary (for the drift issue or a step summary) and, with --write-json, a small status file that
-.agents/scripts/iac_agent.py reads instead of the static budget in .agents/sre/error_budgets.yaml.
+iac-agents-repo/iac_agent/iac_agent.py reads instead of the static budget in iac-agents-repo/sre/error_budgets.yaml.
 
 Numbers are for a team, never for a person: no author or reviewer name is read or printed.
-The maths is pure functions over plain dicts, so it is tested offline (.agents/tests/test_delivery_metrics.py).
+The maths is pure functions over plain dicts, so it is tested offline (iac-agents-repo/tests/test_delivery_metrics.py).
 Only fetch() needs `gh` and a token.
 """
 from __future__ import annotations
@@ -314,7 +314,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--window-days", type=int, default=28)
     parser.add_argument("--input", help="read a saved JSON file (keys prs, plan_runs, apply_runs, issues) instead of calling gh")
     parser.add_argument("--markdown", help="write the Markdown summary to this file (default: print it)")
-    parser.add_argument("--write-json", nargs="?", const=str(SLO_STATUS_PATH), help="write the SLO status file the agent reads (default path .agents/metrics/platform_slo.json)")
+    parser.add_argument("--write-json", nargs="?", const=str(SLO_STATUS_PATH), help="write the SLO status file the agent reads (default path iac-agents-repo/metrics/platform_slo.json)")
     parser.add_argument("--minute-cost-usd", type=float, default=0.008, help="price of one CI minute (GitHub-hosted Linux runner list price; check yours)")
     args = parser.parse_args(argv)
 

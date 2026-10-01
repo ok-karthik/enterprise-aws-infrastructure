@@ -10,4 +10,4 @@ Please refer to [`AGENTS.md`](AGENTS.md) for:
 - Governance gates (OPA/Conftest, Checkov, Infracost; Trivy scans the toolbox image)
 - CI/CD workflows and zero-key OIDC authentication
 - Conventions and gotchas (`root.hcl` generated files, tag propagation)
-- Agent Registry definitions and usage (IaC Architect, Policy Auditor, Pipeline Healer, and IaC Generation Agent)
+- Where the agents are defined: see [`iac-agents-repo/README.md`](iac-agents-repo/README.md) (agent registry, autonomy tiers, catalog)

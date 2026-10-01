@@ -2,7 +2,7 @@ name: 'Delivery Metrics (Weekly)'
 
 # PLAN 9.4 / 11.5: lead time, deployment frequency, change failure rate, drift MTTR and the platform SLOs, split into
 # human and `ai-generated` PRs. Read-only: it only lists PRs, runs and issues. The result is the job summary and an
-# artifact; .agents/metrics/platform_slo.json is what the agent's error-budget gate reads when it is fresh.
+# artifact; iac-agents-repo/metrics/platform_slo.json is what the agent's error-budget gate reads when it is fresh.
 
 on:
   schedule:

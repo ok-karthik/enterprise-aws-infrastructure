@@ -471,7 +471,7 @@ SLO_STATUS_MAX_AGE_DAYS = 8
 def measured_error_budget(prod_cfg: dict, now: Optional[datetime] = None, status_path: Optional[Path] = None) -> float:
     """Remaining prod error budget in percent. Order of trust (PLAN 9.3):
     1. SLO_ERROR_BUDGET_REMAINING (an explicit human override),
-    2. the measured value in .agents/metrics/platform_slo.json, if it is at most 8 days old and has a number
+    2. the measured value in iac-agents-repo/metrics/platform_slo.json, if it is at most 8 days old and has a number
        (written by delivery_metrics.py from real GitHub history),
     3. the static number in error_budgets.yaml (the old behaviour, and the fallback when nothing is measured)."""
     override = os.getenv("SLO_ERROR_BUDGET_REMAINING")

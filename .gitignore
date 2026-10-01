@@ -13,9 +13,7 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.agents/metrics/*.jsonl
 *.sarif
-.agents/metrics/platform_slo.json
 iac-agents-repo/metrics/*.jsonl
 iac-agents-repo/metrics/platform_slo.json
 foundation-live-repo/_config/accounts.local.hcl

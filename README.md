@@ -56,7 +56,7 @@ flowchart TB
 
 | Component | Target Account | Evidence & Proof | Verified Date | Notes |
 |---|---|---|---|---|
-| *Day-0 Bootstrap* | `management` | CloudFormation Stack Output | 2026-10-01 | State bucket, OIDC provider, CI roles created |
+| *Day-0 Bootstrap* | `management` | *Applied, proof pending* | *pending* | State bucket, OIDC provider, CI roles created |
 | *Foundational Stacks* | *Sandbox* | *Pending live apply in S5* | *Pending* | Tracked via module status tables |
 
 ## Key Design Decisions

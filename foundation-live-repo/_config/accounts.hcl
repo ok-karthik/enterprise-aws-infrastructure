@@ -2,8 +2,21 @@
 # vends the entries with create = true; scripts/check-account-registry.sh fails CI if any
 # account.hcl uses an ID that is not listed here.
 #
-# Real IDs and emails come from accounts.local.hcl (gitignored) if present, or supplied via
-# ACCOUNTS_LOCAL_HCL in CI.
+# The ids and emails below are placeholders. Real IDs and emails come from accounts.local.hcl (gitignored) if
+# present, or supplied via the ACCOUNTS_LOCAL_HCL repository variable in CI (see accounts.local.hcl.example). An entry
+# there overrides the same-named entry here, field by field.
+#
+# Fields:
+#   - id     : the 12-digit account ID (000000000xxx = placeholder: CI skips the account, bootstrap refuses it)
+#   - ou     : OU name from the organization module ("Root" = directly under the root, only the management account)
+#   - env    : global | dev | staging | prod
+#   - email  : the account's root email (plus-addressing works: you+log-archive@...). @example.com is refused by the factory
+#   - monthly_budget_usd : monthly cost budget (USD); alerts at 50/80/100 % actual and 100 % forecast go to the account's email.
+#                  For the management account (the payer) it covers the whole organization, so keep it low.
+#   - ci     : true = the pipeline plans (and, on main, applies through the account's GitHub Environment) this account's stacks.
+#              An account is only run once it has a live folder and a real (non-placeholder) id, see generate_account_matrix.py
+#   - create : true = the factory manages this account (an account you made by hand must be IMPORTED first);
+#              false = a placeholder or the management account: never created
 
 locals {
   local_override = try(read_terragrunt_config("${get_repo_root()}/foundation-live-repo/_config/accounts.local.hcl"), { locals = { accounts = {} } })
