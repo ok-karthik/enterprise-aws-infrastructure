@@ -1,5 +1,7 @@
 # network/inspection-egress
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS — Network Firewall cost barrier)
+
 The central egress/inspection VPC (PLAN 5.3), applied in **network-hub**, per region: NAT gateways (one per AZ) behind AWS Network Firewall. Spoke VPCs (`network/vpc` with `egress_mode = "central"`, attached with `network/tgw-attachment`'s `egress_route_cidr`) send `0.0.0.0/0` here instead of using their own NAT gateways.
 
 ## Topology

@@ -1,5 +1,7 @@
 # governance/account-baseline
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo` and `workloads-live-repo`; not applied to AWS)
+
 Applied to **every** account (management, workloads, ...), in its primary region. The state bucket, the OIDC provider and the CI roles are **not** here: they come from the Day-0 bootstrap (CloudFormation / StackSets), because this module needs them before it can run.
 
 - **`platform-workload-boundary`**: the permissions boundary every role created by Terraform, ACK or tenants must carry. One broad Allow, then Denies: a role under it can only create roles with the same boundary (so it cannot be shed), cannot remove or edit the boundary, create IAM users or access keys, edit `platform-*` / `terraform-*` / `github-actions-*` roles, tamper with CloudTrail / Config / GuardDuty / Security Hub / Access Analyzer / Macie, lower the account defaults below, or touch Organizations and Identity Center.

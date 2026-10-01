@@ -1,5 +1,7 @@
 # governance/budgets
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo` and `workloads-live-repo`; not applied to AWS)
+
 Budgets from day one, applied in **every** account: a monthly cost budget with alerts at **50 / 80 / 100 % of the actual** spend and **100 % of the forecast**, and a Cost Anomaly Detection monitor (per service, daily email). It protects the sandbox bill as much as production.
 
 - The amount (`monthly_budget_usd`) and the alert address (the account's `email`) come from the account registry `foundation-live-repo/_config/accounts.hcl`. In the **management account** (the payer) the budget covers the whole organization, so keep it low (default 50 USD) while nothing runs. AWS Budgets reports in USD.

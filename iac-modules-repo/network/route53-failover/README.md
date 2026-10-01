@@ -1,5 +1,7 @@
 # network/route53-failover
 
+**Status:** 📐 Design-only (tested offline; not wired into a live stack)
+
 DNS failover between two regions (PLAN 7.4): one health check on the primary endpoint and a PRIMARY / SECONDARY
 pair of alias records. While the health check passes, clients get the primary. When it fails, Route 53 answers
 with the secondary. The secondary has no health check on purpose: it is the last resort and must always answer.

@@ -1,5 +1,7 @@
 # security/org-cloudtrail
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 The organization-wide **CloudTrail** (PLAN 4.2): one trail, applied **once** in the management account, that logs every account (`is_organization_trail = true`, `is_multi_region_trail = true`). It delivers to the bucket that `security/log-archive` builds in the `log-archive` account.
 
 ## The naming contract

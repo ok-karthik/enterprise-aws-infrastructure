@@ -1,5 +1,7 @@
 # network/ipam
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 The org-wide IPAM (PLAN 5.1), applied in **network-hub**: a top-level pool, one regional pool per region (carved from the top-level pool), and `prod`/`nonprod` env pools under each regional pool.
 
 ## Sharing

@@ -1,5 +1,7 @@
 # AWS Config Organization Governance Module
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 Manages AWS Config organization-wide compliance and resource inventory across multi-account AWS landing zones (PLAN 4.3).
 
 ## Features

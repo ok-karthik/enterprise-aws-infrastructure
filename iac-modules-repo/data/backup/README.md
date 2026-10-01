@@ -1,5 +1,7 @@
 # data/backup
 
+**Status:** 📐 Design-only (tested offline; not wired into a live stack)
+
 AWS Backup for one region (PLAN 7.3): an encrypted vault, a daily plan, a tag-based selection, and an optional
 **cross-region copy** of every recovery point to a vault in the secondary region.
 

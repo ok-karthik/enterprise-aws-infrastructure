@@ -1,5 +1,7 @@
 # governance/bootstrap-stacksets
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 Rolls the Day-0 bootstrap template (`foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml`: state bucket, GitHub OIDC provider, `github-actions-plan` / `github-actions-apply` roles and boundary) out to **every member account** in the targeted OUs, with no human step when a new account joins. Service-managed StackSets with auto-deployment on; stacks are retained if an account leaves or an instance is removed.
 
 - **One StackSet per GitHub Environment.** The environment sets the apply role's trust subject, and auto-deployment can only use the StackSet's own parameters, so a single StackSet cannot serve dev, prod and core. Typical: `bootstrap-nonprod` (NonProd OU, `dev`), `bootstrap-prod` (Prod OU, `prod`), `bootstrap-core` (Security + Infrastructure OUs, `core`). Sandbox and Suspended are not targeted.

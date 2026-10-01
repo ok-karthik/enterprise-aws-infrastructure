@@ -1,5 +1,7 @@
 # security/break-glass-alerts
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo` and `workloads-live-repo`; not applied to AWS)
+
 Tells people about every **BreakGlassAdmin** sign-in: EventBridge rules for the ways to sign in (STS `AssumeRoleWithSAML` in the account, console sign-in, and in the management account also the Identity Center portal calls, which are the only events that show CLI sign-ins), an SNS topic **encrypted with its own rotating KMS key**, and an email subscription per address. Regional: applied in every account, in the primary region. Part of the just-in-time access design, see [`docs/BREAK_GLASS.md`](../../../docs/BREAK_GLASS.md).
 
 - Only the module's own rules may publish to the topic (`aws:SourceArn`), and only they may use the key.

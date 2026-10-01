@@ -1,5 +1,7 @@
 # security/shield-advanced
 
+**Status:** 📐 Design-only (tested offline; not wired into a live stack — ,000/mo Shield Advanced cost barrier)
+
 AWS Shield Advanced module (PLAN 6.4): optional DDoS protection for production
 resources. Disabled by default (`enabled = false`).
 

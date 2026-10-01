@@ -1,5 +1,7 @@
 # network/transit-gateway
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 Transit Gateway (PLAN 5.2), applied in **network-hub**, once per region. Default route table association and propagation are **off**: nothing lands anywhere by accident. Four route tables: `prod`, `nonprod`, `shared`, `inspection`. **Prod and nonprod never route to each other**, because each spoke associates and propagates into exactly one of those two tables (`network/tgw-attachment`'s `route_table_id`), never both.
 
 ## Sharing and attaching a spoke

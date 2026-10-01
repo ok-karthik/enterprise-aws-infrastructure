@@ -1,5 +1,7 @@
 # security/threat-detection
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS. Includes optional Audit Manager integration, default off)
+
 Turns on **GuardDuty, Security Hub, Inspector v2 and Macie** for the whole organization (PLAN 4.4), applied in the `security-tooling` account, which is the **delegated administrator** for each service. Detective is optional.
 
 Delegation itself is granted by `governance/organization`'s `delegated_administrators` map, applied from the management account — this module assumes it already happened.

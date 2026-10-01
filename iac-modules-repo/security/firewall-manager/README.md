@@ -1,5 +1,7 @@
 # security/firewall-manager
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS — Firewall Manager cost barrier)
+
 AWS Firewall Manager (FMS) module for organization-wide edge and network security
 (PLAN 6.1). Applied in the **security-tooling** account — the delegated FMS
 administrator.

@@ -76,11 +76,11 @@ Read this before the rest. It is the honest part.
 
 | | Status |
 | :--- | :--- |
-| **Code and offline tests** | Written and tested without AWS: about 40 Terraform modules with `terraform test` (mock provider), Rego rules with `conftest verify`, Python tests for the scripts and the agent, `terragrunt render` on the live leaves, CloudFormation lint. |
-| **The new multi-account organization** | **Not applied.** Account IDs in `foundation-live-repo/_config/accounts.hcl` are placeholders (`TODO(owner)`) except the management account. The first real plan in CI (PLAN 2.11) has not happened. What was applied, if anything, is only in [docs/EXECUTION_LOG.md](docs/EXECUTION_LOG.md). |
+| **Code and offline tests** | Written and tested without AWS: 40 Terraform modules with `terraform test` (mock provider), Rego rules with `conftest verify`, Python tests for scripts and agents, `terragrunt render` on live leaves, CloudFormation lint. See [iac-modules-repo/README.md](iac-modules-repo/README.md) for module-by-module status labels (📝 plan-only vs 📐 design-only). |
+| **The new multi-account organization** | **Not applied.** Account IDs in `foundation-live-repo/_config/accounts.hcl` are placeholders (`TODO(owner)`) except the management account. The first real plan in CI has not happened. Stacks are 📝 plan-only (see status breakdowns in [foundation-live-repo/README.md](foundation-live-repo/README.md) and [workloads-live-repo/README.md](workloads-live-repo/README.md)). |
 | **The older single-account version** | This is what the "deployed to a real AWS account, validated through the pipeline, then torn down" story was about: a single account with `dev` and `prod` stacks, since replaced by the layout above. |
-| **Measured numbers** | None yet: no RTO/RPO, no cost of the foundation, no SLO values. They have places to go (`DISASTER_RECOVERY.md`, `FINOPS.md`, `docs/SLO.md`) and a weekly job that computes the SLOs from GitHub history. |
-| **Not written yet** | The compliance mapping (`docs/COMPLIANCE.md`, PLAN 4.7), most ADRs (only one exists), the failure-drill postmortems. |
+| **Measured numbers** | None yet: no RTO/RPO, no cost of the foundation, no SLO values. They have places to go (`docs/DISASTER_RECOVERY.md`, `docs/FINOPS.md`, `docs/SLO.md`) and a weekly job that computes the SLOs from GitHub history. |
+| **Not written yet** | The compliance mapping (`docs/COMPLIANCE.md`), draft ADRs (`docs/adr/`), and real failure-drill results. |
 
 The plan, in order, with what is done and not: **[PLAN.md](PLAN.md)**.
 

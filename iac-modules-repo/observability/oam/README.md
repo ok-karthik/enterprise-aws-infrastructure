@@ -1,5 +1,7 @@
 # observability/oam
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 CloudWatch **cross-account observability** (PLAN 9.1): one place (the observability account) to see the metrics
 and logs of every account, without copying data or logging in to each account.
 

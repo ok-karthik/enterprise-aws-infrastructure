@@ -1,5 +1,7 @@
 # governance/data-perimeter
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 **Resource Control Policies** (RCPs, PLAN 4.6): deny access to a resource from any principal **outside this organization**, and require TLS. Applied from the **management account**, the same way SCPs are.
 
 RCPs work from the resource's side: a permissive bucket, key, queue or secret policy no longer matters for the accounts this is attached to, because the RCP still denies the request. This closes the PLAN 3.7 gap where `sqs:SetQueueAttributes` / `sns:SetTopicAttributes` could set a queue or topic policy that grants access to an outside principal, bypassing the Developer policy's `AddPermission` deny — for SQS. **SNS is not covered**: at the time this module was written, RCPs do not support SNS. Check the current AWS documentation; until SNS support exists (or is confirmed absent), the PLAN 3.7 second follow-up (an SCP or Config rule for SNS) is still open.

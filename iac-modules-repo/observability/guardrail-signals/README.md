@@ -1,5 +1,7 @@
 # observability/guardrail-signals
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 "Are the guardrails still on?" (PLAN 9.3). Each signal is a CloudTrail event that means a control was weakened,
 counted by a CloudWatch Logs metric filter and alarmed on the **first** occurrence:
 

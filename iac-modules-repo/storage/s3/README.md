@@ -1,5 +1,7 @@
 # storage/s3
 
+**Status:** 📐 Design-only (tested offline; consumed by internal-developer-platform)
+
 Tenant-facing capability module for provisioning hardened Amazon S3 buckets. Consumed by `internal-developer-platform` catalog templates.
 
 Enforces non-negotiable security guardrails:

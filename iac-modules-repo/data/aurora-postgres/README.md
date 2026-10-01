@@ -1,5 +1,7 @@
 # data/aurora-postgres
 
+**Status:** 📐 Design-only (tested offline; not wired into a live stack)
+
 Aurora PostgreSQL for production data (PLAN 7.3), with an optional **Aurora Global Database** for a second
 region. `data/postgres` stays the cheap single-instance RDS for NonProd; use this module when a database must
 survive the loss of a region.

@@ -1,5 +1,7 @@
 # identity/identity-center
 
+**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+
 IAM Identity Center for humans, applied from the **management account**: the permission-set catalog, the groups, and the account assignments **OU → group → permission set**, expanded to accounts with the account registry. The IdP (Okta / Entra ID / Google) and SCIM are set up by hand: see [`docs/IDENTITY.md`](../../../docs/IDENTITY.md).
 
 **Catalog:** `ReadOnly`, `Developer`, `PlatformEngineer`, `SecurityAudit`, `Billing`, `BreakGlassAdmin`. Sessions are 1 hour for the elevated sets (`PlatformEngineer`, `BreakGlassAdmin`) and 8 hours for the rest.

@@ -1,5 +1,7 @@
 # identity/human-access
 
+**Status:** 📐 Design-only (tested offline; consumed by internal-developer-platform)
+
 Human access to an **EKS cluster**: access entries (with Kubernetes groups) and the cluster view policy per team. The IAM Identity Center permission sets that used to live here (`PlatformAdmin`, `Developer`, `AuditorReadOnly`, ...) moved to [`identity/identity-center`](../identity-center/README.md), which owns the whole permission-set catalog and the assignments.
 
 <!-- BEGIN_TF_DOCS -->
