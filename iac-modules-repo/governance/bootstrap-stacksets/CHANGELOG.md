@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/bootstrap-stacksets-v2.1.0...bootstrap-stacksets-v2.2.0) (2026-10-02)
+
+
+### Features
+
+* **bootstrap-stacksets:** add secondary region and state bucket replication (PLAN 7.1, 7.2) ([834f69f](https://github.com/ok-karthik/enterprise-aws-infrastructure/commit/834f69fc8958f91cdd86f49750e3786d0600881b))
+* **platform:** disaster recovery, pipeline hardening, observability, docs, and agent governance (PLAN 7–11) ([8f58efe](https://github.com/ok-karthik/enterprise-aws-infrastructure/commit/8f58efeb47b7b8127409f3fbd7c02a109258d272))
+
 ## [2.1.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/bootstrap-stacksets-v2.0.0...bootstrap-stacksets-v2.1.0) (2026-09-21)
 
 
