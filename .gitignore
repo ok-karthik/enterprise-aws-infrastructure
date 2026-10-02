@@ -18,3 +18,5 @@ iac-agents-repo/metrics/*.jsonl
 iac-agents-repo/metrics/platform_slo.json
 foundation-live-repo/_config/accounts.local.hcl
 **/accounts.local.hcl
+# Guard hook scratch state (verify-module attempt counter)
+.claude/hooks/state/

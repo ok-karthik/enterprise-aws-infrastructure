@@ -6,12 +6,12 @@
   guard.py post-edit  After an edit inside a module, run `verify_module.py` for it and hand the short summary back.
   guard.py reset <category/name>   A human clears the attempt counter for a module.
 
-The rules are tool-neutral and written in .agents/AGENTS.md ("Local agent guardrails"); this file is one implementation.
+The rules are tool-neutral and written in AGENTS.md ("Local agent guardrails"); this file is one implementation.
 Any other agent tool can call the same script or read the same rules.
 
 **These hooks run on a laptop and can be switched off. They save time; they are not the control.** The controls are
 CODEOWNERS on these paths, branch protection, and the fact that no agent has credentials that can apply. See
-docs/AGENT_AUTONOMY.md.
+iac-agents-repo/docs/AGENT_AUTONOMY.md.
 
 Protocol (Claude Code hooks): the hook JSON arrives on stdin. Exit code 2 blocks the tool call and shows stderr to the
 agent. Any other exit code lets it through. post-edit returns JSON with `additionalContext` for the agent.
@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Optional
 
 REPO_ROOT = Path(os.environ.get("CLAUDE_PROJECT_DIR") or Path(__file__).resolve().parents[2]).resolve()
-STATE_PATH = REPO_ROOT / ".agents" / "metrics" / "verify_attempts.json"
+STATE_PATH = REPO_ROOT / ".claude" / "hooks" / "state" / "verify_attempts.json"
 MAX_FAILED_ATTEMPTS = int(os.environ.get("AGENT_MAX_VERIFY_ATTEMPTS", "3"))  # N in PLAN 11.2
 
 TOOLS = {"terraform", "terragrunt", "tofu"}
@@ -39,7 +39,7 @@ STATE_WRITES = {"rm", "mv", "push"}  # terraform state <sub>
 ALWAYS_BLOCKED = {"apply", "destroy", "force-unlock", "import", "taint", "untaint"}
 READ_ONLY = {"plan", "validate", "fmt", "init", "show", "output", "graph", "providers", "version", "hcl", "render", "test", "console", "workspace", "list", "find", "info", "stack"}
 PROTECTED_EXACT = {".checkov.yaml", ".trivyignore", ".claude/settings.json", ".claude/settings.local.json"}
-PROTECTED_PREFIXES = ("policy-library-repo/", ".agents/hooks/")
+PROTECTED_PREFIXES = ("policy-library-repo/", ".claude/hooks/")
 WRITE_HINTS = re.compile(r"(\bsed\s+-i|\btee\b|\bmv\b|\brm\b|\bcp\b|\bgit\s+(checkout|restore|rm|mv)\b|\btruncate\b|\bdd\b|>>?|\bperl\s+-i|\bpython3?\b.*\bwrite|\bcat\b.*>)")
 
 
@@ -304,7 +304,7 @@ def handover_message(module: str, state: dict) -> str:
     return (
         f"STOP: `make verify-module MODULE={module}` failed {MAX_FAILED_ATTEMPTS} times in a row. Do not keep editing this module. "
         f"Hand over to a human with the last result below. (A human clears the counter with "
-        f"`python3 .agents/hooks/guard.py reset {module}`.)\n\n{last}"
+        f"`python3 .claude/hooks/guard.py reset {module}`.)\n\n{last}"
     )
 
 

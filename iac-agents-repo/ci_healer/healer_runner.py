@@ -137,7 +137,7 @@ def run_lock_file_upgrade() -> bool:
     lock_files = []
     # Walk the repository and locate active lock files (skip cache and git directories)
     for root, dirs, files in os.walk("."):
-        if ".terragrunt-cache" in root or ".git" in root or ".agents" in root:
+        if ".terragrunt-cache" in root or ".git" in root or "iac-agents-repo" in root or ".claude" in root:
             continue
         if ".terraform.lock.hcl" in files:
             lock_files.append(Path(root) / ".terraform.lock.hcl")
@@ -149,7 +149,7 @@ def run_lock_file_upgrade() -> bool:
     # Temporarily mock get_aws_account_id() calls to prevent AWS authentication errors during parsing
     mocked_files = []
     for root, dirs, files in os.walk("."):
-        if ".git" in root or ".terragrunt-cache" in root or ".agents" in root:
+        if ".git" in root or ".terragrunt-cache" in root or "iac-agents-repo" in root or ".claude" in root:
             continue
         for file in files:
             if file.endswith(".hcl"):
@@ -318,7 +318,7 @@ def main():
     project_files = []
     for root, dirs, files in os.walk("."):
         # Prune search in-place to avoid descending into unwanted directories
-        dirs[:] = [d for d in dirs if d not in (".git", ".github", ".terragrunt-cache", ".agents", "venv", ".venv")]
+        dirs[:] = [d for d in dirs if d not in (".git", ".github", ".terragrunt-cache", "iac-agents-repo", ".claude", "venv", ".venv")]
         for file in sorted(files):
             if file.endswith((".tf", ".hcl", ".tfvars", ".yaml", ".yml")) or file in ("Dockerfile", "Makefile", "renovate.json"):
                 path = Path(root) / file

@@ -11,8 +11,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BASE_DIR / "hooks"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import guard  # noqa: E402
 
@@ -142,7 +141,7 @@ class ProtectedFiles(unittest.TestCase):
             str(root / "policy-library-repo" / "POLICIES.md"),
             "iac-modules-repo/../policy-library-repo/terraform/helpers.rego",
             ".claude/settings.json",
-            ".agents/hooks/guard.py",
+            ".claude/hooks/guard.py",
         ]:
             self.assertEqual(self.edit(path), 2, path)
 

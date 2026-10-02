@@ -39,7 +39,7 @@ class PushDecision(unittest.TestCase):
         self.assertFalse(g.push_decision(None, 1, 0, OK_PATHS)[0])
 
     def test_protected_paths_stop_the_push(self):
-        for path in [".checkov.yaml", "policy-library-repo/terraform/require_tags.rego", ".github/workflows/terragrunt.yml", ".trivyignore", ".tflint.hcl", "sub/.trivyignore", ".claude/settings.json", ".agents/hooks/guard.py", "./.checkov.yaml"]:
+        for path in [".checkov.yaml", "policy-library-repo/terraform/require_tags.rego", ".github/workflows/terragrunt.yml", ".trivyignore", ".tflint.hcl", "sub/.trivyignore", ".claude/settings.json", ".claude/hooks/guard.py", "./.checkov.yaml"]:
             allowed, reason = g.push_decision("b", 1, 0, OK_PATHS + [path])
             self.assertFalse(allowed, path)
             self.assertIn("protected paths", reason)

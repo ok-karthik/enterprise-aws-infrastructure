@@ -798,7 +798,7 @@ workloads-live-repo/infrastructure/network-hub/eu-central-1/network/transit-gate
 
             <g class="node" id="node-guard-hooks" onclick="selectNode('guard-hooks')">
               <rect x="50" y="240" width="250" height="150" rx="10" fill="#0C1E18" stroke="#10B981" stroke-width="2"/>
-              <text x="70" y="270" fill="#10B981" font-size="14" font-weight="700">.agents/hooks/guard.py</text>
+              <text x="70" y="270" fill="#10B981" font-size="14" font-weight="700">.claude/hooks/guard.py</text>
               <text x="70" y="295" fill="#A7F3D0" font-size="11">● pre-bash: Blocks apply/destroy</text>
               <text x="70" y="315" fill="#A7F3D0" font-size="11">● pre-edit: Blocks .checkov & policies</text>
               <text x="70" y="335" fill="#A7F3D0" font-size="11">● post-edit: Runs verify-module</text>
@@ -839,7 +839,7 @@ workloads-live-repo/infrastructure/network-hub/eu-central-1/network/transit-gate
               <text x="400" y="455" fill="#FDA4AF" font-size="11">● Triggers on Failed CI Workflow</text>
               <text x="400" y="475" fill="#FDA4AF" font-size="11">● Refuses main branch / Needs Open PR</text>
               <text x="400" y="495" fill="#FDA4AF" font-size="11">● Hard ceiling: 3 retry commits</text>
-              <text x="400" y="515" fill="#FDA4AF" font-size="11">● Restores .agents/ before push</text>
+              <text x="400" y="515" fill="#FDA4AF" font-size="11">● Restores iac-agents-repo/ before push</text>
             </g>
 
             <!-- Stage 3: ChatOps & Human Verification -->
@@ -1235,17 +1235,17 @@ workloads-live-repo/infrastructure/network-hub/eu-central-1/network/transit-gate
         title: "Local Agent Guardrails (guard.py)",
         tag: "AGENT SAFETY",
         desc: "Local laptop guardrail invoked via .claude/settings.json before Bash and file edits. Blocks destructive commands, protects policy definitions, and runs offline module verification.",
-        meta: { "File": ".agents/hooks/guard.py", "Enforcement": "Pre-Bash, Pre-Edit, Post-Edit", "Max Retries": "3 consecutive failed attempts" },
+        meta: { "File": ".claude/hooks/guard.py", "Enforcement": "Pre-Bash, Pre-Edit, Post-Edit", "Max Retries": "3 consecutive failed attempts" },
         guardrail: "Quote-aware shell tokenizer blocks apply, destroy, and state rm/mv while permitting read-only commands and multi-line commit messages.",
-        code: ".agents/hooks/guard.py\n.agents/tests/test_hooks.py"
+        code: ".claude/hooks/guard.py\n.claude/hooks/test_guard.py"
       },
       'healer-runner': {
         title: "Autonomous Pipeline Healer",
         tag: "AUTONOMOUS REMEDIATION",
         desc: "GitHub Actions bot triggered on CI failure. Analyzes plan/lint/conftest errors, scaffolds compliant fixes, and commits updates to the pull request.",
-        meta: { "Script": ".agents/scripts/healer_runner.py", "Trigger": "pipeline_healer.yml (workflow_run failure)", "Safety Guard": "healer_guards.py" },
-        guardrail: "Refuses main branch, requires an open PR, enforces a 3-commit retry ceiling, and automatically restores the repository .agents/ directory before committing.",
-        code: ".agents/scripts/healer_runner.py\n.agents/scripts/healer_guards.py"
+        meta: { "Script": "iac-agents-repo/ci_healer/healer_runner.py", "Trigger": "pipeline_healer.yml (workflow_run failure)", "Safety Guard": "healer_guards.py" },
+        guardrail: "Refuses main branch, requires an open PR, enforces a 3-commit retry ceiling, and automatically restores the repository iac-agents-repo/ directory before committing.",
+        code: "iac-agents-repo/ci_healer/healer_runner.py\niac-agents-repo/ci_healer/healer_guards.py"
       },
       'ssm-contract': {
         title: "SSM Discovery Contract",

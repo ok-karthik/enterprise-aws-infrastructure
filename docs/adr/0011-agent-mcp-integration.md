@@ -15,12 +15,12 @@ The Model Context Protocol (MCP) provides an open standard for LLMs to interface
 ## Decision
 
 1. **Constrained, Read-Only MCP Integration**:
-   - The platform integrates an isolated HashiCorp-compatible MCP server running locally on `127.0.0.1` (`.agents/mcp/docker-compose.yml` and `.agents/mcp/mcp_client.py`).
+   - The platform integrates an isolated HashiCorp-compatible MCP server running locally on `127.0.0.1` (`iac-agents-repo/integrations/mcp/docker-compose.yml` and `iac-agents-repo/iac_agent/mcp_client.py`).
    - The MCP server is scoped exclusively to read-only schema queries, provider documentation lookups, and registry metadata inspection.
 2. **Zero Execution Privileges**:
    - The MCP server has **no AWS credentials**, no access to S3 state files, and no capability to execute `terraform apply`, `destroy`, `import`, or `state rm`.
 3. **Hard Local Agent Guardrails**:
-   - Pre-command execution hooks (`.agents/hooks/guard.py`) strictly enforce safety invariants: blocking destructive commands, intercepting state-file manipulations, and requiring local offline verification (`verify-module`) after every module edit.
+   - Pre-command execution hooks (`.claude/hooks/guard.py`) strictly enforce safety invariants: blocking destructive commands, intercepting state-file manipulations, and requiring local offline verification (`verify-module`) after every module edit.
 
 ## What I chose against and what it cost
 

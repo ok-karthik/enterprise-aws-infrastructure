@@ -134,7 +134,7 @@ STAGE 3 (Enterprise: 50+ Teams — Distributed Platform & IDP)
 4. **Autonomous SRE & AI Agentic Operations**:
    - Automated self-healing CI pipelines (`iac-agents-repo/ci_healer/healer_runner.py`) parse execution failures and propose remediations.
    - Nightly drift-detection issues trigger ChatOps `/reconcile` bots to align Terraform state with cloud reality.
-   - Agent operations are constrained by strict pre-execution guardrails (`.agents/hooks/guard.py`) and read-only MCP servers ([ADR 0011](file:///Users/karthik.orugonda/github/enterprise-aws-infrastructure/docs/adr/0011-agent-mcp-integration.md)).
+   - Agent operations are constrained by strict pre-execution guardrails (`.claude/hooks/guard.py`) and read-only MCP servers ([ADR 0011](adr/0011-agent-mcp-integration.md)).
 
 ---
 

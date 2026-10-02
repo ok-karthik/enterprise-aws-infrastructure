@@ -17,7 +17,7 @@ MAX_HEALER_COMMITS = int(os.getenv("HEALER_MAX_COMMITS", "3"))
 AI_LABEL = "ai-generated"
 
 PROTECTED_EXACT = {".checkov.yaml", ".trivyignore", ".tflint.hcl", "CODEOWNERS", ".github/CODEOWNERS"}
-PROTECTED_PREFIXES = ("policy-library-repo/", ".github/", ".claude/", ".agents/hooks/")
+PROTECTED_PREFIXES = ("policy-library-repo/", ".github/", ".claude/")
 
 
 def count_healer_commits(subjects: Iterable[str]) -> int:

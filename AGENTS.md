@@ -183,23 +183,23 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 ### Local agent guardrails (PLAN 11.2)
 
 These rules apply to **any** coding agent working in this repo, whatever the tool. They are written here once; `.claude/settings.json` +
-`.agents/hooks/guard.py` are one implementation (Claude Code). Another tool can call the same script or implement the same rules.
+`.claude/hooks/guard.py` are one implementation (Claude Code). Another tool can call the same script or implement the same rules.
 
 1. **After every edit inside a module**, run `make verify-module MODULE=<category/name>` and read the short result
    (`<tool> <check-id> <file>:<line>`, one line per failure). Fix the code, not the check.
 2. **Never run** `terraform` / `terragrunt` `apply`, `destroy`, `import`, `force-unlock`, `state rm|mv|push`, or `run --all` without a
    read-only command (`plan`, `validate`, ...). This includes `cd x && ...` chains, `bash -c`, `sudo`, `xargs` and `make` targets named
    like `apply`. `plan`, `validate`, `fmt`, `init`, `test` and `render` are fine.
-3. **Never edit** `.checkov.yaml`, `.trivyignore`, `policy-library-repo/`, `.claude/settings.json` or `.agents/hooks/`. They decide what
+3. **Never edit** `.checkov.yaml`, `.trivyignore`, `policy-library-repo/`, `.claude/settings.json` or `.claude/hooks/`. They decide what
    "passing" means, so only a human changes them. If a check is wrong, say so in the PR and let the owner decide.
 4. **Attempt limit:** after **3** failed `verify-module` runs in a row on the same module, stop editing it and hand over to a human with
-   the last result. A human clears it with `python3 .agents/hooks/guard.py reset <category/name>`. Set `AGENT_MAX_VERIFY_ATTEMPTS` to change N.
+   the last result. A human clears it with `python3 .claude/hooks/guard.py reset <category/name>`. Set `AGENT_MAX_VERIFY_ATTEMPTS` to change N.
 5. Never push to `main`, never bypass the prod approval gate, never invent account IDs (see `PLAN.md`).
 
 **The hooks are not the control.** They run on a laptop and can be switched off; they exist to save time and stop honest mistakes.
 The real controls are: CODEOWNERS on the paths in rule 3, branch protection on `main`, and that no agent has credentials that can apply
 (no agent may assume `github-actions-apply`). See `docs/AGENT_AUTONOMY.md` for what is enforced where, and for the known gaps.
-Tests: `python3 -m unittest discover -s .agents/tests` (`test_hooks.py`).
+Tests: `python3 -m unittest discover -s .claude/hooks` (`test_guard.py`).
 
 ---
 
