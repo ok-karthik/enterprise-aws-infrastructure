@@ -3,7 +3,7 @@
 #checkov:skip=CKV_DOCKER_8: "Runs as root on purpose: the GitHub runner writes the workspace as root (options: --user root), see the note above the USER instruction and .trivyignore DS-0002"
 
 # Global ARGs for multi-stage support
-ARG TRIVY_VERSION=0.70.0
+ARG TRIVY_VERSION=0.75.0
 # Checkov version: ONE pin, used here and read by workloads-live-repo/scripts/run-checkov.sh, so a local run
 # and the CI run use the same rules. Renovate bumps it.
 ARG CHECKOV_VERSION=3.3.19 # renovate: datasource=pypi depName=checkov
