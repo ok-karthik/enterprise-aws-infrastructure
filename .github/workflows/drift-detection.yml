@@ -32,7 +32,7 @@ jobs:
       count: ${{ steps.matrix.outputs.count }}
     steps:
       - name: "Git Checkout"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: "Generate account matrix"
         id: matrix
@@ -63,7 +63,7 @@ jobs:
       ACCOUNTS_LOCAL_HCL: ${{ vars.ACCOUNTS_LOCAL_HCL }}
     steps:
       - name: "Git Checkout"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: "Setup Platform"
         uses: ./.github/actions/setup-platform
