@@ -51,7 +51,7 @@ jobs:
       ACCOUNTS_LOCAL_HCL: ${{ vars.ACCOUNTS_LOCAL_HCL }}
     steps:
       - name: "Git Checkout"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # the affected-units filter compares against origin/<base branch>
 
@@ -141,7 +141,7 @@ jobs:
       ACCOUNTS_LOCAL_HCL: ${{ vars.ACCOUNTS_LOCAL_HCL }}
     steps:
       - name: "Git Checkout"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: "Setup Platform"
         uses: ./.github/actions/setup-platform
@@ -209,7 +209,7 @@ jobs:
       ACCOUNTS_LOCAL_HCL: ${{ vars.ACCOUNTS_LOCAL_HCL }}
     steps:
       - name: "Git Checkout"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: "Setup Platform"
         uses: ./.github/actions/setup-platform
