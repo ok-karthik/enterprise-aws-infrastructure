@@ -87,6 +87,41 @@ run "guardrails_can_be_widened" {
   }
 }
 
+run "policy_targets_allows_independent_per_policy_rollout" {
+  command = plan
+
+  variables {
+    guardrail_target_ous = ["Policy-Staging"]
+    policy_targets = {
+      deny_leave_org = ["Policy-Staging", "Sandbox", "NonProd"]
+      require_imdsv2 = ["Policy-Staging"]
+    }
+  }
+
+  assert {
+    condition = toset([for k, v in aws_organizations_policy_attachment.guardrails : k if startswith(k, "deny_leave_org/")]) == toset([
+      "deny_leave_org/Policy-Staging",
+      "deny_leave_org/Sandbox",
+      "deny_leave_org/NonProd"
+    ])
+    error_message = "deny_leave_org must attach to all three specified OUs."
+  }
+
+  assert {
+    condition = toset([for k, v in aws_organizations_policy_attachment.guardrails : k if startswith(k, "require_imdsv2/")]) == toset([
+      "require_imdsv2/Policy-Staging"
+    ])
+    error_message = "require_imdsv2 must attach only to Policy-Staging."
+  }
+
+  assert {
+    condition = toset([for k, v in aws_organizations_policy_attachment.guardrails : k if startswith(k, "deny_root_user_actions/")]) == toset([
+      "deny_root_user_actions/Policy-Staging"
+    ])
+    error_message = "Policies omitted from policy_targets must fall back to guardrail_target_ous."
+  }
+}
+
 run "region_scp_is_per_ou_and_only_for_ous_with_a_non_empty_list" {
   command = plan
 

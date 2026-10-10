@@ -48,10 +48,12 @@ variable "aws_service_access_principals" {
     "access-analyzer.amazonaws.com",                     # 3.6
     "cloudtrail.amazonaws.com",                          # org trail (4.2)
     "config.amazonaws.com",                              # 4.3
+    "config-multiaccountsetup.amazonaws.com",            # 4.3
     "guardduty.amazonaws.com",                           # 4.4
     "securityhub.amazonaws.com",                         # 4.4
     "inspector2.amazonaws.com",                          # 4.4
     "macie.amazonaws.com",                               # 4.4
+    "auditmanager.amazonaws.com",                        # 4.4
     "backup.amazonaws.com",                              # 4.6
     "tagpolicies.tag.amazonaws.com",                     # 4.6
     "ram.amazonaws.com",                                 # network sharing (5.x)
@@ -105,12 +107,23 @@ variable "enabled_policy_types" {
 
 variable "guardrail_target_ous" {
   description = <<-EOT
-    OUs the baseline SCP guardrails are attached to. Starts with Policy-Staging only, so a new SCP is tested on
-    throw-away accounts before it can lock real ones out (PLAN 4.6). Widen it deliberately, for example
-    ["Policy-Staging", "Sandbox", "NonProd"], then the rest.
+    Default OUs the baseline SCP guardrails are attached to when not overridden in policy_targets. Starts
+    with Policy-Staging only, so a new SCP is tested on throw-away accounts before it can lock real ones
+    out (PLAN 4.6). Widen it deliberately, for example ["Policy-Staging", "Sandbox", "NonProd"], then the rest.
   EOT
   type        = list(string)
   default     = ["Policy-Staging"]
+}
+
+variable "policy_targets" {
+  description = <<-EOT
+    Per-policy target OU mapping, allowing progressive per-policy rollouts across OUs (Pattern A).
+    Key = guardrail policy key (e.g. deny_leave_org, require_imdsv2).
+    Value = list of OU names where this specific policy should be attached.
+    If a policy key is omitted from this map, it defaults to var.guardrail_target_ous.
+  EOT
+  type        = map(list(string))
+  default     = {}
 }
 
 variable "allowed_regions_by_ou" {

@@ -470,8 +470,9 @@ resource "aws_organizations_policy_attachment" "suspended_deny_all" {
   target_id = local.organizational_unit_ids["Suspended"]
 }
 
-# Attach every generic guardrail to every OU in var.guardrail_target_ous. Static keys: policy IDs are only
-# known after apply. SCPs never apply to the management account, whatever they are attached to.
+# Attach generic guardrails according to var.policy_targets (Pattern A: per-policy rollout)
+# or var.guardrail_target_ous (fallback). Static keys: policy IDs are only known after apply.
+# SCPs never apply to the management account, whatever they are attached to.
 locals {
   guardrail_policy_ids = {
     deny_leave_org                      = aws_organizations_policy.deny_leave_org.id
@@ -484,10 +485,18 @@ locals {
     deny_role_creation_without_boundary = aws_organizations_policy.deny_role_creation_without_boundary.id
   }
 
-  guardrail_attachments = {
-    for pair in setproduct(keys(local.guardrail_policy_ids), var.guardrail_target_ous) :
-    "${pair[0]}/${pair[1]}" => { policy = pair[0], ou = pair[1] }
+  # Pattern A: Each policy targets its own list of OUs from var.policy_targets if specified,
+  # falling back to var.guardrail_target_ous. Enables progressive per-policy rollouts.
+  effective_policy_targets = {
+    for policy in keys(local.guardrail_policy_ids) :
+    policy => try(var.policy_targets[policy], var.guardrail_target_ous)
   }
+
+  guardrail_attachments = merge([
+    for policy, ous in local.effective_policy_targets : {
+      for ou in ous : "${policy}/${ou}" => { policy = policy, ou = ou }
+    }
+  ]...)
 }
 
 resource "aws_organizations_policy_attachment" "guardrails" {

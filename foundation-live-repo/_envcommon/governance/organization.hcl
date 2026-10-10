@@ -46,9 +46,24 @@ inputs = {
     "Policy-Staging" = local.regions.locals.allowed_regions_by_ou["Policy-Staging"]
   }
 
-  # The baseline SCPs attach to these OUs only. Start on Policy-Staging, test there, then widen
-  # deliberately (for example ["Policy-Staging", "Sandbox", "NonProd"]). PLAN 4.6.
+  # Default target OUs for guardrails not explicitly mapped in policy_targets.
+  # Starts with Policy-Staging only (PLAN 4.6).
   guardrail_target_ous = ["Policy-Staging"]
+
+  # Pattern A: Progressive per-policy rollout across OUs.
+  # To promote a policy to wider OUs (e.g., Sandbox, NonProd, Prod), add the OU name to its list.
+  # New or experimental policies can remain on ["Policy-Staging"] only.
+  # Any guardrail omitted from this map falls back to guardrail_target_ous.
+  policy_targets = {
+    deny_leave_org                      = ["Policy-Staging"]
+    deny_disable_cloudtrail             = ["Policy-Staging"]
+    deny_root_user_actions              = ["Policy-Staging"]
+    deny_disable_detection_services     = ["Policy-Staging"]
+    deny_iam_user_creation              = ["Policy-Staging"]
+    protect_platform_resources          = ["Policy-Staging"]
+    require_imdsv2                      = ["Policy-Staging"]
+    deny_role_creation_without_boundary = ["Policy-Staging"]
+  }
 
   # Centralized root access (PLAN 3.5) is on by default; delegated administrators only once their account is real.
   enable_centralized_root_access = true

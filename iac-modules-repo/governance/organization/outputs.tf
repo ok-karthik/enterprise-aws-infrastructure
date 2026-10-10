@@ -23,6 +23,11 @@ output "guardrail_policy_ids" {
   value       = local.guardrail_policy_ids
 }
 
+output "effective_policy_targets" {
+  description = "Effective target OUs for each guardrail policy"
+  value       = local.effective_policy_targets
+}
+
 output "centralized_root_access_enabled" {
   description = "Whether centralized root access management is enabled"
   value       = var.enable_centralized_root_access
