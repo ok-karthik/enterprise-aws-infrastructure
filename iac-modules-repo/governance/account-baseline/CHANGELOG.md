@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/account-baseline-v1.1.0...account-baseline-v1.2.0) (2026-10-10)
+
+
+### Features
+
+* **auto-remediation:** remove open SSH/RDP security group rules automatically (PLAN 4.9) ([2d41208](https://github.com/ok-karthik/enterprise-aws-infrastructure/commit/2d41208db99aa9d467abb15407b2a334a2769a39))
+* **networking:** hub-and-spoke Phase 5 — IPAM, Transit Gateway, inspection egress, shared endpoints, DNS (PLAN 5.1-5.7) ([e806d7f](https://github.com/ok-karthik/enterprise-aws-infrastructure/commit/e806d7f214edf30f5bb80d6749ff7e70c1511d57))
+* **phase-4:** security baseline, central logging, threat detection & guardrails ([51b654e](https://github.com/ok-karthik/enterprise-aws-infrastructure/commit/51b654ef449946a65dd38cb4686456b5f9558c38))
+* **pipeline:** retire trivy config, prune duplicate Rego, add observability and billing (PLAN 8.3, 8.4, 8.9, 8.10, 9.1, 9.2) ([8fe5216](https://github.com/ok-karthik/enterprise-aws-infrastructure/commit/8fe5216ca8ad9ac0bec19a691e38c61304160032))
+* **platform:** disaster recovery, pipeline hardening, observability, docs, and agent governance (PLAN 7–11) ([8f58efe](https://github.com/ok-karthik/enterprise-aws-infrastructure/commit/8f58efeb47b7b8127409f3fbd7c02a109258d272))
+* **vpc:** flow logs to S3, and account-wide VPC Block Public Access (PLAN 5.7) ([77f14df](https://github.com/ok-karthik/enterprise-aws-infrastructure/commit/77f14df713f2ed8903d3b85593621b9e5ef0a3ae))
+
 ## [1.1.0](https://github.com/ok-karthik/enterprise-aws-infrastructure/compare/account-baseline-v1.0.0...account-baseline-v1.1.0) (2026-09-21)
 
 
