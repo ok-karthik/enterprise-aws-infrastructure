@@ -6,7 +6,7 @@
 ARG TRIVY_VERSION=0.70.0
 # Checkov version: ONE pin, used here and read by workloads-live-repo/scripts/run-checkov.sh, so a local run
 # and the CI run use the same rules. Renovate bumps it.
-ARG CHECKOV_VERSION=3.3.19 # renovate: datasource=pypi depName=checkov
+ARG CHECKOV_VERSION=3.3.26 # renovate: datasource=pypi depName=checkov
 
 # 1. Define Trivy source stage (supports variables)
 FROM public.ecr.aws/aquasecurity/trivy:${TRIVY_VERSION} AS trivy_source
@@ -23,8 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Define tool versions (Sync with renovate.json)
 ARG TERRAFORM_VERSION=1.15.1 # renovate: datasource=github-releases depName=hashicorp/terraform
 ARG TERRAGRUNT_VERSION=1.0.3 # renovate: datasource=github-releases depName=gruntwork-io/terragrunt
-ARG TFLINT_VERSION=0.62.0 # renovate: datasource=github-releases depName=terraform-linters/tflint
-ARG CONFTEST_VERSION=0.68.2 # renovate: datasource=github-releases depName=open-policy-agent/conftest
+ARG TFLINT_VERSION=0.64.0 # renovate: datasource=github-releases depName=terraform-linters/tflint
+ARG CONFTEST_VERSION=0.71.1 # renovate: datasource=github-releases depName=open-policy-agent/conftest
 ARG TF_SUMMARIZE_VERSION=0.3.20 # renovate: datasource=github-releases depName=dineshba/tf-summarize
 
 WORKDIR /install
