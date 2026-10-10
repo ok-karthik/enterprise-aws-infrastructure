@@ -65,7 +65,8 @@ resource "aws_cloudformation_stack_set_instance" "this" {
 
   # The secondary region goes first: its state bucket is the replication destination of the primary's.
   operation_preferences {
-    region_order = compact([var.secondary_region, var.region])
+    region_order         = compact([var.secondary_region, var.region])
+    max_concurrent_count = 10
   }
 
   # Never delete a member account's stack (and with it the roles CI depends on) because

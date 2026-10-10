@@ -2,35 +2,63 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
-include "envcommon" {
-  path   = "${dirname(find_in_parent_folders("root.hcl"))}/_envcommon/governance/bootstrap-stacksets.hcl"
-  expose = true
+terraform {
+  source = local.module_source
+}
+
+locals {
+  # Module source: the pinned release tag (module_versions in env.hcl), or this checkout when
+  # IAC_MODULES_LOCAL is set. CI sets it for PRs that change iac-modules-repo/** so module changes are
+  # tested before release, and until every module has a release tag at the iac-modules-repo path.
+  env_vars       = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+  modules_local  = get_env("IAC_MODULES_LOCAL", "") != ""
+  module_version = local.env_vars.locals.module_versions.bootstrap_stacksets
+  module_source  = local.modules_local ? "${get_repo_root()}/iac-modules-repo/governance/bootstrap-stacksets" : "git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//iac-modules-repo/governance/bootstrap-stacksets?ref=${local.module_version}"
+
+  region_vars = read_terragrunt_config(find_in_parent_folders("region.hcl"))
+  aws_region  = local.region_vars.locals.aws_region
 }
 
 # One StackSet per GitHub Environment: the environment sets the apply role's trust subject, and
 # auto-deployment can only use the StackSet's own parameters (PLAN 2.0b).
-#
-# TODO(owner): replace every ou-0000-00000000 with the real OU ID. The module refuses to plan
-# while the placeholder is still there. Look them up (read-only) with:
-#   aws organizations list-organizational-units-for-parent --parent-id <root-or-parent-id>
-# After PLAN 2.3 creates the OUs, these IDs come from the organization module's outputs.
-#
-# Sandbox and Suspended OUs are deliberately not targeted. Do not move an account between OUs
-# that are targeted by different StackSets (its stack would be deleted and re-created, and the
-# create fails on the retained state bucket name); accounts must not move between Prod and NonProd.
+dependency "organization" {
+  config_path = "../organization"
+  mock_outputs = {
+    organizational_unit_ids = {
+      "NonProd"        = "ou-mock-12345678"
+      "Prod"           = "ou-mock-12345678"
+      "Security"       = "ou-mock-12345678"
+      "Infrastructure" = "ou-mock-12345678"
+    }
+  }
+}
+
 inputs = {
+  # The module stays pure: the template is read here, not inside the module.
+  template_body = file("${get_repo_root()}/foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml")
+  region        = local.aws_region
+
+  # CloudFormation copies these onto every resource the stacks create in member accounts.
+  # Project, Owner and DataClassification come from the provider default_tags in root.hcl.
+  tags = {
+    ManagedBy = "CloudFormation"
+  }
+
   stack_sets = {
     bootstrap-nonprod = {
       github_environment      = "dev"
-      organizational_unit_ids = ["ou-0000-00000000"] # TODO(owner): Workloads/NonProd OU
+      organizational_unit_ids = [dependency.organization.outputs.organizational_unit_ids["NonProd"]]
     }
     bootstrap-prod = {
       github_environment      = "prod"
-      organizational_unit_ids = ["ou-0000-00000000"] # TODO(owner): Workloads/Prod OU
+      organizational_unit_ids = [dependency.organization.outputs.organizational_unit_ids["Prod"]]
     }
     bootstrap-core = {
-      github_environment      = "core"
-      organizational_unit_ids = ["ou-0000-00000000"] # TODO(owner): Security OU (add the Infrastructure OU id as a second entry)
+      github_environment = "core"
+      organizational_unit_ids = [
+        dependency.organization.outputs.organizational_unit_ids["Security"],
+        dependency.organization.outputs.organizational_unit_ids["Infrastructure"],
+      ]
     }
   }
 }

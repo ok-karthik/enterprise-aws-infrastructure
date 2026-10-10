@@ -2,20 +2,75 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
-include "envcommon" {
-  path   = "${dirname(find_in_parent_folders("root.hcl"))}/_envcommon/governance/organization.hcl"
-  expose = true
+terraform {
+  source = local.module_source
 }
 
-# Applied by the owner from the management account, never by CI.
-#
-# BEFORE THE FIRST APPLY: the organization already exists (bootstrap.sh created it), so import it,
-# otherwise Terraform tries to create a second one and fails. From this folder, logged in to the
-# management account with an SSO profile:
-#   terragrunt import 'aws_organizations_organization.this' <organization-id>     # o-..., from the console
-# Then run `terragrunt plan` and READ IT: service access principals and policy types are authoritative,
-# so anything enabled by hand and missing from the module defaults is shown as a removal.
-# OUs you already created by hand are imported the same way, one per OU:
-#   terragrunt import 'aws_organizations_organizational_unit.top["Sandbox"]' <ou-id>
-# A plan that shows the OUs as "create" when they already exist means the import was skipped.
-inputs = {}
+locals {
+  # Module source: the pinned release tag (module_versions in env.hcl), or this checkout when
+  # IAC_MODULES_LOCAL is set. CI sets it for PRs that change iac-modules-repo/** so module changes are
+  # tested before release, and until every module has a release tag at the iac-modules-repo path.
+  env_vars       = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+  env            = local.env_vars.locals.env
+  modules_local  = get_env("IAC_MODULES_LOCAL", "") != ""
+  module_version = local.env_vars.locals.module_versions.organization
+  module_source  = local.modules_local ? "${get_repo_root()}/iac-modules-repo/governance/organization" : "git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//iac-modules-repo/governance/organization?ref=${local.module_version}"
+
+  # Delegated administrators: service => the registry account that administers it. Left out until that
+  # account has a REAL id (registry placeholders are never registered). security-tooling is the delegated
+  # administrator for access-analyzer (3.6) and for GuardDuty/Security Hub/Inspector v2/Macie (4.4,
+  # security/threat-detection assumes this registration already happened).
+  registry = read_terragrunt_config("${get_repo_root()}/foundation-live-repo/_config/accounts.hcl")
+  delegated_administrator_accounts = {
+    "access-analyzer.amazonaws.com"          = "security-tooling"
+    "guardduty.amazonaws.com"                = "security-tooling"
+    "securityhub.amazonaws.com"              = "security-tooling"
+    "inspector2.amazonaws.com"               = "security-tooling"
+    "macie.amazonaws.com"                    = "security-tooling"
+    "config.amazonaws.com"                   = "security-tooling"
+    "config-multiaccountsetup.amazonaws.com" = "security-tooling"
+    "auditmanager.amazonaws.com"             = "security-tooling"
+  }
+  delegated_administrators = {
+    for service, account in local.delegated_administrator_accounts : service => local.registry.locals.accounts[account].id
+    if !startswith(local.registry.locals.accounts[account].id, "00000000")
+  }
+
+  # Region allow-list per OU (PLAN 4.6), from _config/regions.hcl. Starts with ONLY the Policy-Staging entry,
+  # same "test first" reasoning as guardrail_target_ous below: widen by adding more of
+  # local.regions.locals.allowed_regions_by_ou's keys once Policy-Staging has been proven safe.
+  regions = read_terragrunt_config("${get_repo_root()}/foundation-live-repo/_config/regions.hcl")
+}
+
+inputs = {
+  allowed_regions_by_ou = {
+    "Policy-Staging" = local.regions.locals.allowed_regions_by_ou["Policy-Staging"]
+  }
+
+  # Default target OUs for guardrails not explicitly mapped in policy_targets.
+  # Starts with Policy-Staging only (PLAN 4.6).
+  guardrail_target_ous = ["Policy-Staging"]
+
+  # Pattern A: Progressive per-policy rollout across OUs.
+  # To promote a policy to wider OUs (e.g., Sandbox, NonProd, Prod), add the OU name to its list.
+  # New or experimental policies can remain on ["Policy-Staging"] only.
+  # Any guardrail omitted from this map falls back to guardrail_target_ous.
+  policy_targets = {
+    deny_leave_org                      = ["Policy-Staging"]
+    deny_disable_cloudtrail             = ["Policy-Staging"]
+    deny_root_user_actions              = ["Policy-Staging"]
+    deny_disable_detection_services     = ["Policy-Staging"]
+    deny_iam_user_creation              = ["Policy-Staging"]
+    protect_platform_resources          = ["Policy-Staging"]
+    require_imdsv2                      = ["Policy-Staging"]
+    deny_role_creation_without_boundary = ["Policy-Staging"]
+  }
+
+  # Centralized root access (PLAN 3.5) is on by default; delegated administrators only once their account is real.
+  enable_centralized_root_access = true
+  delegated_administrators       = local.delegated_administrators
+
+  tags = {
+    Environment = title(local.env)
+  }
+}
