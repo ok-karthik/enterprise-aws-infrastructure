@@ -59,6 +59,8 @@ variable "aws_service_access_principals" {
     "ram.amazonaws.com",                                 # network sharing (5.x)
     "ipam.amazonaws.com",                                # 5.1
     "fms.amazonaws.com",                                 # 6.1
+    "compute-optimizer.amazonaws.com",                   # 9.5 (Compute Optimizer, org-wide)
+    "cost-optimization-hub.bcm.amazonaws.com",           # 9.5 (Cost Optimization Hub enables this itself; listed so the org apply does not turn it off)
   ]
 }
 

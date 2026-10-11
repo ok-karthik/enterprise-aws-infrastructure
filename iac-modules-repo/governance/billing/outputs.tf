@@ -12,3 +12,13 @@ output "anomaly_monitor_arns" {
   description = "ARNs of all anomaly monitors (the organization-wide one and one per OU)"
   value       = concat([aws_ce_anomaly_monitor.services.arn], [for m in aws_ce_anomaly_monitor.ou : m.arn])
 }
+
+output "cost_optimization_hub_enrolled" {
+  description = "Whether this module enrolls the organization in Cost Optimization Hub"
+  value       = length(aws_costoptimizationhub_enrollment_status.this) > 0
+}
+
+output "compute_optimizer_enrolled" {
+  description = "Whether this module enrolls the organization in Compute Optimizer"
+  value       = length(aws_computeoptimizer_enrollment_status.this) > 0
+}

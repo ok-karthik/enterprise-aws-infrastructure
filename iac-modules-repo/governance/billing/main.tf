@@ -234,3 +234,21 @@ resource "aws_ce_cost_allocation_tag" "this" {
   tag_key = each.value
   status  = "Active"
 }
+
+# ------------------------------------------------------------------------------
+# Cost Optimization Hub and Compute Optimizer: savings recommendations for the whole organization (PLAN 9.5).
+# Cost Optimization Hub's API is us-east-1 only, and it reads its rightsizing data from Compute Optimizer,
+# hence the order. Both are free. include_member_accounts needs trusted access, see the README.
+# ------------------------------------------------------------------------------
+resource "aws_computeoptimizer_enrollment_status" "this" {
+  count                   = var.enable_compute_optimizer ? 1 : 0
+  status                  = "Active"
+  include_member_accounts = true
+}
+
+resource "aws_costoptimizationhub_enrollment_status" "this" {
+  count                   = var.enable_cost_optimization_hub ? 1 : 0
+  provider                = aws.us_east_1
+  include_member_accounts = true
+  depends_on              = [aws_computeoptimizer_enrollment_status.this]
+}

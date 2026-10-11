@@ -39,6 +39,17 @@ LIMIT  20;
 (CUR 2.0 stores tag columns as a map, `resource_tags`, with `user_` prefixed keys. Check the exact column name in your
 table before relying on the query.)
 
+## Cost Optimization Hub and Compute Optimizer (PLAN 9.5)
+
+Both are enrolled for the whole organization (`include_member_accounts = true`) and are free. Cost Optimization Hub's API is
+us-east-1 only (the `aws.us_east_1` alias); it reads rightsizing data from Compute Optimizer, so that one is enrolled first.
+The weekly cost report (`.github/workflows/finops-weekly.yml`) reads the recommendations. Switch them off with
+`enable_cost_optimization_hub` / `enable_compute_optimizer`.
+
+> **Warning:** enrolling turns on Organizations trusted access for `cost-optimization-hub.bcm.amazonaws.com` and
+> `compute-optimizer.amazonaws.com`. `governance/organization` manages that list authoritatively
+> (`aws_service_access_principals`), so both must stay in it or the next organization apply turns them off.
+
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -67,6 +78,8 @@ No modules.
 | [aws_ce_anomaly_monitor.services](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ce_anomaly_monitor) | resource |
 | [aws_ce_anomaly_subscription.daily](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ce_anomaly_subscription) | resource |
 | [aws_ce_cost_allocation_tag.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ce_cost_allocation_tag) | resource |
+| [aws_computeoptimizer_enrollment_status.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/computeoptimizer_enrollment_status) | resource |
+| [aws_costoptimizationhub_enrollment_status.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/costoptimizationhub_enrollment_status) | resource |
 | [aws_s3_bucket.cur](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket) | resource |
 | [aws_s3_bucket_lifecycle_configuration.cur](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_lifecycle_configuration) | resource |
 | [aws_s3_bucket_policy.cur](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_policy) | resource |
@@ -86,6 +99,8 @@ No modules.
 | <a name="input_anomaly_ou_accounts"></a> [anomaly\_ou\_accounts](#input\_anomaly\_ou\_accounts) | OU name => list of 12-digit account IDs in it. One Cost Anomaly Detection monitor is created per OU (only accounts with real IDs; leave placeholders out). The organization-wide per-service monitor is always created. | `map(list(string))` | `{}` | no |
 | <a name="input_anomaly_threshold_usd"></a> [anomaly\_threshold\_usd](#input\_anomaly\_threshold\_usd) | Alert when an anomaly's total impact is at least this many US dollars. | `number` | `20` | no |
 | <a name="input_cost_allocation_tags"></a> [cost\_allocation\_tags](#input\_cost\_allocation\_tags) | Tag keys to activate for cost allocation (they then appear in the CUR and Cost Explorer, which is what the CostCenter showback needs). A key can only be activated after a resource with it has been seen in billing data (up to 24 hours after tagging), so leave this empty until then. | `list(string)` | `[]` | no |
+| <a name="input_enable_compute_optimizer"></a> [enable\_compute\_optimizer](#input\_enable\_compute\_optimizer) | Enroll the organization in AWS Compute Optimizer (free, org-wide through include\_member\_accounts). Cost Optimization Hub reads its rightsizing data from here. | `bool` | `true` | no |
+| <a name="input_enable_cost_optimization_hub"></a> [enable\_cost\_optimization\_hub](#input\_enable\_cost\_optimization\_hub) | Enroll the organization in Cost Optimization Hub (free, org-wide through include\_member\_accounts). Its API is us-east-1 only; it collects savings recommendations for the weekly cost report. | `bool` | `true` | no |
 | <a name="input_export_retention_days"></a> [export\_retention\_days](#input\_export\_retention\_days) | Days the CUR files are kept in the bucket. Billing data is needed for audits for years, so the default keeps 13 months hot and expires after that; archive elsewhere if you must keep more. | `number` | `400` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name prefix for the export and the bucket (for example platform-billing) | `string` | `"platform-billing"` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags for the bucket and the monitors | `map(string)` | `{}` | no |
@@ -95,6 +110,8 @@ No modules.
 | Name | Description |
 | ---- | ----------- |
 | <a name="output_anomaly_monitor_arns"></a> [anomaly\_monitor\_arns](#output\_anomaly\_monitor\_arns) | ARNs of all anomaly monitors (the organization-wide one and one per OU) |
+| <a name="output_compute_optimizer_enrolled"></a> [compute\_optimizer\_enrolled](#output\_compute\_optimizer\_enrolled) | Whether this module enrolls the organization in Compute Optimizer |
+| <a name="output_cost_optimization_hub_enrolled"></a> [cost\_optimization\_hub\_enrolled](#output\_cost\_optimization\_hub\_enrolled) | Whether this module enrolls the organization in Cost Optimization Hub |
 | <a name="output_cur_bucket_name"></a> [cur\_bucket\_name](#output\_cur\_bucket\_name) | Bucket that receives the CUR 2.0 export (point Athena at s3://<bucket>/cur2/) |
 | <a name="output_export_arn"></a> [export\_arn](#output\_export\_arn) | ARN of the Data Exports export |
 <!-- END_TF_DOCS -->
