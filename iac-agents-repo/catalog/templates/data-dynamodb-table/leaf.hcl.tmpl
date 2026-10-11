@@ -1,15 +1,18 @@
-# Common configuration for DynamoDB table modules.
+# DynamoDB table. Account and region come from the folder path (root.hcl).
 # Golden path: reuses vetted terraform-aws-modules/dynamodb-table/aws registry module.
 # Rendered by IaC Generation Agent from iac-agents-repo/catalog/templates/data-dynamodb-table/.
+
+include "root" {
+  path   = find_in_parent_folders("root.hcl")
+  expose = true
+}
 
 terraform {
   source = "tfr://registry.terraform.io/terraform-aws-modules/dynamodb-table/aws?version=4.2.0"
 }
 
 locals {
-  env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
-  env      = local.env_vars.locals.env
-
+  env     = include.root.locals.env
   is_prod = local.env == "prod"
 }
 

@@ -26,11 +26,6 @@ if [ ! -d "$ACCOUNT_DIR" ]; then
     exit 1
 fi
 
-if [ ! -d "iac-modules-repo/$MODULE_PATH" ]; then
-    echo "❌ Error: no module iac-modules-repo/$MODULE_PATH."
-    exit 1
-fi
-
 STACK=$(basename "$MODULE_PATH")
 TARGET_DIR="$ACCOUNT_DIR/$REGION/$STACK"
 

@@ -1,20 +1,23 @@
-# Common configuration for encrypted RDS PostgreSQL database modules.
+# Encrypted RDS PostgreSQL database. Account and region come from the folder path (root.hcl).
 # Golden path: reuses vetted terraform-aws-modules/rds/aws registry module.
 # Rendered by IaC Generation Agent from iac-agents-repo/catalog/templates/data-rds-postgres/.
+
+include "root" {
+  path   = find_in_parent_folders("root.hcl")
+  expose = true
+}
 
 terraform {
   source = "tfr://registry.terraform.io/terraform-aws-modules/rds/aws?version=6.10.0"
 }
 
 locals {
-  env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
-  env      = local.env_vars.locals.env
-
+  env     = include.root.locals.env
   is_prod = local.env == "prod"
 }
 
 dependency "vpc" {
-  config_path = "${get_terragrunt_dir()}/../../network/vpc"
+  config_path = "../vpc"
   mock_outputs = {
     vpc_id          = "vpc-12345678"
     private_subnets = ["subnet-12345678", "subnet-87654321"]

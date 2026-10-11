@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ci_healer"))
 import healer_guards as g  # noqa: E402
 
-OK_PATHS = ["iac-modules-repo/network/vpc/.terraform.lock.hcl", "workloads-live-repo/workloads/nonprod/workloads-dev/eu-central-1/network/vpc/terragrunt.hcl"]
+OK_PATHS = ["iac-modules-repo/network/vpc/.terraform.lock.hcl", "iac-live-repo/workloads-dev/eu-central-1/vpc/terragrunt.hcl"]
 
 
 class PushDecision(unittest.TestCase):

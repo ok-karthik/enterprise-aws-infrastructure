@@ -8,12 +8,11 @@ loop by an orchestrator script — assume your output is applied automatically, 
 - Modules under `/iac-modules-repo/<category>/<name>/` are generic reusable Terraform — no
   environment specifics, and never a hand-written `provider.tf` or `backend.tf` (those are generated
   by `root.hcl`).
-- Shared blueprints live in `/workloads-live-repo/_envcommon/<category>/<name>.hcl` — set
-  `terraform.source`, any `dependency` blocks (with `mock_outputs` for plan-time), and default `inputs`.
-- Leaf configs live in `/workloads-live-repo/workloads/<nonprod|prod>/<account>/<region>/<category>/<name>/terragrunt.hcl`
-  (for example `workloads/nonprod/workloads-dev/eu-central-1/compute/eks/`) and should only override
-  env-specific values (e.g. dev shrinking `min_size`/`max_size`). Each account folder has `account.hcl` and
-  `env.hcl`; each region folder has `region.hcl`. The account and region are chosen by the folder, never in the leaf.
+- Live stacks live in `/iac-live-repo/<account>/<region>/<stack>/terragrunt.hcl` (for example
+  `iac-live-repo/workloads-dev/eu-central-1/eks/`). One file is the whole stack: `terraform.source`, `dependency` blocks
+  (with `mock_outputs` for plan-time) and every input. The account and region come from the folder path, never from the file.
+- A stack includes only `root.hcl` (`expose = true`) and reads account and region values as `include.root.locals.<name>`
+  (`account_name`, `account_id`, `env`, `aws_region`, `registry`, ...). Never use `read_terragrunt_config` or `get_env`.
 - Every resource must end up carrying `Service`, `Environment`, `Project`, `Owner` and `DataClassification` tags in `tags_all` — normally
   satisfied automatically via `default_tags` from `root.hcl`, so you usually don't need explicit `tags`
   blocks unless the resource type doesn't inherit provider default tags.
