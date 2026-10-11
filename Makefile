@@ -1,8 +1,7 @@
 # Enterprise AWS Platform — task runner
 # Wraps the platform's command surface. Run `make help` for the list.
 
-FMT_DIRS := iac-modules-repo foundation-live-repo workloads-live-repo policy-library-repo
-ENV ?= dev
+FMT_DIRS := iac-modules-repo iac-live-repo policy-library-repo
 
 .DEFAULT_GOAL := help
 
@@ -31,11 +30,11 @@ lint: ## Run TFLint recursively
 
 .PHONY: validate
 validate: ## Full local validation suite (compliance, fmt, init/validate, tflint)
-	./workloads-live-repo/scripts/smoke-test.sh
+	./scripts/smoke-test.sh
 
 .PHONY: checkov
 checkov: ## Checkov with the CI settings (.checkov.yaml); the same result as the CI check
-	./workloads-live-repo/scripts/run-checkov.sh --compact --quiet
+	./scripts/run-checkov.sh --compact --quiet
 
 .PHONY: image-scan
 image-scan: ## Build the toolbox image and scan it with Trivy (needs Docker), like publish-toolchain.yml
@@ -48,11 +47,11 @@ image-scan: ## Build the toolbox image and scan it with Trivy (needs Docker), li
 verify-module: ## Check ONE module with the CI tools, no AWS credentials: make verify-module MODULE=storage/s3
 	@test -n "$(MODULE)" || { echo "usage: make verify-module MODULE=<category/name>"; exit 2; }
 	@mkdir -p "$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}"
-	TF_PLUGIN_CACHE_DIR="$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}" python3 workloads-live-repo/scripts/verify_module.py $(MODULE) $(VERIFY_ARGS)
+	TF_PLUGIN_CACHE_DIR="$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}" python3 scripts/verify_module.py $(MODULE) $(VERIFY_ARGS)
 
 .PHONY: plan
-plan: ## Plan one workload account: make plan ENV=nonprod/workloads-dev
-	cd workloads-live-repo/workloads/$(ENV) && terragrunt run --all plan --non-interactive --log-format bare
+plan: ## Plan one account: make plan ACCOUNT=workloads-dev
+	cd iac-live-repo/$(ACCOUNT) && terragrunt run --all plan --non-interactive --log-format bare
 
 .PHONY: test
 test: ## Run OPA policy unit tests, module unit tests and Python unit tests (no AWS credentials needed)
@@ -65,6 +64,7 @@ test: ## Run OPA policy unit tests, module unit tests and Python unit tests (no 
 	done
 	@echo "-> iac-agents-repo tests"
 	python3 -m unittest discover -s iac-agents-repo/tests
+	python3 -m unittest discover -s scripts/tests
 	python3 -m unittest discover -s .claude/hooks
 
 .PHONY: docs

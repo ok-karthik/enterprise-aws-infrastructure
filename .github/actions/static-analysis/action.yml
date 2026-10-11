@@ -9,8 +9,7 @@ runs:
       run: |
         echo "🎨 Checking HCL formatting..."
         terraform fmt -check -recursive iac-modules-repo
-        terraform fmt -check -recursive foundation-live-repo
-        terraform fmt -check -recursive workloads-live-repo
+        terraform fmt -check -recursive iac-live-repo
         terraform fmt -check -recursive policy-library-repo
 
     - name: Terraform Validate
@@ -38,27 +37,27 @@ runs:
       run: |
         echo "☁️ Linting CloudFormation templates..."
         pip3 install --quiet --no-cache-dir --break-system-packages cfn-lint
-        cfn-lint foundation-live-repo/_bootstrap/cloudformation/*.yaml
+        cfn-lint iac-live-repo/_bootstrap/cloudformation/*.yaml
 
     - name: Bootstrap template tests (apply boundary and CI roles)
       shell: bash
-      run: python3 -m unittest discover -s foundation-live-repo/_bootstrap/tests
+      run: python3 -m unittest discover -s iac-live-repo/_bootstrap/tests
 
     - name: Script unit tests (account matrix generator)
       shell: bash
-      run: python3 -m unittest discover -s workloads-live-repo/scripts/tests
+      run: python3 -m unittest discover -s scripts/tests
 
     - name: Policy catalog check (every Rego rule is listed in POLICIES.md)
       shell: bash
-      run: python3 workloads-live-repo/scripts/check_policy_catalog.py
+      run: python3 scripts/check_policy_catalog.py
 
     - name: Account registry check
       shell: bash
-      run: ./workloads-live-repo/scripts/check-account-registry.sh
+      run: ./scripts/check-account-registry.sh
 
     - name: Discovery contract check (ensure no contract parameter disappears)
       shell: bash
-      run: python3 workloads-live-repo/scripts/check_discovery_contract.py
+      run: python3 scripts/check_discovery_contract.py
 
     - name: Run TFLint
       shell: bash
@@ -66,8 +65,7 @@ runs:
         echo "🔍 Running TFLint..."
         tflint --init
         tflint --chdir=iac-modules-repo --recursive --format=compact
-        tflint --chdir=foundation-live-repo --recursive --format=compact
-        tflint --chdir=workloads-live-repo --recursive --format=compact
+        tflint --chdir=iac-live-repo --recursive --format=compact
       env:
         GITHUB_TOKEN: ${{ github.token }}
 
@@ -77,14 +75,14 @@ runs:
     - name: Run Checkov (Static HCL)
       shell: bash
       run: |
-        ./workloads-live-repo/scripts/run-checkov.sh \
+        ./scripts/run-checkov.sh \
           --output cli --output sarif --output-file-path console,checkov-results-raw.sarif
 
     - name: Filter suppressed findings from Checkov SARIF
       shell: bash
       if: always() && hashFiles('checkov-results-raw.sarif') != ''
       run: |
-        python3 workloads-live-repo/scripts/merge_sarif.py checkov-results-raw.sarif checkov-results.sarif
+        python3 scripts/merge_sarif.py checkov-results-raw.sarif checkov-results.sarif
 
     - name: Upload Checkov SARIF results
       uses: github/codeql-action/upload-sarif@v4
@@ -98,4 +96,4 @@ runs:
       shell: bash
       run: |
         echo "📜 Checking license compliance..."
-        ./workloads-live-repo/scripts/check-licenses.sh
+        ./scripts/check-licenses.sh

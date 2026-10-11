@@ -4,7 +4,7 @@
 
 # Global ARGs for multi-stage support
 ARG TRIVY_VERSION=0.70.0
-# Checkov version: ONE pin, used here and read by workloads-live-repo/scripts/run-checkov.sh, so a local run
+# Checkov version: ONE pin, used here and read by scripts/run-checkov.sh, so a local run
 # and the CI run use the same rules. Renovate bumps it.
 ARG CHECKOV_VERSION=3.3.19 # renovate: datasource=pypi depName=checkov
 

@@ -29,7 +29,7 @@ inputs:
     required: false
     default: 'latest'
   accounts_local_hcl:
-    description: 'Raw HCL content for foundation-live-repo/_config/accounts.local.hcl (real IDs/emails)'
+    description: 'Raw HCL content for iac-live-repo/_config/accounts.local.hcl (real IDs/emails)'
     required: false
     default: ''
 
@@ -43,9 +43,9 @@ runs:
       run: |
         CONTENT="${LOCAL_HCL_INPUT:-${ACCOUNTS_LOCAL_HCL:-}}"
         if [[ -n "$CONTENT" ]]; then
-          echo "Writing foundation-live-repo/_config/accounts.local.hcl from ACCOUNTS_LOCAL_HCL..."
-          mkdir -p foundation-live-repo/_config
-          printf "%s\n" "$CONTENT" > foundation-live-repo/_config/accounts.local.hcl
+          echo "Writing iac-live-repo/_config/accounts.local.hcl from ACCOUNTS_LOCAL_HCL..."
+          mkdir -p iac-live-repo/_config
+          printf "%s\n" "$CONTENT" > iac-live-repo/_config/accounts.local.hcl
         fi
 
     - name: Pre-validate Inputs
