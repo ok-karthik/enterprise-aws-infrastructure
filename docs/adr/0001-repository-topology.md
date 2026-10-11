@@ -3,7 +3,7 @@
 > **DRAFT written by an AI model. Owner: rewrite this in your own words before you rely on it in an
 > interview (PLAN.md Phase 10: the ADRs are yours). Check every claim; delete this note when done.**
 
-- Status: draft
+- Status: draft (the two live repos below were merged into `iac-live-repo/` on 2026-10-11, see the last section)
 - Date: 2026-09-21
 
 ## Context
@@ -62,3 +62,24 @@ Split by **who approves a change and how much damage a bad change can do**, not 
   CODEOWNERS header that says so.
 - The `internal-developer-platform` catalog must point at `//iac-modules-repo` and at tags that exist at the new
   path (PLAN 1.7, a separate PR in that repository, after the modules are re-released).
+
+## 2026-10-11 revision: one live repo
+
+> DRAFT by the model: the owner rewrites this in his own words.
+
+- **What changed:** `foundation-live-repo/` and `workloads-live-repo/` are merged into one live repo, `iac-live-repo/`
+  (`<account>/<region or _global>/<stack>/terragrunt.hcl`, one `root.hcl`, one `_config/` registry, one `_bootstrap/`).
+  The helper scripts moved to the repo-root `scripts/`. The table above is the original decision; for the live repos it is
+  replaced by this section.
+- **Why:** two live repos meant two identical `root.hcl` copies, the registry read across repos, and every change that touches
+  both landing zone and workloads needed two PRs. The split by approver never needed a second repository, only a second owner.
+- **Where isolation between accounts comes from now:** not from repo boundaries. It comes from per-account CI roles (OIDC,
+  `github-actions-plan` read-only and `github-actions-apply` only from that account's GitHub Environment), per-account
+  state buckets (`tg-state-<account-id>-<region>`), and GitHub Environments with approvals.
+- **Ownership:** CODEOWNERS per account folder (`/iac-live-repo/<account>/`); the examples are in `.github/CODEOWNERS`, commented
+  out until there is more than one team.
+- **Unchanged:** `iac-modules-repo` and `policy-library-repo` stay separately versioned (release tags per module; the policy
+  bundle is pulled by every pipeline).
+- **What we give up:** one repo's history for both teams, and per-repo branch protection and access control (a token for the
+  repo reaches every account folder; the account roles are what limits damage).
+- **When to split again:** separate teams with separate release cadences, or an audit need for repo-level separation.

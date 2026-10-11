@@ -16,7 +16,7 @@ Template: [`cloudformation/account-bootstrap.yaml`](cloudformation/account-boots
 | `PlanRole` | `github-actions-plan` | `ReadOnlyAccess`; on the state bucket: read state, write/delete `*.tflock` only. Trusts any job of this repo (`repo:<repo>:*`, widened by hand from `pull_request` + `main`; read-only, but it can read every state file, so narrow it if you add collaborators) |
 | `ApplyRole` | `github-actions-apply` | `AdministratorAccess` **with** the boundary. Trusts exactly one GitHub Environment (`management` here) |
 
-Tags come from the stack, not the template: `Project`, `ManagedBy=CloudFormation`, `Owner`, `DataClassification` (read from `foundation-live-repo/management/account.hcl`). There are no `Export`s: an export locks the exported resource against changes.
+Tags come from the stack, not the template: `Project`, `ManagedBy=CloudFormation`, `Owner`, `DataClassification` (read from the `management` entry of `iac-live-repo/_config/accounts.hcl`). There are no `Export`s: an export locks the exported resource against changes.
 
 ## Deploy it (owner only)
 
@@ -59,18 +59,18 @@ If you have AWS CLI configured locally with an SSO profile or exported session c
 ```bash
 # If using AWS IAM Identity Center (SSO):
 aws sso login --profile <management-admin-profile>
-AWS_PROFILE=<management-admin-profile> ./foundation-live-repo/_bootstrap/bootstrap.sh
+AWS_PROFILE=<management-admin-profile> ./iac-live-repo/_bootstrap/bootstrap.sh
 
 # Or if using exported temporary session credentials:
 export AWS_ACCESS_KEY_ID="ASIA..."
 export AWS_SECRET_ACCESS_KEY="..."
 export AWS_SESSION_TOKEN="..."
 export AWS_DEFAULT_REGION="eu-central-1"
-./foundation-live-repo/_bootstrap/bootstrap.sh
+./iac-live-repo/_bootstrap/bootstrap.sh
 ```
 
 The script:
-1. **Preflight.** Reads the expected account id from the `EXPECTED_ACCOUNT_ID` environment variable, or from the `management` block of `foundation-live-repo/_config/accounts.local.hcl` (gitignored; `account.hcl` only holds a placeholder), and aborts if your credentials belong to a different account (safeguards against running in the wrong browser/profile session).
+1. **Preflight.** Reads the expected account id from the `EXPECTED_ACCOUNT_ID` environment variable, or from the `management` block of `iac-live-repo/_config/accounts.local.hcl` (gitignored; the registry `accounts.hcl` only holds a placeholder), and aborts if your credentials belong to a different account (safeguards against running in the wrong browser/profile session).
 2. Verifies the AWS Organization exists and enables StackSets trusted access (`aws cloudformation activate-organizations-access`).
 3. Creates a **change set**, renders an ASCII preview of resources to create, and prompts for confirmation (`--yes` skips).
 4. Deploys the stack, turns on termination protection, applies [`cloudformation/stack-policy.json`](cloudformation/stack-policy.json), and prints the GitHub role ARNs.
@@ -85,7 +85,7 @@ If you prefer the CLI but don't want to configure local terminal profiles:
    ```bash
    git clone https://github.com/ok-karthik/enterprise-aws-infrastructure.git
    cd enterprise-aws-infrastructure
-   ./foundation-live-repo/_bootstrap/bootstrap.sh
+   ./iac-live-repo/_bootstrap/bootstrap.sh
    ```
 *(CloudShell runs with pre-authenticated session credentials for the active console user, requiring zero static keys).*
 
@@ -107,10 +107,10 @@ aws cloudformation describe-organizations-access          # expect "Status": "EN
 
 # 3. Deploy through a reviewed change set
 aws cloudformation validate-template \
-  --template-body file://foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml
+  --template-body file://iac-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml
 aws cloudformation deploy \
   --stack-name platform-bootstrap \
-  --template-file foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml \
+  --template-file iac-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml \
   --parameter-overrides GitHubEnvironment=management AllowOrganizationsAdmin=true AllowIdentityCenterAdmin=true \
   --capabilities CAPABILITY_NAMED_IAM \
   --tags Project=enterprise-aws-platform ManagedBy=CloudFormation Owner=platform-team DataClassification=internal \
@@ -122,7 +122,7 @@ aws cloudformation wait stack-create-complete --stack-name platform-bootstrap   
 # 4. Lock it down and read the outputs
 aws cloudformation update-termination-protection --enable-termination-protection --stack-name platform-bootstrap
 aws cloudformation set-stack-policy --stack-name platform-bootstrap \
-  --stack-policy-body file://foundation-live-repo/_bootstrap/cloudformation/stack-policy.json
+  --stack-policy-body file://iac-live-repo/_bootstrap/cloudformation/stack-policy.json
 aws cloudformation describe-stacks --stack-name platform-bootstrap --query 'Stacks[0].Outputs'
 ```
 
@@ -142,13 +142,13 @@ gh api -X PUT repos/ok-karthik/enterprise-aws-infrastructure/environments/manage
 #    role ARN from the account id in the registry. The real ids live in accounts.local.hcl (gitignored), so
 #    CI gets that file's text as ACCOUNTS_LOCAL_HCL (account ids are not secrets).
 gh variable set AWS_REGION --body "eu-central-1"
-gh variable set ACCOUNTS_LOCAL_HCL < foundation-live-repo/_config/accounts.local.hcl
+gh variable set ACCOUNTS_LOCAL_HCL < iac-live-repo/_config/accounts.local.hcl
 ```
 
 ### Via GitHub Web Console:
 
 1. **GitHub Environment**: Go to **Settings** → **Environments** → click **New environment** → name it `management`. Under **Environment protection rules**, check **Required reviewers** and add yourself as a reviewer. Create `dev`, `prod` (with required reviewers) and `core` the same way when their accounts exist.
-2. **Repository Variables**: Go to **Settings** → **Secrets and variables** → **Actions** → **Variables** tab (not Secrets): `AWS_REGION` = `eu-central-1`, and `ACCOUNTS_LOCAL_HCL` = the full text of your local `foundation-live-repo/_config/accounts.local.hcl`. Without it CI skips every account (placeholder ids).
+2. **Repository Variables**: Go to **Settings** → **Secrets and variables** → **Actions** → **Variables** tab (not Secrets): `AWS_REGION` = `eu-central-1`, and `ACCOUNTS_LOCAL_HCL` = the full text of your local `iac-live-repo/_config/accounts.local.hcl`. Without it CI skips every account (placeholder ids).
 
 > [!IMPORTANT]
 > The old `AWS_DEV_PLAN_ROLE_ARN`, `AWS_PROD_PLAN_ROLE_ARN`, `AWS_DEV_APPLY_ROLE_ARN` and `AWS_PROD_APPLY_ROLE_ARN` variables are no longer read and can be deleted. The pipeline runs an account only once the registry says `ci = true`, the account has a live folder and it has a real (non-placeholder) id. For `management`, set `ci = true` after the organization stack is imported and the placeholders are replaced.
@@ -160,7 +160,7 @@ Details of the pipeline architecture are in [`docs/CICD.md`](../docs/CICD.md).
 The boundary is part of the template, so a change reaches accounts in two ways:
 
 - **Management account:** run `bootstrap.sh`. The change set shows `Modify` on `ApplyBoundary` (the stack policy only blocks replacing or deleting it).
-- **Member accounts:** apply `foundation-live-repo/management/_global/governance/bootstrap-stacksets`. Its `template_body` changed, so each StackSet is updated across its accounts, 25 % at a time, stopping at the first failure.
+- **Member accounts:** apply `iac-live-repo/management/_global/bootstrap-stacksets`. Its `template_body` changed, so each StackSet is updated across its accounts, 25 % at a time, stopping at the first failure.
 
 **Identity Center from CI needs a re-run of `bootstrap.sh`.** The boundary used to deny `sso:*` everywhere, so CI could not apply the management `identity/identity-center` stack (AccessDenied). After this change the management stack must be updated once (the change set shows `AllowIdentityCenterAdmin` and a `Modify` on `ApplyBoundary`) **before the first Identity Center apply**. Member accounts are unchanged: the StackSets pass `AllowIdentityCenterAdmin=false`.
 
@@ -176,4 +176,4 @@ Edit `cloudformation/account-bootstrap.yaml`, then run `bootstrap.sh` again. It 
 - **Retained, not deletable.** The bucket is `Retain`, and the bucket, OIDC provider and boundary are protected by the stack policy; the stack also has termination protection. If the stack is ever deleted and recreated, creation fails on the bucket name because the old bucket still exists: import that bucket into the new stack by hand.
 - **`environment:dev` can apply to any NonProd account.** Every NonProd account trusts the same `dev` GitHub Environment, so a job in `dev` can apply to all of them. Per-account Environments come with PLAN 2.6.
 - **`ROLLBACK_COMPLETE`** (a failed first deploy): delete that stack and run the script again. Nothing was created.
-- Checks that run without AWS access: `cfn-lint` and `checkov -f foundation-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml` (also in pre-commit and CI).
+- Checks that run without AWS access: `cfn-lint` and `checkov -f iac-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml` (also in pre-commit and CI).

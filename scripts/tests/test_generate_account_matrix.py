@@ -114,7 +114,7 @@ class BuildMatrix(unittest.TestCase):
         self.assertEqual(wd["workloads-dev"], "iac-live-repo/workloads-dev")
 
     def test_a_folder_that_is_not_in_the_registry_is_not_matched(self):
-        root = make_root("iac-live-repo/management", "iac-live-repo/not-an-account", "iac-live-repo/workloads/nonprod/workloads-dev")
+        root = make_root("iac-live-repo/management", "iac-live-repo/not-an-account", "iac-live-repo/nonprod/workloads-dev")
         entries, notices = gam.build_matrix(REGISTRY, root)
         self.assertEqual([e["account"] for e in entries], ["management"])
         self.assertTrue(any("workloads-dev" in n and "no live folder" in n for n in notices))

@@ -1,6 +1,6 @@
 # governance/billing
 
-**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS)
 
 Billing foundation for the management (payer) account (PLAN 9.2):
 

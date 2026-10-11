@@ -1,6 +1,6 @@
 # governance/organization
 
-**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS)
 
 The AWS Organization foundation, applied from the **management account** by the owner: the organization itself (trusted service access and policy types), the OU tree, and the baseline SCP guardrails.
 

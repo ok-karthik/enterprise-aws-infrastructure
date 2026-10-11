@@ -73,7 +73,7 @@ bucket copies every state file, one way, to the secondary region's bucket. Delet
 
 **Recovery, if `tg-state-<account>-eu-central-1` is gone or unusable:**
 1. Check the replica first: `aws s3 ls s3://tg-state-<account>-eu-west-1/<state key>` (keys keep the same path,
-   for example `workloads/prod/workloads-prod/eu-central-1/network/vpc/terraform.tfstate`).
+   for example `workloads-prod/eu-central-1/vpc/terraform.tfstate`).
 2. Recreate the primary bucket by re-deploying the Day-0 stack in `eu-central-1` (it is `Retain`, so if only
    the bucket was deleted, the stack update recreates it).
 3. Copy the state files back: `aws s3 sync s3://tg-state-<account>-eu-west-1/ s3://tg-state-<account>-eu-central-1/ --exclude "eu-west-1/*"`.

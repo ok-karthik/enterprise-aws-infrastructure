@@ -236,7 +236,7 @@ make verify-module MODULE=storage/s3
         GitHub Actions restricts execution to modified stacks using <code>plan_scope.py</code>. Plan JSON files undergo Checkov and OPA/Conftest security validation. If transient failures occur, <code>healer_runner.py</code> attempts automated remediation up to a hard 3-commit ceiling.
       </p>
       <div class="code-box">
-python3 workloads-live-repo/scripts/plan_scope.py
+python3 scripts/plan_scope.py
       </div>
     </div>
 

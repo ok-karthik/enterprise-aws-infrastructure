@@ -1,6 +1,6 @@
 # security/auto-remediation
 
-**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS)
 
 A Lambda (PLAN 4.9) that removes open SSH/RDP security group rules automatically. Applied in **security-tooling**.
 

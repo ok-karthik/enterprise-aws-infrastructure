@@ -42,7 +42,7 @@ The discovery contract is treated as a **versioned API**:
 3. **Non-Sensitive Metadata Only**:
    - Contract parameters are public within the AWS account (IAM type `String`, not `SecureString`). No secrets, private keys, or passwords are ever published to the contract.
 4. **Machine-Readable Schema**:
-   - The contract is defined in `docs/discovery-contract.json` and validated by CI scripts (`workloads-live-repo/scripts/check_discovery_contract.py`).
+   - The contract is defined in `docs/discovery-contract.json` and validated by CI scripts (`scripts/check_discovery_contract.py`).
 
 ---
 

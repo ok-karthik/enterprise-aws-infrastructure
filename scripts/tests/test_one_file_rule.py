@@ -73,7 +73,7 @@ class OneFileRule(unittest.TestCase):
         self.assertIn("get_env(", r.stderr)
 
     def test_another_find_in_parent_folders_fails(self):
-        r = run(make_tree(CLEAN + '\nlocals {\n  x = find_in_parent_folders("env.hcl")\n}\n'))
+        r = run(make_tree(CLEAN + '\nlocals {\n  x = find_in_parent_folders("other.hcl")\n}\n'))
         self.assertEqual(r.returncode, 1)
         self.assertIn("find_in_parent_folders", r.stderr)
 

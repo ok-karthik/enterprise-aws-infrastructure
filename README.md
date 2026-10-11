@@ -49,7 +49,7 @@ flowchart TB
 | Area | Status |
 |---|---|
 | **Code & offline tests** | 41 Terraform modules tested offline (`terraform test` with mock providers), Rego policies (`conftest verify`), and unit tests for Python agents and scripts. Status breakdowns: [iac-modules-repo/README.md](iac-modules-repo/README.md) (28 📝 plan-only, 13 📐 design-only). |
-| **Landing zone & live stacks** | Detailed status per account/region in [foundation-live-repo/README.md](foundation-live-repo/README.md) and [workloads-live-repo/README.md](workloads-live-repo/README.md). Placeholder account IDs in `accounts.hcl` keep CI safe until accounts are linked. |
+| **Landing zone & live stacks** | Detailed status per account/region in [iac-live-repo/README.md](iac-live-repo/README.md). Placeholder account IDs in `accounts.hcl` keep CI safe until accounts are linked. |
 | **Measured numbers** | Operational metrics (RTO/RPO, foundation costs, SLOs) are architectural models documented in [docs/DISASTER_RECOVERY.md](docs/DISASTER_RECOVERY.md), [docs/FINOPS.md](docs/FINOPS.md), and [docs/SLO.md](docs/SLO.md). |
 
 ## Applied, with proof
@@ -70,8 +70,8 @@ flowchart TB
 A directory ending in `-repo` is treated as a separate repository in production ([ADR 0001](docs/adr/0001-repository-topology.md)):
 
 - `iac-modules-repo/`: Reusable, versioned Terraform modules published independently via semantic release tags.
-- `foundation-live-repo/`: Landing zone live stacks (management, security, infrastructure OUs) and Day-0 bootstrap.
-- `workloads-live-repo/`: Platform stacks for workload accounts (`workloads-dev`, `workloads-prod`).
+- `iac-live-repo/`: All live stacks, one folder per account (`<account>/<region>/<stack>/terragrunt.hcl`): landing zone (management, security, infrastructure), workload accounts (`workloads-dev`, `workloads-prod`) and the Day-0 bootstrap.
+- `scripts/`: Smoke test, stack generator, account matrix and the other CI helpers.
 - `policy-library-repo/`: Rego compliance rules evaluated with Conftest against Terraform plan JSON.
 - `iac-agents-repo/`: Autonomous IaC Platform Agent, self-healing CI bot, golden paths, and delivery metrics.
 

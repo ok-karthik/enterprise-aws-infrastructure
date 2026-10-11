@@ -35,9 +35,9 @@ environments, and it never contains a `provider` or `backend` block (`root.hcl` 
    reason. A skip without a reason is refused in review. Do not touch `.checkov.yaml`.
 5. **Register it:** an entry in `release-please-config.json` and `.release-please-manifest.json` (start at `1.0.0`) and a line
    in the `docs` target of the `Makefile`.
-6. **Wire it into a live folder** (a separate commit): an `_envcommon/<category>/<name>.hcl` that sets the module source and
-   defaults, and a leaf `<account>/<region>/<category>/<name>/terragrunt.hcl` of about 10 lines. Check it with
-   `IAC_MODULES_LOCAL=1 terragrunt render --format json`.
+6. **Wire it into a live folder** (a separate commit): a stack `iac-live-repo/<account>/<region>/<name>/terragrunt.hcl` (one file: module source,
+   dependencies and inputs; `scripts/generate-module.sh <category>/<name> <account> <region>` writes the template). Check it with
+   `terragrunt render --format json`.
 7. **Write the README:** what it makes, the two or three things that are not obvious, and what is *not* covered.
 
 ## What a good PR looks like

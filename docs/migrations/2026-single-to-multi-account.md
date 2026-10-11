@@ -1,3 +1,4 @@
+> Historical. The current layout: 2026-10-simple-layout.md.
 # Migration: one AWS account to a multi-account organization (2026)
 
 **Status: a design and a set of tools, not yet a completed migration.** This file records what was actually done and what

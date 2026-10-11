@@ -1,6 +1,6 @@
 # security/security-alerts
 
-**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS)
 
 Central alerting for PLAN 4.5. One EventBridge rule per alert type, one encrypted SNS topic, email subscriptions. Which rules are created depends on `var.enable_*` and on **where** the module is applied:
 

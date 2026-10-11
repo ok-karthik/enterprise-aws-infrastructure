@@ -1,6 +1,6 @@
 # network/vpc
 
-**Status:** 📝 Plan-only (wired into `workloads-live-repo`; not applied to AWS)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS)
 
 Reusable VPC module wrapping `terraform-aws-modules/vpc/aws`. Ships hardened by default: a deny-all default network ACL, a black-hole default security group (no ingress/egress), and VPC Flow Logs shipped to CloudWatch — so a caller cannot accidentally get an open-by-default network.
 

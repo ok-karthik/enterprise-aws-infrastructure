@@ -12,9 +12,9 @@ A multi-environment AWS Infrastructure-as-Code platform built with **Terragrunt 
 A directory ending in `-repo` is a separate Git repository in a real company (see `docs/adr/0001-repository-topology.md`); here they live side by side so the whole foundation can be read from one checkout.
 
 *   `/iac-modules-repo/`: Custom reusable Terraform modules, versioned per module (`<module>-vX.Y.Z`). Pure `.tf`, no environment specifics, no provider blocks.
-*   `/foundation-live-repo/`: The landing zone: `_global/` (organization, bootstrap StackSets; management account), `_envcommon/governance/` blueprints, its own `root.hcl`, and `_bootstrap/`. Security + cloud-infra approve changes.
-*   `/workloads-live-repo/`: Platform stacks in workload accounts: `workloads/nonprod/workloads-dev/`, `workloads/prod/workloads-prod/`, `_envcommon/{compute,data,network}/`, its own `root.hcl`, and `scripts/` (smoke test, module generator). The platform team approves changes.
-*   `/foundation-live-repo/_bootstrap/` (inside the foundation repo): Day-0 **CloudFormation** stack `platform-bootstrap` (`cloudformation/account-bootstrap.yaml`: S3 state bucket, GitHub OIDC provider, `github-actions-plan` / `github-actions-apply` roles + permissions boundary) and the `bootstrap.sh` that deploys it. Run once by a human in the management account; member accounts get it through StackSets (PLAN 2.0b). Terragrunt never creates the state bucket: **no command may pass `--backend-bootstrap`**.
+*   `/iac-live-repo/`: All live Terragrunt stacks, one folder per account: `iac-live-repo/<account>/<region or _global>/<stack>/terragrunt.hcl` (management, security, network, observability and the workload accounts `workloads-dev` / `workloads-prod`). One `root.hcl`, the account registry in `_config/`, and `_bootstrap/`. Ownership per account folder is set in `.github/CODEOWNERS`.
+*   `/scripts/`: Smoke test, module/stack generator, account matrix, cost gate and the other CI helpers (with `tests/`).
+*   `/iac-live-repo/_bootstrap/`: Day-0 **CloudFormation** stack `platform-bootstrap` (`cloudformation/account-bootstrap.yaml`: S3 state bucket, GitHub OIDC provider, `github-actions-plan` / `github-actions-apply` roles + permissions boundary) and the `bootstrap.sh` that deploys it. Run once by a human in the management account; member accounts get it through StackSets (PLAN 2.0b). Terragrunt never creates the state bucket: **no command may pass `--backend-bootstrap`**.
 *   `/policy-library-repo/terraform/`: Rego-based OPA compliance rules enforced against Terraform plan JSON.
 *   `/iac-agents-repo/`: Autonomous IaC platform agent, CI healer, golden-path catalog, SRE policies, and tests.
 
@@ -37,7 +37,7 @@ git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//iac-module
 | `iac-modules-repo/identity/workload-iam` | `iam` | `workload-iam-v1.0.0` | Documented interface stub for workload pod identity / IRSA role vending |
 
 ### 2. Platform Foundation Modules (Internal to this Repository)
-Applied and maintained directly by this platform via Terragrunt environments (`workloads-live-repo/workloads/{nonprod,prod}/<account>/...` and `foundation-live-repo/management/_global/`):
+Applied and maintained directly by this platform via Terragrunt stacks (`iac-live-repo/<account>/<region>/<stack>`, for example `iac-live-repo/workloads-dev/...` and `iac-live-repo/management/_global/`):
 
 | Module Path | Scope | Release Tag | Purpose |
 |---|---|---|---|
@@ -67,7 +67,7 @@ Applied and maintained directly by this platform via Terragrunt environments (`w
 | `iac-modules-repo/governance/cost-janitor` | Account (workload, dev) | `cost-janitor-v1.0.0` | Weekly Lambda that reports unattached EBS volumes, old snapshots, unassociated Elastic IPs and log groups without retention (PLAN 9.5). Report-only by default (`dry_run = true`); `keep=true` tag opt-out; dev only |
 | `iac-modules-repo/governance/discovery-publisher` | Account | `discovery-publisher-v1.0.0` | Publishes the discovery contract (`/platform/<env>/<region>/...`) into the account from the outputs of the VPC, EKS and ACK stacks; the single owner of those parameter names |
 | `iac-modules-repo/governance/account-baseline` | Account | `account-baseline-v1.0.0` | Applied to every account: `platform-workload-boundary`, account alias, password policy, S3 Block Public Access, EBS encryption and IMDSv2 defaults, VPC Block Public Access (PLAN 5.7, on by default), KMS CMKs per data class, the account discovery parameters, and (when given the auto-remediation Lambda's role ARN) the narrow `security-remediation` role it assumes. Not the state bucket or CI roles (those come from the Day-0 bootstrap) |
-| `iac-modules-repo/governance/account-factory` | Global | `account-factory-v1.0.0` | Creates and places the member accounts from the account registry (`foundation-live-repo/_config/accounts.hcl`, entries with `create = true`); accounts are never closed. Applied by the owner from the management account |
+| `iac-modules-repo/governance/account-factory` | Global | `account-factory-v1.0.0` | Creates and places the member accounts from the account registry (`iac-live-repo/_config/accounts.hcl`, entries with `create = true`); accounts are never closed. Applied by the owner from the management account |
 | `iac-modules-repo/identity/ack-cross-account` | Account | `ack-cross-account-v1.0.0` | ACK hub/spoke trust for one account: spoke role, scoped inline policy, `ack-tenant-boundary`, discovery parameter |
 
 ### 3. The Discovery Contract (SSM Parameter Store Service Catalog)
@@ -95,10 +95,10 @@ All tooling is baked into the toolchain container (`.github/docker/Dockerfile`);
 ```bash
 # Full local validation suite — compliance, fmt, terragrunt init+validate (dev), tflint.
 # This is the pre-commit hook and the CI "smoke test"; run it before pushing.
-./workloads-live-repo/scripts/smoke-test.sh
+./scripts/smoke-test.sh
 
-# Formatting — MUST cover all four roots or CI fails (see static-analysis action)
-terraform fmt -recursive iac-modules-repo foundation-live-repo workloads-live-repo policy-library-repo
+# Formatting — MUST cover all three roots or CI fails (see static-analysis action)
+terraform fmt -recursive iac-modules-repo iac-live-repo policy-library-repo
 terragrunt hcl fmt
 
 # Lint / security / policy
@@ -108,15 +108,16 @@ make verify-module MODULE=<category/name>   # ONE module, the CI tools, no AWS c
 make image-scan     # build the toolbox image and Trivy-scan it (needs Docker)
 conftest test --policy policy-library-repo/terraform <plan.json>   # policy runs against plan JSON, not HCL
 
-# Plan/apply a single environment stack (uses run --all across the dependency graph)
-cd workloads-live-repo/workloads/nonprod/workloads-dev && terragrunt run --all plan --non-interactive --log-format bare
-cd workloads-live-repo/workloads/nonprod/workloads-dev && terragrunt run --all apply --non-interactive -auto-approve --log-format bare
+# Plan/apply one account (uses run --all across the dependency graph)
+make plan ACCOUNT=workloads-dev
+cd iac-live-repo/workloads-dev && terragrunt run --all plan --non-interactive --log-format bare
+cd iac-live-repo/workloads-dev && terragrunt run --all apply --non-interactive -auto-approve --log-format bare
 
-# Plan/apply one module only
-cd workloads-live-repo/workloads/nonprod/workloads-dev/eu-central-1/compute/eks && terragrunt plan --log-format bare
+# Plan/apply one stack only
+cd iac-live-repo/workloads-dev/eu-central-1/eks && terragrunt plan --log-format bare
 
-# Scaffold a new module manually
-./workloads-live-repo/scripts/generate-module.sh <category/module-name> [env] [region]
+# Scaffold a new stack (one terragrunt.hcl) manually
+./scripts/generate-module.sh <category/module-name> <account> <region>
 
 # Install the pre-commit hook (fmt + checkov on every commit)
 pre-commit install
@@ -124,24 +125,35 @@ pre-commit install
 
 ---
 
-## 4. Architecture: The Terragrunt Inheritance Chain
+## 4. How a stack is put together
 
-The core pattern is **strict separation of "blueprint" from "live config"**, kept 100% DRY through a layered `include`/`read_terragrunt_config` chain:
+A stack is **one `terragrunt.hcl`**. Nothing is merged from other files except `root.hcl`:
 
-1. **`iac-modules-repo/`** — generic, reusable Terraform (`network/vpc`, `compute/eks`). Pure `.tf`, no environment specifics. Security hardening lives *here* (VPC deny-all NACLs, EKS KMS encryption), not just in CI.
+1. **The folder path is the config:** `iac-live-repo/<account>/<region or _global>/<stack>/terragrunt.hcl`. `<account>` must be a key in `iac-live-repo/_config/accounts.hcl` (the registry); `_global` means "account-wide, run from the primary region". Every folder name is checked by `scripts/check-account-registry.sh`.
+2. **`iac-live-repo/root.hcl`** is the only file that looks anything up. It takes the account from the path and everything else from the registry in `_config/` (`accounts.hcl`, `regions.hcl`, `organization.hcl`), and **generates `provider.tf` and `backend.tf`** with `default_tags` (`Environment`, `Service`, `Project`, `ManagedBy`, `Account`, `Owner`, `DataClassification`). The state bucket is `tg-state-<account-id>-<region>`, the state key is the path (`path_relative_to_include()`). Do not add provider/backend blocks by hand.
+3. **The stack file** includes `root.hcl` (`expose = true`), sets `terraform.source` to the local module (`${get_repo_root()}/iac-modules-repo/<category>/<module>`), declares its `dependency` blocks (with `mock_outputs` for plan-time) and every input. Short template:
 
-2. **`root.hcl`** (one copy in each live repo, kept identical) — the root included by every leaf. It **generates `provider.tf` and `backend.tf`** at runtime (`generate` blocks) and injects `default_tags` (`Environment`, `Service`, `Project`, `ManagedBy`, `Account`). The S3 backend bucket name and `default_tags` are computed here — do not add provider/backend blocks by hand in modules.
+   ```hcl
+   include "root" {
+     path   = find_in_parent_folders("root.hcl")
+     expose = true
+   }
+   terraform {
+     source = "${get_repo_root()}/iac-modules-repo/compute/eks"
+   }
+   dependency "vpc" {
+     config_path  = "../vpc"
+     mock_outputs = { vpc_id = "vpc-12345678" }
+   }
+   inputs = {
+     cluster_name = "main-eks-dev"
+     vpc_id       = dependency.vpc.outputs.vpc_id
+   }
+   ```
+4. **Where values come from:** account and region values are `include.root.locals.<name>` (`account_name`, `account_id`, `env`, `ou`, `alias`, `owner`, `data_classification`, `aws_region`, plus `registry`, `regions`, `organization`). Everything else (cluster names, sizes, CIDRs) is a literal in the stack file.
+5. **The one-file rule:** a stack never calls `read_terragrunt_config`, `get_env(` or `find_in_parent_folders` (except for `root.hcl`). `scripts/check-account-registry.sh` fails CI otherwise.
 
-3. **`workloads-live-repo/_envcommon/<category>/<module>.hcl`** — the shared blueprint per module type. Sets `terraform.source` (pointing into `iac-modules-repo/` or registry `tfr://`), declares `dependency` blocks (with `mock_outputs` for plan-time), and default `inputs`. Cross-module wiring (EKS → VPC subnets) lives here.
-
-4. **Data files loaded via `find_in_parent_folders`:**
-   - `<account>/account.hcl` — `aws_account_id`, `account_name` (= folder name), `ou`, `env` (`dev|staging|prod|global`), `owner`, `data_classification`; must match the account's entry in `foundation-live-repo/_config/accounts.hcl`
-   - `<account>/env.hcl` — `env` (same as account.hcl), `cluster_name`, cost-scaling knobs (`min_size`, `desired_size`, `enable_nat_gateway`) and `module_versions` (the release tag of each `iac-modules-repo` module this environment uses; `_envcommon` builds `terraform.source` from it, or from the checkout when `IAC_MODULES_LOCAL` is set — see `docs/CICD.md`)
-   - `<account>/<region|_global>/region.hcl` — `aws_region` (must be in `_config/regions.hcl`)
-
-5. **`workloads-live-repo/workloads/<nonprod|prod>/<account>/<region>/<category>/<module>/terragrunt.hcl`** (`<account>` = `workloads-dev`, `workloads-prod`, ...; the management account is `foundation-live-repo/management/_global/...`) — the leaf. Includes `root` + the matching `_envcommon` file (`expose = true`) and only overrides env-specific values (e.g. dev EKS shrinks `min_size`/`max_size`/`desired_size`).
-
-`path_relative_to_include()` drives naming everywhere (state key, `Service` tag, env detection), so **directory layout is load-bearing** — the `<account>/<region|_global>/<category>/<module>` shape is a contract, not a convention. `env` comes from `account.hcl` (`dev`/`staging`/`prod`/`global`), not from the folder name, and regions must be in `_config/regions.hcl` (enforced by `smoke-test.sh`). There is no `assume_role`: CI uses OIDC directly into the target account.
+The folder layout is load-bearing: the path drives the account, the region, the state key and the `Service` tag. `env` comes from the registry (`dev`/`staging`/`prod`/`global`), not from the folder name, and regions must be allowed for the account's OU in `_config/regions.hcl`. There is no `assume_role`: CI uses OIDC directly into the target account.
 
 ---
 
@@ -150,10 +162,10 @@ The core pattern is **strict separation of "blueprint" from "live config"**, kep
 These are enforced against the **Terraform plan JSON** in CI (`reusable-terragrunt.yml`), so a change can pass `terraform validate` and still fail here:
 
 - **OPA/Conftest** (`policy-library-repo/terraform/*.rego`, package `main`):
-  - `require_tags.rego` — every created/updated resource must carry `Service`, `Environment`, `Project`, `Owner` and `DataClassification` tags (checked in `tags_all`). The `root.hcl` `default_tags` normally satisfies this (`Owner` / `DataClassification` come from `account.hcl`); resources that escape provider default tags will fail.
+  - `require_tags.rego` — every created/updated resource must carry `Service`, `Environment`, `Project`, `Owner` and `DataClassification` tags (checked in `tags_all`). The `root.hcl` `default_tags` normally satisfies this (`Owner` / `DataClassification` come from the registry via `root.hcl`); resources that escape provider default tags will fail.
   - `no_legacy_instances.rego` — blocks old instance families (`t2.`, `m3.`, `m4.`, `c3.`, `c4.`).
   - `deny_admin_attachments.rego`, `deny_public_s3.rego`, `deny_open_ingress.rego`, `deny_iam_wildcards.rego`, `require_encryption.rego` — see `docs/CICD.md` for what each blocks. Shared helpers live in `helpers.rego` (all files are package `main`, so helper names must not collide).
-- **Checkov** — the only Checkov settings file is `.checkov.yaml`; always run it through `./workloads-live-repo/scripts/run-checkov.sh` (or `make checkov`), which is what CI and the pre-commit hook run, so the result matches. It blocks (no `soft_fail`). Accept a finding with an inline `#checkov:skip=<ID>: <reason>` on that resource; the repo-wide `skip-check` list is only for checks that do not apply to the platform. Plan-stage Checkov runs on every `tfplan.json`. Checkov IAM checks read only Allow statements, so a Deny does not clear a finding. The Checkov version is pinned in `.github/docker/Dockerfile` (`CHECKOV_VERSION`, Renovate-managed).
+- **Checkov** — the only Checkov settings file is `.checkov.yaml`; always run it through `./scripts/run-checkov.sh` (or `make checkov`), which is what CI and the pre-commit hook run, so the result matches. It blocks (no `soft_fail`). Accept a finding with an inline `#checkov:skip=<ID>: <reason>` on that resource; the repo-wide `skip-check` list is only for checks that do not apply to the platform. Plan-stage Checkov runs on every `tfplan.json`. Checkov IAM checks read only Allow statements, so a Deny does not clear a finding. The Checkov version is pinned in `.github/docker/Dockerfile` (`CHECKOV_VERSION`, Renovate-managed).
 - **Trivy** — scans the toolbox image only (it no longer scans Terraform, PLAN 8.9). `publish-toolchain.yml` scans the toolbox image (`trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1`) before pushing it; `make image-scan` runs it locally.
 - Gate ownership (8.9): tflint = written correctly, Checkov = secure, conftest/Rego = this org's rules, Trivy = the toolbox image.
 - **Infracost** — posts a per-module cost breakdown PR comment, and fails a PR whose monthly cost rises ≥ $100, or ≥ $10 and ≥ 20 %, unless it has the `cost-approved` label.
@@ -162,7 +174,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 
 ## 6. CI/CD Pipeline
 
-- `terragrunt.yml` — main orchestrator. Static analysis + one reusable stack per account run in parallel (the account matrix is generated from `foundation-live-repo/_config/accounts.hcl` by `workloads-live-repo/scripts/generate_account_matrix.py`; an account runs only with `ci = true`, a live folder and a real account id). On push to `main`, an `apply` matrix job runs one account at a time (management, core, dev, staging, prod), each in the account's GitHub Environment (prod requires manual approval).
+- `terragrunt.yml` — main orchestrator. Static analysis + one reusable stack per account run in parallel (the account matrix is generated from `iac-live-repo/_config/accounts.hcl` by `scripts/generate_account_matrix.py`; an account runs only with `ci = true`, a live folder and a real account id). On push to `main`, an `apply` matrix job runs one account at a time (management, core, dev, staging, prod), each in the account's GitHub Environment (prod requires manual approval).
 - `reusable-terragrunt.yml` — per-account plan → governance (OPA on every plan, Checkov on every plan) → cost analysis. The cost gate in that last job marks the PR's cost-analysis check red on a big monthly rise; it blocks merging only once that check is required in branch protection (main is not protected yet). Plans are generated as `tfplan.bin`, converted to `tfplan.json`, uploaded as artifacts, and consumed by the gate jobs.
 - Auth is **zero-key OIDC** with two roles per account, straight into the target account (no shared role, no role chaining, no per-environment role variables): plan/governance/drift jobs assume the read-only `arn:aws:iam::<account-id>:role/github-actions-plan` (trusted from PRs and `main`); apply/destroy jobs assume `.../github-actions-apply` (trusted only from that account's GitHub Environment: `management`, `core`, `dev`, `prod`), via `setup-platform`. The account id comes from the registry. No static AWS credentials exist.
 - `drift-detection.yml` — nightly matrix over the account matrix; manages one GitHub Issue per account (create/comment/auto-close) and prompts for ChatOps reconciliation.
@@ -173,13 +185,14 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 
 ## 7. Conventions & Gotchas
 
-- **Account IDs come from `account.hcl`**, never `get_aws_account_id()` in `root.hcl`: that returns the caller's account, so `allowed_account_ids` would compare the caller with itself and never fail. Every `account.hcl` also carries `owner` and `data_classification` (used for default tags).
-- **EKS API endpoint is private by default.** `env.hcl` `api_allowed_cidrs` (empty by default) turns on the public endpoint and restricts it to those CIDRs; the module rejects public access with no CIDRs.
+- **Account IDs come from the registry** (`iac-live-repo/_config/accounts.hcl`, read by `root.hcl` from the account folder name), never `get_aws_account_id()` in `root.hcl`: that returns the caller's account, so `allowed_account_ids` would compare the caller with itself and never fail. The registry also carries `owner` and `data_classification` (used for default tags).
+- **A value lives in exactly one place:** the stack file, or the registry via `root.hcl`. Setting the same value in two files is how dev EKS got `min_size` twice in PR #71.
+- **EKS API endpoint is private by default.** `api_allowed_cidrs` in the EKS stack (empty by default) turns on the public endpoint and restricts it to those CIDRs; the module rejects public access with no CIDRs.
 - **Never hand-write `provider.tf` or `backend.tf`** — they are generated by `root.hcl`. Editing them has no effect (`if_exists = "overwrite_terragrunt"`).
-- When adding a module, create both the blueprint (`_envcommon/.../<m>.hcl` → `terraform.source`) and the leaf `terragrunt.hcl` in each env; don't inline module logic into a live dir.
-- `fmt` must pass across `iac-modules-repo`, `foundation-live-repo`, `workloads-live-repo` **and** `policies` — a stray unformatted `.tf`/`.hcl` in any of the four fails Gate 1. The CloudFormation template in `foundation-live-repo/_bootstrap/cloudformation/` is checked by `cfn-lint` instead.
+- When adding a module, create the stack `terragrunt.hcl` in each account folder that needs it (`scripts/generate-module.sh`); don't inline module logic into a live dir.
+- `fmt` must pass across `iac-modules-repo`, `iac-live-repo` **and** `policy-library-repo` — a stray unformatted `.tf`/`.hcl` in any of the three fails Gate 1. The CloudFormation template in `iac-live-repo/_bootstrap/cloudformation/` is checked by `cfn-lint` instead.
 - Rego policies target Rego v1 (`import rego.v1`) and package `main`.
-- Cost / resilience knobs (spot/scaling, `enable_nat_gateway`, `single_nat_gateway`) live in `env.hcl`; keep dev cheap (spot, min sizes) — the README's FinOps numbers depend on it.
+- Cost / resilience knobs (spot/scaling, `enable_nat_gateway`, `single_nat_gateway`) are literals in the dev stacks; keep dev cheap (spot, min sizes) — the README's FinOps numbers depend on it.
 
 ### Local agent guardrails (PLAN 11.2)
 
@@ -196,7 +209,7 @@ These rules apply to **any** coding agent working in this repo, whatever the too
 4. **Attempt limit:** after **3** failed `verify-module` runs in a row on the same module, stop editing it and hand over to a human with
    the last result. A human clears it with `python3 .claude/hooks/guard.py reset <category/name>`. Set `AGENT_MAX_VERIFY_ATTEMPTS` to change N.
 5. Never push to `main`, never bypass the prod approval gate, never invent account IDs (see `PLAN.md`).
-6. Check a live stack's final inputs with `terragrunt render --format json` (works offline, see command), never by grepping one file: leaf inputs override _envcommon inputs. Command: `cd <leaf> && env -u AWS_PROFILE AWS_CONFIG_FILE=/dev/null AWS_SHARED_CREDENTIALS_FILE=/dev/null IAC_MODULES_LOCAL=1 terragrunt render --format json --non-interactive --log-format bare 2>/dev/null | jq '.inputs'`.
+6. Check a live stack's final inputs with `terragrunt render --format json` (works offline, see command), never by guessing from one file. Command: `cd <leaf> && env -u AWS_PROFILE AWS_CONFIG_FILE=/dev/null AWS_SHARED_CREDENTIALS_FILE=/dev/null terragrunt render --format json --non-interactive --log-format bare 2>/dev/null | jq '.inputs'`.
 
 **The hooks are not the control.** They run on a laptop and can be switched off; they exist to save time and stop honest mistakes.
 The real controls are: CODEOWNERS on the paths in rule 3, branch protection on `main`, and that no agent has credentials that can apply

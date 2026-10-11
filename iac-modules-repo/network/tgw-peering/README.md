@@ -1,6 +1,6 @@
 # network/tgw-peering
 
-**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS)
 
 Cross-region Transit Gateway peering (PLAN 5.2), applied in **network-hub**, once per region. One region is the **requester** (creates the peering attachment), the other is the **accepter** (accepts it). It is its own module so the two regional transit gateways stay independent: if peering lived inside `network/transit-gateway`, each region's transit gateway would need the other's output, which is a Terragrunt dependency cycle.
 

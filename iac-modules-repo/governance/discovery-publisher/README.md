@@ -1,6 +1,6 @@
 # governance/discovery-publisher
 
-**Status:** 📝 Plan-only (wired into `workloads-live-repo`; not applied to AWS)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS)
 
 Writes the platform **discovery contract** into one account, with the same parameter names in every workload account (`/platform/<env>/<region>/...`), so tenant Terraform reads its own account whatever account the underlying resource lives in (for example a VPC shared from a network hub). Only keys of the contract are accepted; see [`docs/DISCOVERY_CONTRACT.md`](../../../docs/DISCOVERY_CONTRACT.md).
 
