@@ -13,6 +13,9 @@
 #   - email  : the account's root email (plus-addressing works: you+log-archive@...). @example.com is refused by the factory
 #   - monthly_budget_usd : monthly cost budget (USD); alerts at 50/80/100 % actual and 100 % forecast go to the account's email.
 #                  For the management account (the payer) it covers the whole organization, so keep it low.
+#   - alias  : the IAM account alias (set by governance/account-baseline)
+#   - owner  : owning team
+#   - data_classification : public | internal | confidential
 #   - ci     : true = the pipeline plans (and, on main, applies through the account's GitHub Environment) this account's stacks.
 #              An account is only run once it has a live folder and a real (non-placeholder) id, see generate_account_matrix.py
 #   - create : true = the factory manages this account (an account you made by hand must be IMPORTED first);
@@ -24,76 +27,100 @@ locals {
 
   base_accounts = {
     management = {
-      id                 = "000000000000"
-      ou                 = "Root"
-      env                = "global"
-      email              = "aws+management@example.com"
-      create             = false
-      monthly_budget_usd = 50
-      ci                 = false
+      id                  = "000000000000"
+      ou                  = "Root"
+      env                 = "global"
+      email               = "aws+management@example.com"
+      create              = false
+      monthly_budget_usd  = 50
+      ci                  = false
+      alias               = "ok-karthik-management"
+      owner               = "platform-team" # TODO(owner): real owning team
+      data_classification = "internal"      # TODO(owner): confirm (public | internal | confidential)
     }
     log-archive = {
-      id                 = "000000000001"
-      ou                 = "Security"
-      env                = "global"
-      email              = "aws+log-archive@example.com"
-      create             = true
-      monthly_budget_usd = 10
-      ci                 = false
+      id                  = "000000000001"
+      ou                  = "Security"
+      env                 = "global"
+      email               = "aws+log-archive@example.com"
+      create              = true
+      monthly_budget_usd  = 10
+      ci                  = false
+      alias               = "ok-karthik-log-archive"
+      owner               = "platform-team" # TODO(owner): real owning team
+      data_classification = "confidential"  # audit logs
     }
     security-tooling = {
-      id                 = "000000000002"
-      ou                 = "Security"
-      env                = "global"
-      email              = "aws+security@example.com"
-      create             = true
-      monthly_budget_usd = 20
-      ci                 = false
+      id                  = "000000000002"
+      ou                  = "Security"
+      env                 = "global"
+      email               = "aws+security@example.com"
+      create              = true
+      monthly_budget_usd  = 20
+      ci                  = false
+      alias               = "ok-karthik-security-tooling"
+      owner               = "platform-team" # TODO(owner): real owning team
+      data_classification = "confidential"  # TODO(owner): confirm (public | internal | confidential)
     }
     network-hub = {
-      id                 = "000000000003"
-      ou                 = "Infrastructure"
-      env                = "global"
-      email              = "aws+network@example.com"
-      create             = true
-      monthly_budget_usd = 50
-      ci                 = false
+      id                  = "000000000003"
+      ou                  = "Infrastructure"
+      env                 = "global"
+      email               = "aws+network@example.com"
+      create              = true
+      monthly_budget_usd  = 50
+      ci                  = false
+      alias               = "ok-karthik-network-hub"
+      owner               = "platform-team" # TODO(owner): real owning team
+      data_classification = "internal"      # network infrastructure, not application data
     }
     shared-services = {
-      id                 = "000000000004"
-      ou                 = "Infrastructure"
-      env                = "global"
-      email              = "aws+shared@example.com"
-      create             = true
-      monthly_budget_usd = 30
-      ci                 = false
+      id                  = "000000000004"
+      ou                  = "Infrastructure"
+      env                 = "global"
+      email               = "aws+shared@example.com"
+      create              = true
+      monthly_budget_usd  = 30
+      ci                  = false
+      alias               = "ok-karthik-shared-services"
+      owner               = "platform-team" # TODO(owner): real owning team
+      data_classification = "internal"      # shared network infrastructure, not application data
     }
     observability = {
-      id                 = "000000000007"
-      ou                 = "Infrastructure"
-      env                = "global"
-      email              = "aws+observability@example.com"
-      create             = true
-      monthly_budget_usd = 30
-      ci                 = false
+      id                  = "000000000007"
+      ou                  = "Infrastructure"
+      env                 = "global"
+      email               = "aws+observability@example.com"
+      create              = true
+      monthly_budget_usd  = 30
+      ci                  = false
+      alias               = "ok-karthik-observability"
+      owner               = "platform-team" # TODO(owner): real owning team
+      data_classification = "internal"      # metrics and logs of the platform (may contain personal data: review before widening access)
     }
     workloads-dev = {
-      id                 = "000000000005"
-      ou                 = "NonProd"
-      env                = "dev"
-      email              = "aws+workloads-dev@example.com"
-      create             = true
-      monthly_budget_usd = 100
-      ci                 = true
+      id                  = "000000000005"
+      ou                  = "NonProd"
+      env                 = "dev"
+      email               = "aws+workloads-dev@example.com"
+      create              = true
+      monthly_budget_usd  = 100
+      ci                  = true
+      alias               = "ok-karthik-workloads-dev"
+      owner               = "platform-team" # TODO(owner): real owning team
+      data_classification = "internal"      # TODO(owner): confirm (public | internal | confidential)
     }
     workloads-prod = {
-      id                 = "000000000006"
-      ou                 = "Prod"
-      env                = "prod"
-      email              = "aws+workloads-prod@example.com"
-      create             = false
-      monthly_budget_usd = 100
-      ci                 = true
+      id                  = "000000000006"
+      ou                  = "Prod"
+      env                 = "prod"
+      email               = "aws+workloads-prod@example.com"
+      create              = false
+      monthly_budget_usd  = 100
+      ci                  = true
+      alias               = "ok-karthik-workloads-prod"
+      owner               = "platform-team" # TODO(owner): real owning team
+      data_classification = "confidential"  # TODO(owner): confirm (public | internal | confidential)
     }
   }
 
