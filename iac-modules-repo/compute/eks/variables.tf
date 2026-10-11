@@ -44,17 +44,21 @@ variable "instance_types" {
 }
 
 variable "ami_type" {
-  description = "AMI type of the node group. The default is the Graviton (ARM) AL2023 image to match the default instance types; an x86 AMI on t4g/m7g/... instances cannot launch."
+  description = "AMI type of the node group. The default is the Graviton (ARM) AL2023 image to match the default instance types; an x86 AMI on t4g/m7g/... instances cannot launch, and a mix of Graviton and x86 types is rejected."
   type        = string
   default     = "AL2023_ARM_64_STANDARD"
 
   validation {
+    # Graviton = a1 or a family ending in g (t4g, m7g, c7gn, ...). All Graviton needs ARM_64, none needs non-ARM, a mix is rejected.
     condition = (
-      anytrue([for t in var.instance_types : can(regex("^[a-z]+[0-9]+g[a-z]*\\.", t))])
+      alltrue([for t in var.instance_types : can(regex("^([a-z]+[0-9]+g[a-z]*|a1)\\.", t))])
       ? strcontains(var.ami_type, "ARM_64")
-      : !strcontains(var.ami_type, "ARM_64")
+      : (
+        !anytrue([for t in var.instance_types : can(regex("^([a-z]+[0-9]+g[a-z]*|a1)\\.", t))])
+        && !strcontains(var.ami_type, "ARM_64")
+      )
     )
-    error_message = "ami_type (${var.ami_type}) does not match instance_types (${join(", ", var.instance_types)}): Graviton types (t4g, m7g, c7gn, ...) need an ARM_64 AMI type, other types need a non-ARM one."
+    error_message = "ami_type (${var.ami_type}) does not match instance_types (${join(", ", var.instance_types)}): all Graviton types (a1, t4g, m7g, c7gn, ...) need an ARM_64 AMI type, all other types need a non-ARM one, and the two cannot be mixed in one node group."
   }
 }
 

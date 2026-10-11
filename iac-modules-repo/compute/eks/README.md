@@ -16,7 +16,7 @@ Reusable EKS module wrapping `terraform-aws-modules/eks/aws`. Encrypts Kubernete
 | `max_size` | Maximum number of nodes | `number` | `3` |
 | `desired_size` | Desired number of nodes | `number` | `1` |
 | `instance_types` | List of instance types for the node group | `list(string)` | `["t4g.small", "t4g.medium"]` |
-| `ami_type` | Node group AMI type. Must match `instance_types`: Graviton types (t4g, m7g, ...) need an ARM_64 type (validated) | `string` | `"AL2023_ARM_64_STANDARD"` |
+| `ami_type` | Node group AMI type. Must match `instance_types`: all Graviton types (a1, t4g, m7g, ...) need an ARM_64 type, all others a non-ARM type, and a mixed list is rejected (validated) | `string` | `"AL2023_ARM_64_STANDARD"` |
 | `scale_schedule` | Optional working-hours schedule (EventBridge Scheduler). Sets desired size only, needs `min_size = 0`. `null` = always on. Scales only the managed node group `spot_nodes`: nodes Karpenter launched keep running, and the Karpenter controller pod loses its node at 0, so on a Karpenter cluster the schedule alone does not switch everything off (known limit). The control plane keeps running | `object` | `null` |
 | `tags` | A map of tags to add to all resources | `map(string)` | `{}` |
 
@@ -66,7 +66,7 @@ Reusable EKS module wrapping `terraform-aws-modules/eks/aws`. Encrypts Kubernete
 
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
-| <a name="input_ami_type"></a> [ami\_type](#input\_ami\_type) | AMI type of the node group. The default is the Graviton (ARM) AL2023 image to match the default instance types; an x86 AMI on t4g/m7g/... instances cannot launch. | `string` | `"AL2023_ARM_64_STANDARD"` | no |
+| <a name="input_ami_type"></a> [ami\_type](#input\_ami\_type) | AMI type of the node group. The default is the Graviton (ARM) AL2023 image to match the default instance types; an x86 AMI on t4g/m7g/... instances cannot launch, and a mix of Graviton and x86 types is rejected. | `string` | `"AL2023_ARM_64_STANDARD"` | no |
 | <a name="input_api_allowed_cidrs"></a> [api\_allowed\_cidrs](#input\_api\_allowed\_cidrs) | CIDR blocks allowed to reach the public EKS API endpoint. Required (non-empty) when cluster\_endpoint\_public\_access is true; ignored otherwise. | `list(string)` | `[]` | no |
 | <a name="input_cluster_addons"></a> [cluster\_addons](#input\_cluster\_addons) | Map of cluster addons to enable | `any` | `{}` | no |
 | <a name="input_cluster_endpoint_public_access"></a> [cluster\_endpoint\_public\_access](#input\_cluster\_endpoint\_public\_access) | Whether the Amazon EKS public API server endpoint is enabled. Defaults to false (private endpoint only). When true, api\_allowed\_cidrs must be non-empty. | `bool` | `false` | no |

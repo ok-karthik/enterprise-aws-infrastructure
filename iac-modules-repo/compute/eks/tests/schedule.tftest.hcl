@@ -93,3 +93,36 @@ run "x86_instances_with_x86_ami_are_accepted" {
     ami_type       = "AL2023_x86_64_STANDARD"
   }
 }
+
+run "mixed_graviton_and_x86_instances_are_rejected" {
+  command = plan
+
+  variables {
+    instance_types = ["t4g.small", "m6i.large"]
+    ami_type       = "AL2023_ARM_64_STANDARD"
+  }
+
+  expect_failures = [var.ami_type]
+}
+
+run "a1_instances_with_x86_ami_are_rejected" {
+  command = plan
+
+  variables {
+    instance_types = ["a1.large"]
+    ami_type       = "AL2023_x86_64_STANDARD"
+  }
+
+  expect_failures = [var.ami_type]
+}
+
+run "a1_mixed_with_x86_instances_is_rejected" {
+  command = plan
+
+  variables {
+    instance_types = ["a1.large", "m6i.large"]
+    ami_type       = "AL2023_x86_64_STANDARD"
+  }
+
+  expect_failures = [var.ami_type]
+}
