@@ -43,6 +43,21 @@ variable "instance_types" {
   default     = ["t4g.small", "t4g.medium"]
 }
 
+variable "ami_type" {
+  description = "AMI type of the node group. The default is the Graviton (ARM) AL2023 image to match the default instance types; an x86 AMI on t4g/m7g/... instances cannot launch."
+  type        = string
+  default     = "AL2023_ARM_64_STANDARD"
+
+  validation {
+    condition = (
+      anytrue([for t in var.instance_types : can(regex("^[a-z]+[0-9]+g[a-z]*\\.", t))])
+      ? strcontains(var.ami_type, "ARM_64")
+      : !strcontains(var.ami_type, "ARM_64")
+    )
+    error_message = "ami_type (${var.ami_type}) does not match instance_types (${join(", ", var.instance_types)}): Graviton types (t4g, m7g, c7gn, ...) need an ARM_64 AMI type, other types need a non-ARM one."
+  }
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)
@@ -81,5 +96,21 @@ variable "api_allowed_cidrs" {
   validation {
     condition     = !var.cluster_endpoint_public_access || length(var.api_allowed_cidrs) > 0
     error_message = "cluster_endpoint_public_access is true but api_allowed_cidrs is empty. Provide explicit CIDRs (never fall back to 0.0.0.0/0) or set cluster_endpoint_public_access = false."
+  }
+}
+
+variable "scale_schedule" {
+  description = "Optional working-hours schedule for the node group (dev). Sets DESIRED size only (upstream ignores desired_size drift), so min_size must be 0. null = always on. Scales only the managed node group, not nodes Karpenter launched."
+  type = object({
+    timezone   = optional(string, "Europe/Berlin")
+    down_cron  = optional(string, "cron(0 19 ? * MON-FRI *)")
+    up_cron    = optional(string, "cron(0 7 ? * MON-FRI *)")
+    up_desired = optional(number, 1)
+  })
+  default = null
+
+  validation {
+    condition     = var.scale_schedule == null || var.min_size == 0
+    error_message = "scale_schedule needs min_size = 0, or the scale-down can't go below min."
   }
 }

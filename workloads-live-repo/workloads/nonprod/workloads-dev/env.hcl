@@ -3,8 +3,9 @@ locals {
   cluster_name = "main-eks-dev"
 
   # --- COST OPTIMIZATION: Active Dev ---
-  min_size           = 1
+  min_size           = 0 # 0 so the night schedule can scale to zero (PLAN 9.5)
   desired_size       = 1
+  scale_schedule     = {} # defaults: weekdays 07:00-19:00 Europe/Berlin
   enable_nat_gateway = true
   single_nat_gateway = true # one shared NAT is fine for dev; an AZ outage only affects dev egress
 

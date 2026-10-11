@@ -47,3 +47,8 @@ output "karpenter_queue_arn" {
   description = "The ARN of the SQS interruption queue for Karpenter"
   value       = try(module.karpenter[0].queue_arn, null)
 }
+
+output "scale_schedule_names" {
+  description = "Names of the working-hours schedules (empty when scale_schedule is null)"
+  value       = concat(aws_scheduler_schedule.down[*].name, aws_scheduler_schedule.up[*].name)
+}
