@@ -309,7 +309,10 @@ def handover_message(module: str, state: dict) -> str:
 
 
 def run_verify(module: str) -> tuple[bool, str]:
-    cmd = [sys.executable, str(REPO_ROOT / "workloads-live-repo" / "scripts" / "verify_module.py"), module]
+    script = REPO_ROOT / "scripts" / "verify_module.py"
+    if not script.exists():  # before the move to scripts/ (simple-terragrunt plan)
+        script = REPO_ROOT / "workloads-live-repo" / "scripts" / "verify_module.py"
+    cmd = [sys.executable, str(script), module]
     env = {**os.environ, "TF_PLUGIN_CACHE_DIR": os.environ.get("TF_PLUGIN_CACHE_DIR", str(Path.home() / ".terraform.d" / "plugin-cache"))}
     Path(env["TF_PLUGIN_CACHE_DIR"]).mkdir(parents=True, exist_ok=True)
     p = subprocess.run(cmd, cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=900)
