@@ -257,6 +257,38 @@ jobs:
           cat /tmp/infracost-table.txt >> /tmp/pr-comment.md
           echo "\`\`\`" >> /tmp/pr-comment.md
 
+      - name: "Combine Infracost JSON"
+        run: infracost output --path "cost-*.json" --format json --out-file /tmp/infracost-combined.json
+
+      - name: "Read PR labels (live)"
+        id: labels
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            // Read live: a label added after the run started is not in github.event (re-runs reuse the old payload).
+            const { data } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            core.setOutput('names', data.map(l => l.name).join(','));
+
+      - name: "Cost gate"
+        id: gate
+        if: github.event_name == 'pull_request'
+        continue-on-error: true # so the PR comment below is still posted; "Enforce cost gate" fails the job at the end
+        env:
+          COST_GATE_MAX_USD: '100'
+          COST_GATE_MIN_USD: '10'
+          COST_GATE_MAX_PCT: '20'
+          PR_LABELS: ${{ steps.labels.outputs.names }}
+        run: |
+          python3 workloads-live-repo/scripts/cost_gate.py /tmp/infracost-combined.json \
+            --labels "$PR_LABELS" \
+            --max-usd "$COST_GATE_MAX_USD" --min-usd "$COST_GATE_MIN_USD" --max-pct "$COST_GATE_MAX_PCT" \
+            --markdown-out /tmp/pr-comment.md
+
       - name: "Post PR Comment"
         if: github.event.pull_request.number != null || github.event_name == 'pull_request'
         uses: actions/github-script@v9
@@ -287,3 +319,9 @@ jobs:
                 body: body
               });
             }
+
+      - name: "Enforce cost gate"
+        if: github.event_name == 'pull_request' && steps.gate.outcome == 'failure'
+        run: |
+          echo "::error title=Cost gate::Monthly cost rise is over the threshold. Add the 'cost-approved' label and re-run this job."
+          exit 1

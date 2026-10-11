@@ -1,0 +1,31 @@
+{
+  "totalMonthlyCost": null,
+  "pastTotalMonthlyCost": null,
+  "diffTotalMonthlyCost": null,
+  "projects": [
+    {
+      "name": "dev/network/vpc",
+      "breakdown": {
+        "totalMonthlyCost": null
+      },
+      "pastBreakdown": {
+        "totalMonthlyCost": null
+      },
+      "diff": {
+        "totalMonthlyCost": null
+      }
+    },
+    {
+      "name": "dev/compute/eks",
+      "breakdown": {
+        "totalMonthlyCost": null
+      },
+      "pastBreakdown": {
+        "totalMonthlyCost": null
+      },
+      "diff": {
+        "totalMonthlyCost": null
+      }
+    }
+  ]
+}
