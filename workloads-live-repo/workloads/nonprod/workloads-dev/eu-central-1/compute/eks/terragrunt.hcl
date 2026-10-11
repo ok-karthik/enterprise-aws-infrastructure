@@ -7,9 +7,7 @@ include "envcommon" {
   expose = true
 }
 
-# Override scaling or types if needed for dev
+# min_size and desired_size come from env.hcl (min 0, desired 1) so the night schedule is valid.
 inputs = {
-  min_size     = 1
-  max_size     = 2
-  desired_size = 1
+  max_size = 2
 }

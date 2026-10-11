@@ -240,6 +240,12 @@
       "package-name": "guardrail-signals",
       "component": "guardrail-signals",
       "tag-separator": "-"
+    },
+    "iac-modules-repo/governance/cost-janitor": {
+      "release-type": "terraform-module",
+      "package-name": "cost-janitor",
+      "component": "cost-janitor",
+      "tag-separator": "-"
     }
   }
 }

@@ -1,0 +1,96 @@
+name: 'FinOps Weekly Report'
+
+# Every Monday: top cost movers, untagged share and savings recommendations as one GitHub Issue per ISO week
+# (PLAN 9.5). Read-only: the plan role has ReadOnlyAccess, which covers Cost Explorer and Cost Optimization Hub.
+on:
+  schedule:
+    - cron: '0 7 * * 1' # Mondays 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+jobs:
+  report:
+    name: '💰 Weekly cost report'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    container:
+      image: ghcr.io/ok-karthik/infrastructure-toolchain:latest
+      options: --user root
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: "Git Checkout"
+        uses: actions/checkout@v6
+
+      - name: "Find the management account"
+        id: mgmt
+        env:
+          # Real account ids (not secret) from the ACCOUNTS_LOCAL_HCL repository variable; empty on forks.
+          ACCOUNTS_LOCAL_HCL: ${{ vars.ACCOUNTS_LOCAL_HCL }}
+        run: |
+          if python3 workloads-live-repo/scripts/generate_account_matrix.py --account management --github-output; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=FinOps report skipped::management is not in the CI matrix yet (placeholder id or ci = false)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Setup Platform"
+        if: steps.mgmt.outputs.skip == 'false'
+        uses: ./.github/actions/setup-platform
+        with:
+          aws_region: us-east-1
+          aws_role_arn: ${{ steps.mgmt.outputs.plan_role_arn }}
+
+      - name: "Check boto3"
+        if: steps.mgmt.outputs.skip == 'false'
+        run: python3 -c "import boto3" || pip3 install --break-system-packages boto3
+
+      - name: "Build report"
+        if: steps.mgmt.outputs.skip == 'false'
+        run: python3 workloads-live-repo/scripts/cost_report.py --out /tmp/cost-report.md
+
+      - name: "Open or update the weekly issue"
+        if: steps.mgmt.outputs.skip == 'false'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/cost-report.md', 'utf8');
+
+            // ISO year and week number of the data (the 7 days ending yesterday), not of the run date: on a Monday
+            // the run date is already the next ISO week.
+            const now = new Date();
+            const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const isoYear = d.getUTCFullYear();
+            const week = Math.ceil((((d - new Date(Date.UTC(isoYear, 0, 1))) / 86400000) + 1) / 7);
+            const title = `💰 Weekly cost report: ${isoYear}-W${String(week).padStart(2, '0')}`;
+
+            const { owner, repo } = context.repo;
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', labels: 'finops-weekly', per_page: 100,
+            });
+
+            // Re-run safety: update this week's issue instead of creating a second one.
+            const existing = open.find(i => i.title === title);
+            if (existing) {
+              await github.rest.issues.update({ owner, repo, issue_number: existing.number, body });
+              return;
+            }
+
+            const created = await github.rest.issues.create({
+              owner, repo, title, body, labels: ['finops-weekly'],
+            });
+            for (const old of open) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: old.number, body: `Superseded by #${created.data.number}`,
+              });
+              await github.rest.issues.update({ owner, repo, issue_number: old.number, state: 'closed' });
+            }

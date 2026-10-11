@@ -1,0 +1,31 @@
+{
+  "totalMonthlyCost": "55.00",
+  "pastTotalMonthlyCost": "40.00",
+  "diffTotalMonthlyCost": "15.00",
+  "projects": [
+    {
+      "name": "dev/network/vpc",
+      "breakdown": {
+        "totalMonthlyCost": "12.00"
+      },
+      "pastBreakdown": {
+        "totalMonthlyCost": "10.00"
+      },
+      "diff": {
+        "totalMonthlyCost": "2.00"
+      }
+    },
+    {
+      "name": "dev/compute/eks",
+      "breakdown": {
+        "totalMonthlyCost": "43.00"
+      },
+      "pastBreakdown": {
+        "totalMonthlyCost": "30.00"
+      },
+      "diff": {
+        "totalMonthlyCost": "13.00"
+      }
+    }
+  ]
+}

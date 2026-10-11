@@ -42,6 +42,9 @@ inputs = {
   max_size     = 3
   desired_size = local.env_vars.locals.desired_size
 
+  # Optional night/weekend scale-down (PLAN 9.5). Unset in env.hcl = always on.
+  scale_schedule = try(local.env_vars.locals.scale_schedule, null)
+
   # --- SECURITY: API endpoint is private unless env.hcl lists allowed CIDRs ---
   # Fail closed: an empty api_allowed_cidrs list keeps the public endpoint disabled.
   cluster_endpoint_public_access = length(local.env_vars.locals.api_allowed_cidrs) > 0

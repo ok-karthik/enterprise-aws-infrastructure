@@ -63,3 +63,15 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "enable_cost_optimization_hub" {
+  description = "Enroll the organization in Cost Optimization Hub (free, org-wide through include_member_accounts). Its API is us-east-1 only; it collects savings recommendations for the weekly cost report."
+  type        = bool
+  default     = true
+}
+
+variable "enable_compute_optimizer" {
+  description = "Enroll the organization in AWS Compute Optimizer (free, org-wide through include_member_accounts). Cost Optimization Hub reads its rightsizing data from here."
+  type        = bool
+  default     = true
+}

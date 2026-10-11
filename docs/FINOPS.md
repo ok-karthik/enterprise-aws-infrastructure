@@ -4,17 +4,69 @@
 
 This platform is designed with "Cost-Aware Infrastructure" principles, ensuring transparency and efficiency in cloud spending.
 
+## 🤖 Cost automation (PLAN 9.5)
+
+Cost used to be only visible. These pieces make it act. **None of them is applied yet.**
+
+| Stage | What runs | Where in the repo | Status |
+|---|---|---|---|
+| PR | Cost gate: marks the PR's cost-analysis check red on a cost rise over the threshold unless labelled `cost-approved` | `workloads-live-repo/scripts/cost_gate.py`, job `cost-analysis` in `.github/workflows/reusable-terragrunt.yml` | built, not applied |
+| Weekly | Cost report: top movers, untagged share and savings recommendations as a GitHub Issue | `workloads-live-repo/scripts/cost_report.py`, `.github/workflows/finops-weekly.yml`; recommendations come from `governance/billing` (Cost Optimization Hub, Compute Optimizer) | built, not applied |
+| Nightly | Dev EKS nodes scale to zero outside working hours | `scale_schedule` in `iac-modules-repo/compute/eks`, set in the dev `env.hcl` | built, not applied |
+| Weekly | Cost janitor: orphaned EBS volumes, snapshots, Elastic IPs and log groups without retention (dev) | `iac-modules-repo/governance/cost-janitor` | built, not applied |
+
+### Cost gate
+
+The job runs per account, on pull requests only (never on push to `main`). It marks the PR's cost-analysis check red; it blocks merging only once that check is required in branch protection (main is not protected yet). That happens when the monthly rise is at least
+**$100**, or at least **$10 and at least 20 %** of the past cost (the $10 floor stops "+$1 on a $4 sandbox" from failing every PR).
+A decrease never fails; a new stack (past cost 0) fails only by the $100 rule. The thresholds are the
+`COST_GATE_*` env vars in the job. To override, add the `cost-approved` label to the PR **and re-run the failed job**: a new
+label does not start CI, and the label is read live from the API at run time. The PR comment is posted before the job fails,
+and it carries the verdict. The first real Infracost JSON is seen on the first CI run; the parser accepts strings, numbers and null.
+
+### Night schedule (dev)
+
+Weekdays 07:00-19:00 Europe/Berlin is 60 of 168 hours, so night and weekend shutdown removes **64 %** of node hours. The EKS control
+plane (about $0.10/h, roughly $73/month) keeps running and is not reduced. The schedule (EventBridge Scheduler calling
+`eks:UpdateNodegroupConfig`) changes **desired size only**: the upstream node group ignores desired-size drift, so Terraform
+shows no diff, and that is why dev `min_size` is now 0.
+
+Known limit: it only scales the managed node group `spot_nodes`. Nodes Karpenter launched keep running, and the Karpenter
+controller pod loses its node when the group is at 0, so on a cluster with Karpenter enabled the schedule alone does not
+switch everything off. Nothing is built for that here.
+
+### Cost janitor
+
+Report-only first (`dry_run = true`): it logs one JSON summary per week to its CloudWatch log group. Anything tagged `keep=true`
+is skipped by the code and, in act mode, refused by IAM. To switch to act mode, read at least one weekly summary, tag what you want to
+keep, then set `dry_run = false` in the dev leaf and apply. Dev only, never prod.
+It runs Mondays 09:00 Europe/Berlin (after the 07:00 node scale-up) and skips EBS CSI volumes (tags `ebs.csi.aws.com/cluster`, `kubernetes.io/created-for/*`), which sit `available` while the night schedule has nodes at 0; they are listed under `skipped_csi`.
+
+### Savings Plans rule (design only) 🔴 not applied
+
+Buy a 1-year **Compute** Savings Plan for about 70-80 % of the steady baseline, after 3 months of data, using Cost Explorer's
+recommendation. Never cover dev or spiky usage. Review coverage and utilisation monthly.
+
+### Measured (the owner fills this after applying)
+
+| Item | Value |
+|---|---|
+| Cost gate, first real result | not yet |
+| First weekly report total | not yet |
+| Dev node hours before / after the schedule | not yet |
+| Janitor first-run estimate | not yet |
+
 ## 📊 Cost Visibility (Infracost)
 Every Pull Request triggers an automated cost breakdown using **Infracost**.
 - **Visual Gating**: Cost changes are posted as comments in the PR.
-- **Threshold Alerts**: Any change increasing monthly costs by more than 20% requires explicit Senior Engineer review.
+- **Threshold Alerts**: PRs whose monthly cost rises over the threshold get a red cost-analysis check (blocking only once it is required in branch protection) unless labelled `cost-approved` (see the cost gate above).
 
 ## 💸 Saving Strategies
 
 ### 1. Spot Instance Orchestration
 In the `dev` environment, we leverage **AWS Spot Instances** for EKS Managed Node Groups.
 - **Impact**: Up to 90% cost reduction compared to On-Demand.
-- **Graceful Termination**: Handled via the AWS Node Termination Handler.
+- **Graceful Termination**: Spot interruption events go to Karpenter's SQS queue (`enable_spot_termination`); the Karpenter controller is installed from internal-developer-platform (ArgoCD, ADR 0013 there); this repo builds its AWS half.
 
 ### 2. Environment Life-cycling
 Non-production environments follow a surgical lifecycle:
@@ -22,8 +74,7 @@ Non-production environments follow a surgical lifecycle:
 - **Resource Sizing**: `dev` environments use the smallest viable Nitro instances (e.g., `t3.medium`) compared to high-availability `prod` types.
 
 ### 3. Storage Optimization
-- **S3 Intelligent-Tiering**: Automatically enabled for data buckets with unknown access patterns.
-- **EBS Lifecycle**: Snapshots older than 30 days are automatically transitioned to Glacier or deleted (except for `prod`).
+- Log buckets in `security/log-archive` move to Glacier after `glacier_transition_days` and expire after their retention (Object Lock COMPLIANCE). Old EBS snapshots in dev are reported by the cost janitor (PLAN 9.5).
 
 ## 🌐 Egress: local NAT vs. central inspection (PLAN 5.3)
 
@@ -122,5 +173,4 @@ Infracost or the AWS pricing calculator before applying** and put the real numbe
 it on for prod only, and write the number next to the RTO you bought with it.
 
 ## 🚀 Future Roadmap
-- **Automated "Shutdown at Night"**: Implementation of instance scheduling for `dev` environments.
 - **Karpenter Integration**: Replacing Cluster Autoscaler with Karpenter for more aggressive rightsizing of Kubernetes nodes.

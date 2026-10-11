@@ -129,3 +129,41 @@ run "bad_account_id_is_rejected" {
 
   expect_failures = [var.anomaly_ou_accounts]
 }
+
+run "cost_optimization_hub_and_compute_optimizer_are_enrolled_org_wide_by_default" {
+  command = plan
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  assert {
+    condition     = length(aws_computeoptimizer_enrollment_status.this) == 1 && aws_computeoptimizer_enrollment_status.this[0].include_member_accounts == true
+    error_message = "Compute Optimizer is enrolled for the whole organization by default."
+  }
+
+  assert {
+    condition     = length(aws_costoptimizationhub_enrollment_status.this) == 1 && aws_costoptimizationhub_enrollment_status.this[0].include_member_accounts == true
+    error_message = "Cost Optimization Hub is enrolled for the whole organization by default."
+  }
+}
+
+run "enrollment_can_be_switched_off" {
+  command = plan
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  variables {
+    enable_cost_optimization_hub = false
+    enable_compute_optimizer     = false
+  }
+
+  assert {
+    condition     = length(aws_computeoptimizer_enrollment_status.this) == 0 && length(aws_costoptimizationhub_enrollment_status.this) == 0
+    error_message = "Both enrollments disappear when the flags are false."
+  }
+}
