@@ -63,8 +63,10 @@ jobs:
             const fs = require('fs');
             const body = fs.readFileSync('/tmp/cost-report.md', 'utf8');
 
-            // ISO year and week number
-            const d = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
+            // ISO year and week number of the data (the 7 days ending yesterday), not of the run date: on a Monday
+            // the run date is already the next ISO week.
+            const now = new Date();
+            const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
             const dayNum = d.getUTCDay() || 7;
             d.setUTCDate(d.getUTCDate() + 4 - dayNum);
             const isoYear = d.getUTCFullYear();
