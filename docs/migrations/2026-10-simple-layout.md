@@ -9,6 +9,7 @@
 - Every stack is one `terragrunt.hcl` (module source, dependencies, all inputs) that includes only `root.hcl`. `_envcommon/`, `account.hcl`, `env.hcl` and `region.hcl` are gone; the registry gained `alias`, `owner` and `data_classification` per account.
 - Module sources are always the local `iac-modules-repo` folder: `module_versions`, `IAC_MODULES_LOCAL` and Renovate's module-pin rules are gone. Release tags stay, for outside consumers.
 - The state key is now the path relative to `iac-live-repo/root.hcl` (`<account>/<region>/<stack>`). Only the five applied stacks need a state move (below); the `Service` tag changes in place.
+- Bug fix, never applied: `firewall-manager`'s `admin_account_id` now comes from the registry (the real security-tooling account id) instead of the old `account.hcl` placeholder `000000000002`.
 
 ## Old to new paths (all 46 stacks)
 
@@ -66,6 +67,8 @@
 **The new keys are the same as in the two-repo version of this plan.** The state key is the path relative to `iac-live-repo/root.hcl`,
 so `management/_global/organization` and so on. Only the five already-applied stacks need a move. Everything else has never been applied
 and simply starts at its new key.
+
+**Heads-up:** applying the `Service` tag change on `bootstrap-stacksets` will likely trigger an UpdateStackSet operation across all member accounts' bootstrap stacks (tags propagate to the CI roles and state buckets). That is expected and harmless; the plan still shows 1 to change, tags only.
 
 **Move them, don't recreate them:**
 - `organization`: an organization with member accounts can't be deleted and recreated.

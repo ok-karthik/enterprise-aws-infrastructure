@@ -18,6 +18,7 @@ SHARED_PREFIXES = (
     "policy-library-repo/",
     ".github/",
     "iac-live-repo/_config/",
+    "iac-live-repo/_bootstrap/",
     "scripts/",
 )
 SHARED_FILES = ("iac-live-repo/root.hcl", ".checkov.yaml", ".tflint.hcl")

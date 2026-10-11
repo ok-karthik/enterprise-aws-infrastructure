@@ -19,6 +19,7 @@ class PlanScope(unittest.TestCase):
             "iac-modules-repo/network/vpc/main.tf",
             "iac-live-repo/_config/regions.hcl",
             "iac-live-repo/root.hcl",
+            "iac-live-repo/_bootstrap/cloudformation/account-bootstrap.yaml",
             "scripts/generate_account_matrix.py",
             ".github/workflows/terragrunt.yml",
             "policy-library-repo/terraform/require_tags.rego",

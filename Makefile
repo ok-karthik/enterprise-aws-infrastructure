@@ -51,6 +51,7 @@ verify-module: ## Check ONE module with the CI tools, no AWS credentials: make v
 
 .PHONY: plan
 plan: ## Plan one account: make plan ACCOUNT=workloads-dev
+	@test -n "$(ACCOUNT)" || { echo "usage: make plan ACCOUNT=workloads-dev"; exit 2; }
 	cd iac-live-repo/$(ACCOUNT) && terragrunt run --all plan --non-interactive --log-format bare
 
 .PHONY: test

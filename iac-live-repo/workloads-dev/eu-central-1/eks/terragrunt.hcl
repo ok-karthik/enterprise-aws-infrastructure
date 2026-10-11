@@ -8,7 +8,6 @@ terraform {
   source = "${get_repo_root()}/iac-modules-repo/compute/eks"
 }
 
-# min_size is 0 and desired_size 1 so the night schedule is valid.
 dependency "vpc" {
   config_path = "../vpc"
 
@@ -34,6 +33,7 @@ inputs = {
   subnet_ids = dependency.vpc.outputs.private_subnets
 
   # --- COST OPTIMIZATION: scaling ---
+  # min_size is 0 and desired_size 1 so the night schedule is valid.
   min_size     = 0 # 0 so the night schedule can scale to zero (PLAN 9.5)
   max_size     = 2
   desired_size = 1

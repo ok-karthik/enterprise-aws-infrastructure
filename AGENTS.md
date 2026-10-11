@@ -155,6 +155,8 @@ A stack is **one `terragrunt.hcl`**. Nothing is merged from other files except `
 
 The folder layout is load-bearing: the path drives the account, the region, the state key and the `Service` tag. `env` comes from the registry (`dev`/`staging`/`prod`/`global`), not from the folder name, and regions must be allowed for the account's OU in `_config/regions.hcl`. There is no `assume_role`: CI uses OIDC directly into the target account.
 
+The catalog golden-path templates (`iac-agents-repo/catalog/templates/`) intentionally use pinned `tfr://` registry modules (third-party, versioned), while platform stacks use local `iac-modules-repo` sources.
+
 ---
 
 ## 5. Governance Gates (What Will Block a PR)

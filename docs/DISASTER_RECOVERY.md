@@ -99,7 +99,7 @@ incident lead has agreed (a health check alarm alone is not enough).
    `aws rds remove-from-global-cluster --global-cluster-identifier <id> --db-cluster-identifier <secondary arn>`
    (the secondary becomes a standalone writer). Planned switch: `aws rds failover-global-cluster`.
    S3: the replica bucket is already readable. AWS Backup: restore from the copy in the secondary vault.
-2. **Compute.** Raise `min_size` / `desired_size` in `workloads-prod/eu-west-1/compute/eks/terragrunt.hcl`,
+2. **Compute.** Raise `min_size` / `desired_size` in `iac-live-repo/workloads-prod/eu-west-1/eks/terragrunt.hcl`,
    merge the PR and let the pipeline apply it (a human approves the prod Environment). Deploy workloads.
 3. **Traffic.** `network/route53-failover` moves DNS by itself once the primary health check fails (about 90 s
    plus caching). If it has not, or the alarm was a false positive, do it by hand from the Route 53 console.
