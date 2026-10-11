@@ -155,7 +155,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 - **Checkov** — the only Checkov settings file is `.checkov.yaml`; always run it through `./workloads-live-repo/scripts/run-checkov.sh` (or `make checkov`), which is what CI and the pre-commit hook run, so the result matches. It blocks (no `soft_fail`). Accept a finding with an inline `#checkov:skip=<ID>: <reason>` on that resource; the repo-wide `skip-check` list is only for checks that do not apply to the platform. Plan-stage Checkov runs on every `tfplan.json`. Checkov IAM checks read only Allow statements, so a Deny does not clear a finding. The Checkov version is pinned in `.github/docker/Dockerfile` (`CHECKOV_VERSION`, Renovate-managed).
 - **Trivy** — scans the toolbox image only (it no longer scans Terraform, PLAN 8.9). `publish-toolchain.yml` scans the toolbox image (`trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1`) before pushing it; `make image-scan` runs it locally.
 - Gate ownership (8.9): tflint = written correctly, Checkov = secure, conftest/Rego = this org's rules, Trivy = the toolbox image.
-- **Infracost** — posts a per-module cost breakdown PR comment (and blocks agent changes exceeding configured budget thresholds).
+- **Infracost** — posts a per-module cost breakdown PR comment, and fails a PR whose monthly cost rises ≥ $100, or ≥ $10 and ≥ 20 %, unless it has the `cost-approved` label.
 
 ---
 

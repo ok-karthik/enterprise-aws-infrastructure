@@ -7,14 +7,14 @@ This platform is designed with "Cost-Aware Infrastructure" principles, ensuring 
 ## 📊 Cost Visibility (Infracost)
 Every Pull Request triggers an automated cost breakdown using **Infracost**.
 - **Visual Gating**: Cost changes are posted as comments in the PR.
-- **Threshold Alerts**: Any change increasing monthly costs by more than 20% requires explicit Senior Engineer review.
+- **Threshold Alerts**: *Planned in PLAN 9.5 Part 2*: PRs above the threshold fail unless labelled `cost-approved`.
 
 ## 💸 Saving Strategies
 
 ### 1. Spot Instance Orchestration
 In the `dev` environment, we leverage **AWS Spot Instances** for EKS Managed Node Groups.
 - **Impact**: Up to 90% cost reduction compared to On-Demand.
-- **Graceful Termination**: Handled via the AWS Node Termination Handler.
+- **Graceful Termination**: Spot interruption events go to Karpenter's SQS queue (`enable_spot_termination`); the Karpenter controller is installed from internal-developer-platform (ArgoCD, ADR 0013 there); this repo builds its AWS half.
 
 ### 2. Environment Life-cycling
 Non-production environments follow a surgical lifecycle:
@@ -22,8 +22,7 @@ Non-production environments follow a surgical lifecycle:
 - **Resource Sizing**: `dev` environments use the smallest viable Nitro instances (e.g., `t3.medium`) compared to high-availability `prod` types.
 
 ### 3. Storage Optimization
-- **S3 Intelligent-Tiering**: Automatically enabled for data buckets with unknown access patterns.
-- **EBS Lifecycle**: Snapshots older than 30 days are automatically transitioned to Glacier or deleted (except for `prod`).
+- Log buckets in `security/log-archive` move to Glacier after `glacier_transition_days` and expire after their retention (Object Lock COMPLIANCE). Old EBS snapshots in dev are reported by the cost janitor (PLAN 9.5).
 
 ## 🌐 Egress: local NAT vs. central inspection (PLAN 5.3)
 
@@ -122,5 +121,4 @@ Infracost or the AWS pricing calculator before applying** and put the real numbe
 it on for prod only, and write the number next to the RTO you bought with it.
 
 ## 🚀 Future Roadmap
-- **Automated "Shutdown at Night"**: Implementation of instance scheduling for `dev` environments.
 - **Karpenter Integration**: Replacing Cluster Autoscaler with Karpenter for more aggressive rightsizing of Kubernetes nodes.
