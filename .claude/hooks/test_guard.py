@@ -114,7 +114,7 @@ class AllowedCommands(unittest.TestCase):
             "git commit -m 'docs: explain why we never run terraform apply by hand'",
             "echo terraform apply is forbidden",
             "grep -rn 'terraform apply' docs",
-            "python3 workloads-live-repo/scripts/verify_module.py storage/s3",
+            "python3 scripts/verify_module.py storage/s3",
             "ls",
             "",
             'git commit -m "feat: make apply safer"',
