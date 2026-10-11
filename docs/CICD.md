@@ -17,7 +17,7 @@ All jobs run inside a purpose-built toolchain container (`ghcr.io/ok-karthik/inf
 | conftest / Rego | This organization's own rules | `make test` | plan stage |
 | Trivy | Toolbox image has no known fixable CVEs | `make image-scan` | `publish-toolchain.yml`, before the push |
 
-4. **Cost** — Infracost posts a per-module breakdown as a PR comment (`tf-summarize` adds a change summary). The **cost gate** (`workloads-live-repo/scripts/cost_gate.py`, pull requests only) then fails the job when the monthly cost rises by at least $100, or by at least $10 and 20 %, unless the PR has the `cost-approved` label (read live; add it, then re-run the job). See `docs/FINOPS.md`.
+4. **Cost** — Infracost posts a per-module breakdown as a PR comment (`tf-summarize` adds a change summary). The **cost gate** (`workloads-live-repo/scripts/cost_gate.py`, pull requests only) then marks the PR's cost-analysis check red (it blocks merging only once that check is required in branch protection; main is not protected yet) when the monthly cost rises by at least $100, or by at least $10 and 20 %, unless the PR has the `cost-approved` label (read live; add it, then re-run the job). See `docs/FINOPS.md`.
 5. **Apply** — on push to `main`, `apply-dev` runs, then `apply-prod`, which is gated by a protected GitHub **Environment** requiring manual approval.
 
 A change can pass `terraform validate` and still fail the governance gates — the gates run against the *planned* resources, not just the HCL.

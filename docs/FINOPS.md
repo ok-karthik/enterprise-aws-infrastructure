@@ -10,14 +10,14 @@ Cost used to be only visible. These pieces make it act. **None of them is applie
 
 | Stage | What runs | Where in the repo | Status |
 |---|---|---|---|
-| PR | Cost gate: fails the PR on a cost rise over the threshold unless labelled `cost-approved` | `workloads-live-repo/scripts/cost_gate.py`, job `cost-analysis` in `.github/workflows/reusable-terragrunt.yml` | built, not applied |
+| PR | Cost gate: marks the PR's cost-analysis check red on a cost rise over the threshold unless labelled `cost-approved` | `workloads-live-repo/scripts/cost_gate.py`, job `cost-analysis` in `.github/workflows/reusable-terragrunt.yml` | built, not applied |
 | Weekly | Cost report: top movers, untagged share and savings recommendations as a GitHub Issue | `workloads-live-repo/scripts/cost_report.py`, `.github/workflows/finops-weekly.yml`; recommendations come from `governance/billing` (Cost Optimization Hub, Compute Optimizer) | built, not applied |
 | Nightly | Dev EKS nodes scale to zero outside working hours | `scale_schedule` in `iac-modules-repo/compute/eks`, set in the dev `env.hcl` | built, not applied |
 | Weekly | Cost janitor: orphaned EBS volumes, snapshots, Elastic IPs and log groups without retention (dev) | `iac-modules-repo/governance/cost-janitor` | built, not applied |
 
 ### Cost gate
 
-The job runs per account, on pull requests only (never on push to `main`). It fails when the monthly rise is at least
+The job runs per account, on pull requests only (never on push to `main`). It marks the PR's cost-analysis check red; it blocks merging only once that check is required in branch protection (main is not protected yet). That happens when the monthly rise is at least
 **$100**, or at least **$10 and at least 20 %** of the past cost (the $10 floor stops "+$1 on a $4 sandbox" from failing every PR).
 A decrease never fails; a new stack (past cost 0) fails only by the $100 rule. The thresholds are the
 `COST_GATE_*` env vars in the job. To override, add the `cost-approved` label to the PR **and re-run the failed job**: a new
@@ -59,7 +59,7 @@ recommendation. Never cover dev or spiky usage. Review coverage and utilisation 
 ## 📊 Cost Visibility (Infracost)
 Every Pull Request triggers an automated cost breakdown using **Infracost**.
 - **Visual Gating**: Cost changes are posted as comments in the PR.
-- **Threshold Alerts**: PRs whose monthly cost rises over the threshold fail unless labelled `cost-approved` (see the cost gate above).
+- **Threshold Alerts**: PRs whose monthly cost rises over the threshold get a red cost-analysis check (blocking only once it is required in branch protection) unless labelled `cost-approved` (see the cost gate above).
 
 ## 💸 Saving Strategies
 
