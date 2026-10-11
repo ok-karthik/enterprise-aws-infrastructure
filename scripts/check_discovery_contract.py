@@ -15,7 +15,7 @@ import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTRACT_JSON = REPO_ROOT / "docs" / "discovery-contract.json"
 PUBLISHER_VARS = REPO_ROOT / "iac-modules-repo" / "governance" / "discovery-publisher" / "variables.tf"
 BASELINE_MAIN = REPO_ROOT / "iac-modules-repo" / "governance" / "account-baseline" / "main.tf"

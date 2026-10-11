@@ -2,7 +2,7 @@
 """Check ONE module locally with the same tools CI uses, without AWS credentials (PLAN 11.1).
 
     make verify-module MODULE=storage/s3
-    python3 workloads-live-repo/scripts/verify_module.py storage/s3 [--json] [--root <modules dir>]
+    python3 scripts/verify_module.py storage/s3 [--json] [--root <modules dir>]
 
 Steps, in order (each one is reported, and a step that cannot run is SKIPPED with a reason, never a silent pass):
 
@@ -10,7 +10,7 @@ Steps, in order (each one is reported, and a step that cannot run is SKIPPED wit
   init       terraform init -backend=false
   validate   terraform validate
   tflint     tflint with the repo's .tflint.hcl
-  checkov    workloads-live-repo/scripts/run-checkov.sh -d <module>   (the CI settings, .checkov.yaml)
+  checkov    scripts/run-checkov.sh -d <module>   (the CI settings, .checkov.yaml)
   test       terraform test (the module's mock_provider tests)
   conftest   conftest against policy-library-repo/terraform on a plan JSON of <module>/examples/basic
 
@@ -36,10 +36,10 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MODULES_ROOT = REPO_ROOT / "iac-modules-repo"
 POLICY_DIR = REPO_ROOT / "policy-library-repo" / "terraform"
-RUN_CHECKOV = REPO_ROOT / "workloads-live-repo" / "scripts" / "run-checkov.sh"
+RUN_CHECKOV = REPO_ROOT / "scripts" / "run-checkov.sh"
 TFLINT_CONFIG = REPO_ROOT / ".tflint.hcl"
 FAKE_ENV = {
     # Fake, never valid, and only in the environment of the child processes: not in any file Checkov scans.

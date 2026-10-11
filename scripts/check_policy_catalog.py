@@ -6,7 +6,7 @@ helpers.rego and *_test.rego files are not rules and need no entry.
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 POLICY_DIR = ROOT / "policy-library-repo" / "terraform"
 CATALOG = ROOT / "policy-library-repo" / "POLICIES.md"
 NOT_RULES = {"helpers.rego"}

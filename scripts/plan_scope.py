@@ -4,8 +4,8 @@
   full      plan every unit (push to main, scheduled/manual runs, or a PR that touches shared code)
   affected  plan only units Terragrunt sees as changed since the PR's base branch
 
-Shared code = anything a unit reads from outside its own folder: the modules (IAC_MODULES_LOCAL points the leaves at
-this checkout), _envcommon, root.hcl, the config registry, the policies and the pipeline itself. Terragrunt's
+Shared code = anything a unit reads from outside its own folder: the modules (the stacks point at
+this checkout), root.hcl, the config registry, the scripts, the policies and the pipeline itself. Terragrunt's
 git filter only looks at files inside a unit, so a change to a module would otherwise plan nothing.
 
 Usage: plan_scope.py <event_name> <base_ref>   (prints scope=..., filter=... for $GITHUB_OUTPUT)
@@ -17,11 +17,10 @@ SHARED_PREFIXES = (
     "iac-modules-repo/",
     "policy-library-repo/",
     ".github/",
-    "foundation-live-repo/_config/",
-    "foundation-live-repo/_envcommon/",
-    "workloads-live-repo/_envcommon/",
+    "iac-live-repo/_config/",
+    "scripts/",
 )
-SHARED_FILES = ("foundation-live-repo/root.hcl", "workloads-live-repo/root.hcl", ".checkov.yaml", ".tflint.hcl")
+SHARED_FILES = ("iac-live-repo/root.hcl", ".checkov.yaml", ".tflint.hcl")
 
 
 def decide(event: str, changed: list[str]) -> str:

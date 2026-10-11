@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generate the CI account matrix from the account registry (PLAN 2.6).
 
-Reads foundation-live-repo/_config/accounts.hcl and emits one matrix entry per account that
+Reads iac-live-repo/_config/accounts.hcl and emits one matrix entry per account that
   - has ci = true in the registry,
-  - has a live folder (workloads-live-repo/<name> or foundation-live-repo/<name>), and
+  - has a live folder (iac-live-repo/<name>), and
   - has a real account id (not a 000000000xxx placeholder).
 Everything else is skipped with a notice that says why, so a placeholder never turns CI red.
 
@@ -28,9 +28,9 @@ import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-REGISTRY = "foundation-live-repo/_config/accounts.hcl"
-LIVE_REPOS = ("workloads-live-repo", "foundation-live-repo")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+REGISTRY = "iac-live-repo/_config/accounts.hcl"
+LIVE_REPO = "iac-live-repo"
 
 # Apply order: the management and core accounts first, then dev, staging, prod last.
 APPLY_ORDER = ["management", "core", "dev", "staging", "prod"]
@@ -60,30 +60,13 @@ def github_environment(name: str, fields: dict[str, str]) -> str:
     return env  # dev | staging | prod
 
 
-OU_FOLDER = {
-    "Security": "security",
-    "Infrastructure": "infrastructure",
-    "NonProd": "workloads/nonprod",
-    "Prod": "workloads/prod",
-    "Root": "",
-}
+def find_account_dir(root: Path, name: str) -> Path | None:
+    """The live folder of an account: iac-live-repo/<name> (the folder name is the registry key)."""
+    candidate = root / LIVE_REPO / name
+    return candidate if candidate.is_dir() else None
 
 
-def find_account_dir(root: Path, name: str, ou: str) -> Path | None:
-    """Find the live folder for an account, checking both OU-grouped and flat paths."""
-    ou_sub = OU_FOLDER.get(ou, "")
-    for repo in LIVE_REPOS:
-        if ou_sub:
-            candidate = root / repo / ou_sub / name
-            if candidate.is_dir():
-                return candidate
-        candidate = root / repo / name
-        if candidate.is_dir():
-            return candidate
-    return None
-
-
-LOCAL_REGISTRY = "foundation-live-repo/_config/accounts.local.hcl"
+LOCAL_REGISTRY = "iac-live-repo/_config/accounts.local.hcl"
 
 
 def load_accounts(registry_text: str, root: Path = REPO_ROOT) -> dict[str, dict[str, str]]:
@@ -121,9 +104,9 @@ def build_matrix(registry_text: str, root: Path = REPO_ROOT) -> tuple[list[dict]
         if account_id.startswith("00000000"):
             notices.append(f"{name}: skipped, {account_id} is still a placeholder id (fill in the real account id in {REGISTRY})")
             continue
-        account_dir = find_account_dir(root, name, fields.get("ou", ""))
+        account_dir = find_account_dir(root, name)
         if account_dir is None:
-            notices.append(f"{name}: skipped, no live folder found ({' or '.join(f'{r}/{name}' for r in LIVE_REPOS)})")
+            notices.append(f"{name}: skipped, no live folder found ({LIVE_REPO}/{name})")
             continue
         rel_working_dir = account_dir.relative_to(root).as_posix()
         environment = github_environment(name, fields)
@@ -145,16 +128,16 @@ def build_matrix(registry_text: str, root: Path = REPO_ROOT) -> tuple[list[dict]
 def expand_per_region(entries: list[dict], root: Path = REPO_ROOT) -> tuple[list[dict], list[str]]:
     """One entry per (account, region), for drift detection (PLAN 8.7).
 
-    A region is a folder directly under the account folder that holds a region.hcl (eu-central-1, eu-west-1, and
-    _global for the account-wide stacks). The entry keeps the account fields, sets working_directory to the region
+    A region is a folder directly under the account folder that holds at least one stack (eu-central-1, eu-west-1,
+    and _global for the account-wide stacks). The entry keeps the account fields, sets working_directory to the region
     folder and adds region and key ("<account>/<region>", the name of the drift issue)."""
     expanded: list[dict] = []
     notices: list[str] = []
     for entry in entries:
         account_dir = root / entry["working_directory"]
-        regions = sorted(p.parent.name for p in account_dir.glob("*/region.hcl"))
+        regions = sorted({p.parent.parent.name for p in account_dir.glob("*/*/terragrunt.hcl")})
         if not regions:
-            notices.append(f"{entry['account']}: no region folder (a folder with region.hcl) yet, nothing to check for drift")
+            notices.append(f"{entry['account']}: no region folder (a folder with a stack) yet, nothing to check for drift")
             continue
         for region in regions:
             expanded.append(

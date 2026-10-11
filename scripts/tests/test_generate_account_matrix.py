@@ -87,12 +87,12 @@ class ParseRegistry(unittest.TestCase):
 class BuildMatrix(unittest.TestCase):
     def setUp(self):
         self.root = make_root(
-            "foundation-live-repo/management",
-            "foundation-live-repo/log-archive",
-            "workloads-live-repo/workloads-dev",
-            "workloads-live-repo/workloads-prod",
-            "workloads-live-repo/workloads-staging",
-            "foundation-live-repo/network-hub",
+            "iac-live-repo/management",
+            "iac-live-repo/log-archive",
+            "iac-live-repo/workloads-dev",
+            "iac-live-repo/workloads-prod",
+            "iac-live-repo/workloads-staging",
+            "iac-live-repo/network-hub",
         )
         self.entries, self.notices = gam.build_matrix(REGISTRY, self.root)
 
@@ -108,21 +108,16 @@ class BuildMatrix(unittest.TestCase):
         envs = {e["account"]: e["github_environment"] for e in self.entries}
         self.assertEqual(envs, {"management": "management", "log-archive": "core", "workloads-dev": "dev", "workloads-prod": "prod"})
 
-    def test_working_directory_points_into_the_right_repo(self):
+    def test_working_directory_is_the_account_folder(self):
         wd = {e["account"]: e["working_directory"] for e in self.entries}
-        self.assertEqual(wd["management"], "foundation-live-repo/management")
-        self.assertEqual(wd["workloads-dev"], "workloads-live-repo/workloads-dev")
+        self.assertEqual(wd["management"], "iac-live-repo/management")
+        self.assertEqual(wd["workloads-dev"], "iac-live-repo/workloads-dev")
 
-    def test_working_directory_resolves_ou_nested_folders(self):
-        root = make_root(
-            "foundation-live-repo/management",
-            "foundation-live-repo/security/log-archive",
-            "workloads-live-repo/workloads/nonprod/workloads-dev",
-        )
-        entries, _ = gam.build_matrix(REGISTRY, root)
-        wd = {e["account"]: e["working_directory"] for e in entries}
-        self.assertEqual(wd["log-archive"], "foundation-live-repo/security/log-archive")
-        self.assertEqual(wd["workloads-dev"], "workloads-live-repo/workloads/nonprod/workloads-dev")
+    def test_a_folder_that_is_not_in_the_registry_is_not_matched(self):
+        root = make_root("iac-live-repo/management", "iac-live-repo/not-an-account", "iac-live-repo/workloads/nonprod/workloads-dev")
+        entries, notices = gam.build_matrix(REGISTRY, root)
+        self.assertEqual([e["account"] for e in entries], ["management"])
+        self.assertTrue(any("workloads-dev" in n and "no live folder" in n for n in notices))
 
     def test_ci_false_is_not_run_and_not_reported(self):
         self.assertNotIn("workloads-staging", [e["account"] for e in self.entries])
@@ -165,7 +160,7 @@ class LocalRegistry(unittest.TestCase):
     """Real ids come from accounts.local.hcl, or from $ACCOUNTS_LOCAL_HCL when that file does not exist."""
 
     def setUp(self):
-        self.root = make_root("workloads-live-repo/workloads/nonprod/workloads-dev")
+        self.root = make_root("iac-live-repo/workloads-dev")
         self.saved = os.environ.pop("ACCOUNTS_LOCAL_HCL", None)
 
     def tearDown(self):
@@ -209,7 +204,7 @@ class LocalRegistry(unittest.TestCase):
 
 class Cli(unittest.TestCase):
     def test_github_output_and_single_account(self):
-        root = make_root("workloads-live-repo/workloads-dev")
+        root = make_root("iac-live-repo/workloads-dev")
         entries, _ = gam.build_matrix(REGISTRY, root)
         self.assertEqual(len(entries), 1)
         with tempfile.NamedTemporaryFile("r", delete=False) as out:
@@ -227,18 +222,18 @@ class Cli(unittest.TestCase):
 
 class PerRegion(unittest.TestCase):
     def test_one_entry_per_account_and_region_folder(self):
-        root = make_root("foundation-live-repo/management/_global", "foundation-live-repo/management/eu-central-1", "foundation-live-repo/management/notes")
-        for f in ["_global", "eu-central-1"]:
-            (root / "foundation-live-repo/management" / f / "region.hcl").write_text("")
+        root = make_root("iac-live-repo/management/_global/organization", "iac-live-repo/management/eu-central-1/budgets", "iac-live-repo/management/notes")
+        for stack in ["_global/organization", "eu-central-1/budgets"]:
+            (root / "iac-live-repo/management" / stack / "terragrunt.hcl").write_text("")
         entries, _ = gam.build_matrix(REGISTRY, root)
         expanded, notices = gam.expand_per_region(entries, root)
         self.assertEqual([e["key"] for e in expanded], ["management/_global", "management/eu-central-1"])
-        self.assertEqual(expanded[1]["working_directory"], "foundation-live-repo/management/eu-central-1")
+        self.assertEqual(expanded[1]["working_directory"], "iac-live-repo/management/eu-central-1")
         self.assertEqual(expanded[1]["account"], "management")
         self.assertEqual(notices, [])
 
     def test_an_account_without_region_folders_is_reported_not_failed(self):
-        root = make_root("foundation-live-repo/management")
+        root = make_root("iac-live-repo/management")
         entries, _ = gam.build_matrix(REGISTRY, root)
         expanded, notices = gam.expand_per_region(entries, root)
         self.assertEqual(expanded, [])
