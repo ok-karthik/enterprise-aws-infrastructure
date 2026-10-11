@@ -81,7 +81,22 @@ CFG = {"dry_run": True, "volume_min_age_days": 14, "snapshot_min_age_days": 30, 
 class Finders(unittest.TestCase):
     def test_young_volume_is_ignored(self):
         ec2 = FakeEC2(volumes=[vol("vol-young", age=3), vol("vol-old", age=20)])
-        self.assertEqual([v["VolumeId"] for v in cj.find_unattached_volumes(ec2, NOW, 14)], ["vol-old"])
+        found, skipped = cj.find_unattached_volumes(ec2, NOW, 14)
+        self.assertEqual(([v["VolumeId"] for v in found], skipped), (["vol-old"], []))
+
+    def test_csi_volumes_are_skipped_and_listed(self):
+        ec2 = FakeEC2(volumes=[
+            vol("vol-csi1", tags=[{"Key": "ebs.csi.aws.com/cluster", "Value": "true"}]),
+            vol("vol-csi2", tags=[{"Key": "kubernetes.io/created-for/pvc/name", "Value": "data"}]),
+            vol("vol-orphan"),
+        ])
+        found, skipped = cj.find_unattached_volumes(ec2, NOW, 14)
+        self.assertEqual(([v["VolumeId"] for v in found], skipped), (["vol-orphan"], ["vol-csi1", "vol-csi2"]))
+
+    def test_csi_volume_is_never_deleted_in_act_mode(self):
+        ec2 = FakeEC2(volumes=[vol("vol-csi", tags=[{"Key": "ebs.csi.aws.com/cluster", "Value": "true"}])])
+        s = cj.run(ec2, FakeLogs(), NOW, {**CFG, "dry_run": False})
+        self.assertEqual((ec2.calls, s["unattached_volumes"], s["skipped_csi"]), ([], [], ["vol-csi"]))
 
     def test_snapshot_used_by_an_ami_is_ignored(self):
         ec2 = FakeEC2(snapshots=[snap("snap-ami"), snap("snap-free")], images=[{"BlockDeviceMappings": [{"Ebs": {"SnapshotId": "snap-ami"}}]}])

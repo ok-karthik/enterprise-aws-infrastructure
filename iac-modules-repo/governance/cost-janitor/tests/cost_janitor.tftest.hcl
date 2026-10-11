@@ -73,6 +73,11 @@ run "act_mode_deletes_only_what_is_not_tagged_keep" {
   }
 
   assert {
+    condition     = length(regexall("StringNotEqualsIgnoreCase", aws_iam_role_policy.act[0].policy)) == 3
+    error_message = "The keep condition is case-insensitive, like is_kept in the code."
+  }
+
+  assert {
     condition     = length(regexall("aws:ResourceTag/keep", aws_iam_role_policy.act[0].policy)) == 3
     error_message = "Volumes, snapshots and Elastic IPs each carry the keep condition."
   }

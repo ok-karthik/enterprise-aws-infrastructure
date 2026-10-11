@@ -69,6 +69,12 @@ resource "aws_iam_role_policy" "lambda" {
           Action   = ["ec2:DescribeVolumes", "ec2:DescribeSnapshots", "ec2:DescribeImages", "ec2:DescribeAddresses", "logs:DescribeLogGroups"]
           Resource = "*"
         },
+        {
+          Sid      = "WriteXRayTraces"
+          Effect   = "Allow"
+          Action   = ["xray:PutTraceSegments", "xray:PutTelemetryRecords"]
+          Resource = "*"
+        },
       ],
       var.alert_topic_arn == null ? [] : [{
         Sid      = "PublishSummary"
@@ -95,21 +101,21 @@ resource "aws_iam_role_policy" "act" {
         Effect    = "Allow"
         Action    = "ec2:DeleteVolume"
         Resource  = "arn:${local.partition}:ec2:${local.region}:${local.account}:volume/*"
-        Condition = { StringNotEquals = { "aws:ResourceTag/keep" = "true" } }
+        Condition = { StringNotEqualsIgnoreCase = { "aws:ResourceTag/keep" = "true" } }
       },
       {
         Sid       = "DeleteUnkeptSnapshots"
         Effect    = "Allow"
         Action    = "ec2:DeleteSnapshot"
         Resource  = "arn:${local.partition}:ec2:${local.region}::snapshot/*"
-        Condition = { StringNotEquals = { "aws:ResourceTag/keep" = "true" } }
+        Condition = { StringNotEqualsIgnoreCase = { "aws:ResourceTag/keep" = "true" } }
       },
       {
         Sid       = "ReleaseUnkeptElasticIps"
         Effect    = "Allow"
         Action    = "ec2:ReleaseAddress"
         Resource  = "arn:${local.partition}:ec2:${local.region}:${local.account}:elastic-ip/*"
-        Condition = { StringNotEquals = { "aws:ResourceTag/keep" = "true" } }
+        Condition = { StringNotEqualsIgnoreCase = { "aws:ResourceTag/keep" = "true" } }
       },
       {
         Sid      = "SetLogRetention"
@@ -125,15 +131,15 @@ resource "aws_lambda_function" "this" {
   #checkov:skip=CKV_AWS_116: "Not queue-driven; a failed weekly run shows in CloudWatch Logs and the next run repeats it, a DLQ adds nothing"
   #checkov:skip=CKV_AWS_173: "Environment variables are non-secret configuration (ages, flags, an SNS topic ARN); Lambda encrypts them with the AWS managed key by default"
   #checkov:skip=CKV_AWS_117: "Only calls AWS APIs (EC2, Logs, SNS), never a VPC resource; a VPC would need NAT or endpoints for no benefit"
+  #checkov:skip=CKV_AWS_115: "No reserved concurrency: new accounts have a concurrency quota of 10 and unreserved concurrency cannot drop below 10, so a reservation would fail; one weekly schedule never runs two at once"
   #checkov:skip=CKV_AWS_272: "Code signing is a bigger control (a signing profile and pipeline) than one small, reviewed function justifies right now"
-  function_name                  = var.name
-  reserved_concurrent_executions = 1 # one run at a time, so two runs never act on the same resources
-  description                    = "Weekly report of orphaned EBS volumes, snapshots, Elastic IPs and log groups without retention (PLAN 9.5)"
-  role                           = aws_iam_role.lambda.arn
-  handler                        = "cost_janitor.handler"
-  runtime                        = "python3.13"
-  timeout                        = 300
-  memory_size                    = 256
+  function_name = var.name
+  description   = "Weekly report of orphaned EBS volumes, snapshots, Elastic IPs and log groups without retention (PLAN 9.5)"
+  role          = aws_iam_role.lambda.arn
+  handler       = "cost_janitor.handler"
+  runtime       = "python3.13"
+  timeout       = 300
+  memory_size   = 256
 
   filename         = data.archive_file.lambda.output_path
   source_code_hash = data.archive_file.lambda.output_base64sha256

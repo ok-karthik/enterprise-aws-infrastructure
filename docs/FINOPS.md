@@ -40,6 +40,7 @@ switch everything off. Nothing is built for that here.
 Report-only first (`dry_run = true`): it logs one JSON summary per week to its CloudWatch log group. Anything tagged `keep=true`
 is skipped by the code and, in act mode, refused by IAM. To switch to act mode, read at least one weekly summary, tag what you want to
 keep, then set `dry_run = false` in the dev leaf and apply. Dev only, never prod.
+It runs Mondays 09:00 Europe/Berlin (after the 07:00 node scale-up) and skips EBS CSI volumes (tags `ebs.csi.aws.com/cluster`, `kubernetes.io/created-for/*`), which sit `available` while the night schedule has nodes at 0; they are listed under `skipped_csi`.
 
 ### Savings Plans rule (design only) 🔴 not applied
 

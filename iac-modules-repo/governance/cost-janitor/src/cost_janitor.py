@@ -2,7 +2,9 @@
 is not "true") removes them.
 
 Looks for:
-  * EBS volumes that are unattached (status "available") for at least VOLUME_MIN_AGE_DAYS
+  * EBS volumes that are unattached (status "available") for at least VOLUME_MIN_AGE_DAYS; EBS CSI volumes
+    (Kubernetes PVs, tagged ebs.csi.aws.com/cluster or kubernetes.io/created-for/*) are skipped and listed under
+    "skipped_csi", because the dev night schedule leaves them "available" over the weekend
   * EBS snapshots owned by this account, at least SNAPSHOT_MIN_AGE_DAYS old, that no own AMI uses and that AWS Backup did not make
   * Elastic IPs that are not associated
   * CloudWatch log groups with no retention
@@ -33,14 +35,29 @@ def _pages(client: Any, operation: str, **kwargs: Any):
     yield from client.get_paginator(operation).paginate(**kwargs)
 
 
-def find_unattached_volumes(ec2: Any, now: datetime, min_age_days: int) -> list[dict[str, Any]]:
+def is_csi_volume(tags: list[dict[str, str]] | None) -> bool:
+    """EBS CSI volumes (Kubernetes PVs). Nodes at 0 over the weekend leave them "available", so they are not orphans."""
+    for t in tags or []:
+        key = str(t.get("Key", ""))
+        if key == "ebs.csi.aws.com/cluster" or key.startswith("kubernetes.io/created-for/"):
+            return True
+    return False
+
+
+def find_unattached_volumes(ec2: Any, now: datetime, min_age_days: int) -> tuple[list[dict[str, Any]], list[str]]:
+    """Returns (volumes to report, IDs of EBS CSI volumes that were skipped)."""
     cutoff = now - timedelta(days=min_age_days)
     found = []
+    skipped_csi: list[str] = []
     for page in _pages(ec2, "describe_volumes", Filters=[{"Name": "status", "Values": ["available"]}]):
         for v in page.get("Volumes", []):
-            if v["CreateTime"] <= cutoff:
-                found.append(v)
-    return found
+            if v["CreateTime"] > cutoff:
+                continue
+            if is_csi_volume(v.get("Tags")):
+                skipped_csi.append(v["VolumeId"])
+                continue
+            found.append(v)
+    return found, skipped_csi
 
 
 def find_old_snapshots(ec2: Any, now: datetime, min_age_days: int) -> list[dict[str, Any]]:
@@ -110,7 +127,7 @@ def act(ec2: Any, logs: Any, volumes: list[dict], snapshots: list[dict], eips: l
 
 
 def run(ec2: Any, logs: Any, now: datetime, cfg: dict[str, Any]) -> dict[str, Any]:
-    volumes = find_unattached_volumes(ec2, now, cfg["volume_min_age_days"])
+    volumes, skipped_csi = find_unattached_volumes(ec2, now, cfg["volume_min_age_days"])
     snapshots = find_old_snapshots(ec2, now, cfg["snapshot_min_age_days"])
     eips = find_unassociated_eips(ec2)
     log_groups = find_log_groups_without_retention(logs, cfg["exclude_log_group_prefixes"])
@@ -141,6 +158,7 @@ def run(ec2: Any, logs: Any, now: datetime, cfg: dict[str, Any]) -> dict[str, An
         "unassociated_eips": [a["AllocationId"] for a in eips],
         "log_groups_without_retention": [g["logGroupName"] for g in log_groups],
         "kept": kept,
+        "skipped_csi": skipped_csi,
         "errors": errors,
         "estimated_monthly_usd": estimate_monthly_usd(volumes, snapshots, eips),
         "estimate_note": "rough estimate from approximate list prices",
@@ -162,7 +180,7 @@ def text_summary(s: dict[str, Any]) -> str:
     return (
         f"Cost janitor, {mode}: {len(s['unattached_volumes'])} unattached volumes, {len(s['old_snapshots'])} old snapshots, "
         f"{len(s['unassociated_eips'])} unassociated Elastic IPs, {len(s['log_groups_without_retention'])} log groups without retention, "
-        f"{len(s['kept'])} kept (keep=true), {len(s['errors'])} errors. Estimated waste about ${s['estimated_monthly_usd']}/month (rough estimate)."
+        f"{len(s['kept'])} kept (keep=true), {len(s['skipped_csi'])} EBS CSI volumes skipped, {len(s['errors'])} errors. Estimated waste about ${s['estimated_monthly_usd']}/month (rough estimate)."
     )
 
 

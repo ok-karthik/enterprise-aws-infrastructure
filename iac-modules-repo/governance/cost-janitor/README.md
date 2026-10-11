@@ -2,12 +2,12 @@
 
 **Status:** 📝 Plan-only (wired into the dev leaf; not applied to AWS)
 
-A weekly Lambda (EventBridge Scheduler, Mondays 06:00 Europe/Berlin) that finds orphaned, billable resources in one
+A weekly Lambda (EventBridge Scheduler, Mondays 09:00 Europe/Berlin, after the dev nodes have scaled back up at 07:00) that finds orphaned, billable resources in one
 account and region (PLAN 9.5). **Report-only by default.** Meant for dev, never prod.
 
 | Finds | Rule |
 |---|---|
-| Unattached EBS volumes | status `available` for at least `volume_min_age_days` (14) |
+| Unattached EBS volumes | status `available` for at least `volume_min_age_days` (14); EBS CSI volumes (tag `ebs.csi.aws.com/cluster` or `kubernetes.io/created-for/*`) are skipped and listed under `skipped_csi`, because the dev night schedule leaves them `available` over the weekend |
 | Old EBS snapshots | owned by this account, at least `snapshot_min_age_days` (30) old; snapshots used by an own AMI and AWS Backup snapshots (`aws:backup:` tag) are skipped |
 | Unassociated Elastic IPs | no association |
 | Log groups without retention | skipped when the name starts with one of `exclude_log_group_prefixes` |
@@ -19,7 +19,7 @@ eu-central-1 list prices (gp3 $0.08/GB, other volumes $0.10/GB, snapshots $0.05/
 ## Safety
 
 - **`keep=true` opt-out.** A resource tagged `keep=true` is never touched. The code lists it under `kept`; in act mode IAM
-  also refuses the delete (`StringNotEquals aws:ResourceTag/keep = true`). Log groups have no such tag, use `exclude_log_group_prefixes`.
+  also refuses the delete (`StringNotEqualsIgnoreCase aws:ResourceTag/keep = true`). Log groups have no such tag, use `exclude_log_group_prefixes`.
 - **No delete permission in dry-run mode.** The `cost-janitor-act` policy (`ec2:DeleteVolume`, `ec2:DeleteSnapshot`,
   `ec2:ReleaseAddress`, `logs:PutRetentionPolicy`) exists only when `dry_run = false`.
 - One failed delete does not stop the others; failures are listed under `errors`.
@@ -83,7 +83,7 @@ No modules.
 | <a name="input_exclude_log_group_prefixes"></a> [exclude\_log\_group\_prefixes](#input\_exclude\_log\_group\_prefixes) | Log groups whose name starts with one of these are ignored | `list(string)` | `[]` | no |
 | <a name="input_log_retention_days"></a> [log\_retention\_days](#input\_log\_retention\_days) | Retention of the Lambda's own log group | `number` | `30` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name prefix for the Lambda, its role, its log group and its schedule | `string` | `"cost-janitor"` | no |
-| <a name="input_schedule_expression"></a> [schedule\_expression](#input\_schedule\_expression) | EventBridge Scheduler expression for the run | `string` | `"cron(0 6 ? * MON *)"` | no |
+| <a name="input_schedule_expression"></a> [schedule\_expression](#input\_schedule\_expression) | EventBridge Scheduler expression for the run | `string` | `"cron(0 9 ? * MON *)"` | no |
 | <a name="input_schedule_timezone"></a> [schedule\_timezone](#input\_schedule\_timezone) | Time zone of schedule\_expression | `string` | `"Europe/Berlin"` | no |
 | <a name="input_snapshot_min_age_days"></a> [snapshot\_min\_age\_days](#input\_snapshot\_min\_age\_days) | An EBS snapshot owned by this account is reported (or deleted) only when it is at least this old. Snapshots used by an AMI and AWS Backup snapshots are always skipped. | `number` | `30` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | A map of tags to add to all resources | `map(string)` | `{}` | no |

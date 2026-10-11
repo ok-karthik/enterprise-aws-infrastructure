@@ -47,7 +47,7 @@ variable "exclude_log_group_prefixes" {
 variable "schedule_expression" {
   description = "EventBridge Scheduler expression for the run"
   type        = string
-  default     = "cron(0 6 ? * MON *)"
+  default     = "cron(0 9 ? * MON *)"
 }
 
 variable "schedule_timezone" {
