@@ -23,5 +23,6 @@ locals {
     discovery_publisher = "discovery-publisher-v1.0.0"
     budgets             = "budgets-v1.0.0"
     break_glass_alerts  = "break-glass-alerts-v1.0.0"
+    cost_janitor        = "cost-janitor-v1.0.0"
   }
 }
