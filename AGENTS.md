@@ -196,6 +196,7 @@ These rules apply to **any** coding agent working in this repo, whatever the too
 4. **Attempt limit:** after **3** failed `verify-module` runs in a row on the same module, stop editing it and hand over to a human with
    the last result. A human clears it with `python3 .claude/hooks/guard.py reset <category/name>`. Set `AGENT_MAX_VERIFY_ATTEMPTS` to change N.
 5. Never push to `main`, never bypass the prod approval gate, never invent account IDs (see `PLAN.md`).
+6. Check a live stack's final inputs with `terragrunt render --format json` (works offline, see command), never by grepping one file: leaf inputs override _envcommon inputs. Command: `cd <leaf> && env -u AWS_PROFILE AWS_CONFIG_FILE=/dev/null AWS_SHARED_CREDENTIALS_FILE=/dev/null IAC_MODULES_LOCAL=1 terragrunt render --format json --non-interactive --log-format bare 2>/dev/null | jq '.inputs'`.
 
 **The hooks are not the control.** They run on a laptop and can be switched off; they exist to save time and stop honest mistakes.
 The real controls are: CODEOWNERS on the paths in rule 3, branch protection on `main`, and that no agent has credentials that can apply
