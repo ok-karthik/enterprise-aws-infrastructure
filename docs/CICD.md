@@ -17,7 +17,7 @@ All jobs run inside a purpose-built toolchain container (`ghcr.io/ok-karthik/inf
 | conftest / Rego | This organization's own rules | `make test` | plan stage |
 | Trivy | Toolbox image has no known fixable CVEs | `make image-scan` | `publish-toolchain.yml`, before the push |
 
-4. **Cost** — Infracost posts a per-module breakdown as a PR comment (`tf-summarize` adds a change summary).
+4. **Cost** — Infracost posts a per-module breakdown as a PR comment (`tf-summarize` adds a change summary). The **cost gate** (`workloads-live-repo/scripts/cost_gate.py`, pull requests only) then fails the job when the monthly cost rises by at least $100, or by at least $10 and 20 %, unless the PR has the `cost-approved` label (read live; add it, then re-run the job). See `docs/FINOPS.md`.
 5. **Apply** — on push to `main`, `apply-dev` runs, then `apply-prod`, which is gated by a protected GitHub **Environment** requiring manual approval.
 
 A change can pass `terraform validate` and still fail the governance gates — the gates run against the *planned* resources, not just the HCL.
@@ -74,6 +74,10 @@ Both are Rego v1 (`import rego.v1`, `package main`) and are unit-tested with `co
 ## Nightly drift detection (`drift-detection.yml`)
 
 A matrix job over the same account matrix compares live AWS against state each night and self-manages **one GitHub Issue per account**: creates on new drift, comments while it persists, and auto-closes when resolved. Each account's own read-only `github-actions-plan` role is used.
+
+## Weekly FinOps report (`finops-weekly.yml`)
+
+Mondays 07:00 UTC (and on demand): `workloads-live-repo/scripts/cost_report.py` reads Cost Explorer and Cost Optimization Hub through the read-only plan role of the management account and writes one GitHub Issue per ISO week (label `finops-weekly`; a re-run updates the issue, the older open ones are closed). It skips with a notice while management is not in the account matrix.
 
 ## Self-healing CI (`pipeline_healer.yml` + `iac-agents-repo/`)
 
