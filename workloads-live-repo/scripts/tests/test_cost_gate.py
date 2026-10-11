@@ -94,6 +94,12 @@ class CostGate(unittest.TestCase):
             p.write_text("not json")
             self.assertEqual(run(p), 2)
 
+    def test_unexpected_shape_exits_2_not_1(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "x.json"
+            p.write_text('{"projects":[{"name":"x","diff":"5"}]}')
+            self.assertEqual(run(p), 2)
+
     def test_markdown_is_appended_not_overwritten(self):
         with tempfile.TemporaryDirectory() as d:
             md = Path(d) / "out.md"

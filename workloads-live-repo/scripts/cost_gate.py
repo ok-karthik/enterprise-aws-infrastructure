@@ -95,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError("top level is not an object")
         verdict = evaluate(data, args.max_usd, args.min_usd, args.max_pct)
         projects = top_projects(data)
-    except (OSError, ValueError) as e:  # json.JSONDecodeError is a ValueError
+    except (OSError, ValueError, AttributeError, TypeError, KeyError) as e:  # json.JSONDecodeError is a ValueError; the rest are odd shapes
         print(f"cost gate: bad input: {e}", file=sys.stderr)
         return 2
 

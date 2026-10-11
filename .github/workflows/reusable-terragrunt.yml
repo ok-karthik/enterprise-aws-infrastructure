@@ -323,5 +323,5 @@ jobs:
       - name: "Enforce cost gate"
         if: github.event_name == 'pull_request' && steps.gate.outcome == 'failure'
         run: |
-          echo "::error title=Cost gate::Monthly cost rise is over the threshold. Add the 'cost-approved' label and re-run this job."
+          echo "::error title=Cost gate::Monthly cost rise is over the threshold or the cost data could not be read (see the Cost gate step log). If it is over the threshold, add the 'cost-approved' label and re-run this job."
           exit 1
