@@ -2,7 +2,7 @@
 # 🏗️ Terragrunt Stack Generator
 # Usage: ./generate-module.sh <category/module> <account> <region>
 #   e.g. ./generate-module.sh storage/s3 workloads-dev eu-central-1
-# Writes iac-live-repo/<account>/<region>/<module>/terragrunt.hcl: one self-contained file per stack.
+# Writes iac-live-repo/<ou folder>/<account>/<region>/<module>/terragrunt.hcl: one self-contained file per stack.
 
 set -e
 
@@ -20,9 +20,9 @@ cd "$(git rev-parse --show-toplevel)"
 
 # The account folder must already exist (it is also a key in iac-live-repo/_config/accounts.hcl).
 # If there is none, say so instead of creating a stray folder.
-ACCOUNT_DIR="iac-live-repo/$ACCOUNT"
-if [ ! -d "$ACCOUNT_DIR" ]; then
-    echo "❌ Error: no account folder $ACCOUNT_DIR. Add the account to iac-live-repo/_config/accounts.hcl and create the folder first."
+# The folder is <ou folder>/<account> (the OU comes from the registry), so ask generate_account_matrix.py.
+if ! ACCOUNT_DIR="$(python3 scripts/generate_account_matrix.py --dir "$ACCOUNT")"; then
+    echo "❌ Error: no account folder for '$ACCOUNT'. Add the account to iac-live-repo/_config/accounts.hcl and create iac-live-repo/<ou folder>/$ACCOUNT first."
     exit 1
 fi
 

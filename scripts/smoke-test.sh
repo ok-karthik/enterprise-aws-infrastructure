@@ -5,15 +5,15 @@ set -e
 # Validates that the platform code is syntactically correct, follows the account-first layout, and
 # (with AWS access) that the Terragrunt dependency graph of one account initialises and validates.
 #
-# Usage: smoke-test.sh [account-directory]   e.g. iac-live-repo/workloads-dev (default) or
-# iac-live-repo/management. The graph step needs AWS credentials for that account; every other
+# Usage: smoke-test.sh [account-directory]   e.g. iac-live-repo/workloads/nonprod/workloads-dev (default) or
+# iac-live-repo/root/management. The graph step needs AWS credentials for that account; every other
 # step works offline.
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
-ACCOUNT_DIR="${1:-iac-live-repo/workloads-dev}"
+ACCOUNT_DIR="${1:-iac-live-repo/workloads/nonprod/workloads-dev}"
 ACCOUNT_DIR_NAME=$(basename "$ACCOUNT_DIR")
 
 # Always run from the repository root, whatever directory the script is called from.

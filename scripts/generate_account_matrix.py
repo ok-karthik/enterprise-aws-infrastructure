@@ -3,7 +3,7 @@
 
 Reads iac-live-repo/_config/accounts.hcl and emits one matrix entry per account that
   - has ci = true in the registry,
-  - has a live folder (iac-live-repo/<name>), and
+  - has a live folder (iac-live-repo/<ou folder>/<name>, see ou_folder()), and
   - has a real account id (not a 000000000xxx placeholder).
 Everything else is skipped with a notice that says why, so a placeholder never turns CI red.
 
@@ -15,6 +15,7 @@ Usage:
   generate_account_matrix.py                       print the matrix JSON
   generate_account_matrix.py --per-region          one entry per account and region (drift detection, PLAN 8.7)
   generate_account_matrix.py --github-output       also write matrix= and count= to $GITHUB_OUTPUT
+  generate_account_matrix.py --dir NAME            print the live folder of one account (exit 2 if there is none)
   generate_account_matrix.py --account NAME        print one entry (must be in the matrix); with
                                                    --github-output write its fields to $GITHUB_OUTPUT
 No AWS access is needed.
@@ -30,6 +31,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = "iac-live-repo/_config/accounts.hcl"
+ORGANIZATION = "iac-live-repo/_config/organization.hcl"
 LIVE_REPO = "iac-live-repo"
 
 # Apply order: the management and core accounts first, then dev, staging, prod last.
@@ -60,9 +62,46 @@ def github_environment(name: str, fields: dict[str, str]) -> str:
     return env  # dev | staging | prod
 
 
-def find_account_dir(root: Path, name: str) -> Path | None:
-    """The live folder of an account: iac-live-repo/<name> (the folder name is the registry key)."""
-    candidate = root / LIVE_REPO / name
+def parse_ous(text: str) -> dict[str, str | None]:
+    """Parse the organizational_units map of organization.hcl into {OU: parent or None}, in file order."""
+    block = re.search(r"^\s*organizational_units\s*=\s*\{\n(.*?)^\s*\}", text, re.M | re.S)
+    ous: dict[str, str | None] = {}
+    if not block:
+        return ous
+    for line in block.group(1).splitlines():
+        m = re.match(r'^\s*"?([A-Za-z0-9][A-Za-z0-9 _-]*)"?\s*=\s*\{\s*(?:parent\s*=\s*"([^"]+)")?\s*\}', line)
+        if m:
+            ous[m.group(1)] = m.group(2)
+    return ous
+
+
+def ou_folder(ou: str, ous: dict[str, str | None]) -> str:
+    """The folder of an OU under iac-live-repo: 'root' for Root, '<parent>/<ou>' for a child OU, else '<ou>' (lowercase)."""
+    if ou == "Root":
+        return "root"
+    parent = ous.get(ou)
+    return f"{parent.lower()}/{ou.lower()}" if parent else ou.lower()
+
+
+def load_ous(root: Path = REPO_ROOT) -> dict[str, str | None]:
+    path = root / ORGANIZATION
+    return parse_ous(path.read_text(encoding="utf-8")) if path.is_file() else {}
+
+
+def find_account_dir(root: Path, name: str, ou: str | None = None, ous: dict[str, str | None] | None = None) -> Path | None:
+    """The live folder of an account: iac-live-repo/<ou folder>/<name>. The OU comes from the registry unless given;
+    the OU tree comes from _config/organization.hcl unless given. None if there is no such folder."""
+    if ou is None:
+        registry_file = root / REGISTRY
+        if not registry_file.is_file():
+            return None
+        fields = load_accounts(registry_file.read_text(encoding="utf-8"), root).get(name)
+        if not fields or "ou" not in fields:
+            return None
+        ou = fields["ou"]
+    if ous is None:
+        ous = load_ous(root)
+    candidate = root / LIVE_REPO / ou_folder(ou, ous) / name
     return candidate if candidate.is_dir() else None
 
 
@@ -89,11 +128,13 @@ def load_accounts(registry_text: str, root: Path = REPO_ROOT) -> dict[str, dict[
     return accounts
 
 
-def build_matrix(registry_text: str, root: Path = REPO_ROOT) -> tuple[list[dict], list[str]]:
+def build_matrix(registry_text: str, root: Path = REPO_ROOT, ous: dict[str, str | None] | None = None) -> tuple[list[dict], list[str]]:
     """Return (matrix entries in apply order, notices for the accounts that were skipped)."""
     entries: list[dict] = []
     notices: list[str] = []
     accounts = load_accounts(registry_text, root)
+    if ous is None:
+        ous = load_ous(root)
     for name, fields in accounts.items():
         if fields.get("ci") != "true":
             continue
@@ -104,9 +145,9 @@ def build_matrix(registry_text: str, root: Path = REPO_ROOT) -> tuple[list[dict]
         if account_id.startswith("00000000"):
             notices.append(f"{name}: skipped, {account_id} is still a placeholder id (fill in the real account id in {REGISTRY})")
             continue
-        account_dir = find_account_dir(root, name)
+        account_dir = find_account_dir(root, name, fields.get("ou", ""), ous)
         if account_dir is None:
-            notices.append(f"{name}: skipped, no live folder found ({LIVE_REPO}/{name})")
+            notices.append(f"{name}: skipped, no live folder found ({LIVE_REPO}/{ou_folder(fields.get('ou', ''), ous)}/{name})")
             continue
         rel_working_dir = account_dir.relative_to(root).as_posix()
         environment = github_environment(name, fields)
@@ -159,8 +200,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--github-output", action="store_true", help="write results to $GITHUB_OUTPUT")
     parser.add_argument("--per-region", action="store_true", help="one entry per account and region (drift detection)")
+    parser.add_argument("--dir", metavar="NAME", help="print the live folder of this account and exit (exit 2 if there is none)")
     parser.add_argument("--account", help="print only this account's entry (it must be in the matrix)")
     args = parser.parse_args(argv)
+
+    if args.dir:
+        found = find_account_dir(REPO_ROOT, args.dir)
+        if found is None:
+            print(f"unknown account or no live folder: {args.dir}", file=sys.stderr)
+            return 2
+        print(found.relative_to(REPO_ROOT).as_posix())
+        return 0
 
     entries, notices = build_matrix((REPO_ROOT / REGISTRY).read_text(encoding="utf-8"))
     for notice in notices:
