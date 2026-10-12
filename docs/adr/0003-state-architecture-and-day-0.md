@@ -10,7 +10,7 @@ Terraform and Terragrunt require an S3 backend to store state files and manage s
 ## Decision
 
 1. **State Bucket per Account**: Each member account owns its own S3 state bucket (`tg-state-<account-id>`) with S3 Object Lock, AES256 server-side encryption, and versioning enabled. S3 native state locking (`use_lockfile = true`) is used, eliminating DynamoDB state locking tables.
-2. **Day-0 Bootstrap via CloudFormation StackSets**: The management account runs `foundation-live-repo/_bootstrap/bootstrap.sh` once to create the bootstrap template. Service-managed CloudFormation StackSets (`governance/bootstrap-stacksets`) automatically deploy `account-bootstrap.yaml` to all member accounts across targeted OUs.
+2. **Day-0 Bootstrap via CloudFormation StackSets**: The management account runs `iac-live-repo/_bootstrap/bootstrap.sh` once to create the bootstrap template. Service-managed CloudFormation StackSets (`governance/bootstrap-stacksets`) automatically deploy `account-bootstrap.yaml` to all member accounts across targeted OUs.
 
 ## What I chose against and what it cost
 

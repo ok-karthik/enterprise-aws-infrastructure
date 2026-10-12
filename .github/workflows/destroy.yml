@@ -23,10 +23,6 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   AWS_REGION: ${{ vars.AWS_REGION }}
-  # Use modules from this checkout instead of the pinned release tags (module_versions in env.hcl).
-  # Needed until every module has a release tag at the iac-modules-repo path (PLAN 1.4), and later for
-  # PRs that change iac-modules-repo/** so module changes are tested before release.
-  IAC_MODULES_LOCAL: '1'
   TG_LOG_FORMAT: 'bare'
 
 jobs:
@@ -55,7 +51,7 @@ jobs:
             exit 1
           fi
           # Fails unless the account is in the CI matrix (ci = true, a live folder, a real account id).
-          python3 workloads-live-repo/scripts/generate_account_matrix.py --account "$ACCOUNT" --github-output
+          python3 scripts/generate_account_matrix.py --account "$ACCOUNT" --github-output
 
   destroy:
     name: '🌪️ Destroy: ${{ github.event.inputs.account }}'

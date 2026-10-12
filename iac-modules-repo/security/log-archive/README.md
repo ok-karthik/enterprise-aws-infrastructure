@@ -1,6 +1,6 @@
 # security/log-archive
 
-**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS)
 
 The central **log archive** (PLAN 4.1), applied in the `log-archive` account. It creates one S3 bucket per log type and one KMS key:
 

@@ -48,7 +48,7 @@ Rules the module enforces (a wrong assignment fails at plan time, not in product
 
 - **A person:** add them to the IdP group. Nothing in this repo changes.
 - **A new group:** create it in the IdP, add its name to `groups` and to `assignments` in the leaf.
-- **A new account:** it is picked up from the registry (`foundation-live-repo/_config/accounts.hcl`) once it has a real id and `create = true`; its OU decides what it gets. The `platform-developer` policy and the boundary come from the account baseline, so apply that first, or the Developer assignment fails.
+- **A new account:** it is picked up from the registry (`iac-live-repo/_config/accounts.hcl`) once it has a real id and `create = true`; its OU decides what it gets. The `platform-developer` policy and the boundary come from the account baseline, so apply that first, or the Developer assignment fails.
 
 ### Gotchas
 

@@ -1,6 +1,6 @@
 # governance/data-perimeter
 
-**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS)
 
 **Resource Control Policies** (RCPs, PLAN 4.6): deny access to a resource from any principal **outside this organization**, and require TLS. Applied from the **management account**, the same way SCPs are.
 

@@ -7,8 +7,7 @@
 # (workflows, composite actions and the toolbox Dockerfile).
 directory:
   - iac-modules-repo
-  - foundation-live-repo
-  - workloads-live-repo
+  - iac-live-repo
   - .github
 
 # Local caches from terraform/terragrunt runs are not our code.

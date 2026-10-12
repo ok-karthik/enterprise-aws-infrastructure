@@ -39,18 +39,18 @@ REPO_ROOT = BASE_DIR.parent
 sys.path.insert(0, str(BASE_DIR / "iac_agent"))
 PROMPT_PATH = BASE_DIR / "prompts" / "iac_agent.md"
 AUDITOR_PROMPT_PATH = BASE_DIR / "prompts" / "auditor.md"
-GENERATE_MODULE_SCRIPT = REPO_ROOT / "workloads-live-repo" / "scripts" / "generate-module.sh"
+GENERATE_MODULE_SCRIPT = REPO_ROOT / "scripts" / "generate-module.sh"
 
 
 def live_env_dir(env: str, root: Optional[Path] = None) -> Path:
-    """Account folder for an environment in the OU-grouped layout:
-    workloads-live-repo/workloads/<nonprod|prod>/workloads-<env>.
+    """Account folder for an environment: iac-live-repo/workloads-<env> (the folder name is the registry key)."""
+    return (root or REPO_ROOT) / "iac-live-repo" / f"workloads-{env}"
 
-    Falls back to workloads-live-repo/workloads-<env> (the older flat layout) when no such folder exists, so a
-    request for an environment without an account yet still gets a sensible path in the error message."""
-    base = (root or REPO_ROOT) / "workloads-live-repo"
-    matches = sorted((base / "workloads").glob(f"*/workloads-{env}"))
-    return matches[0] if matches else base / f"workloads-{env}"
+
+def leaf_dir_for(env: str, region: str, module_path: str, root: Optional[Path] = None) -> Path:
+    """Folder of the one-file stack: iac-live-repo/<account>/<region>/<stack>, stack = the module's name."""
+    return live_env_dir(env, root) / region / Path(module_path).name
+
 
 CATALOG_PATH = BASE_DIR / "catalog" / "golden-paths.yaml"
 CATALOG_TEMPLATES_DIR = BASE_DIR / "catalog" / "templates"
@@ -245,17 +245,17 @@ def _slugify(text: str, max_len: int = 30) -> str:
 def scaffold_from_template(entry: dict, module_path: str, env: str, region: str, request: str) -> list[Path]:
     template_dir = CATALOG_TEMPLATES_DIR / entry["template"]
 
-    res = run(["bash", str(GENERATE_MODULE_SCRIPT), module_path, env, region])
+    res = run(["bash", str(GENERATE_MODULE_SCRIPT), module_path, f"workloads-{env}", region])
     print(res.stdout.strip())
     if res.returncode != 0:
         print(res.stderr.strip())
-    leaf_file = live_env_dir(env) / region / module_path / "terragrunt.hcl"
+    leaf_file = leaf_dir_for(env, region, module_path) / "terragrunt.hcl"
+    if not leaf_file.parent.exists():
+        return []  # the account folder is missing: generate-module.sh already said so
 
-    envcommon_path = REPO_ROOT / "workloads-live-repo" / "_envcommon" / f"{module_path}.hcl"
-    envcommon_path.parent.mkdir(parents=True, exist_ok=True)
     slug = _slugify(request)
     rendered = (
-        (template_dir / "envcommon.hcl.tmpl")
+        (template_dir / "leaf.hcl.tmpl")
         .read_text()
         .replace("__BUCKET_SLUG__", slug)
         .replace("__DB_SLUG__", slug)
@@ -263,59 +263,47 @@ def scaffold_from_template(entry: dict, module_path: str, env: str, region: str,
         .replace("__TABLE_SLUG__", slug)
         .replace("__SERVICE_NAME__", module_path.split("/")[-1])
     )
-    envcommon_path.write_text(rendered)
-
-    created = []
-    if leaf_file.exists():
-        created.append(leaf_file)
-    created.append(envcommon_path)
-    return created
+    leaf_file.write_text(rendered)
+    return [leaf_file]
 
 
 def scaffold_skeleton(module_path: str, env: str, region: str, dependencies: Optional[list[str]] = None) -> list[Path]:
     created = []
-    res = run(["bash", str(GENERATE_MODULE_SCRIPT), module_path, env, region])
+    leaf_file = leaf_dir_for(env, region, module_path) / "terragrunt.hcl"
+    existed = leaf_file.exists()  # an existing stack is never overwritten
+    res = run(["bash", str(GENERATE_MODULE_SCRIPT), module_path, f"workloads-{env}", region])
     print(res.stdout.strip())
     if res.returncode != 0:
         print(res.stderr.strip())
 
-    leaf_dir = live_env_dir(env) / region / module_path
-    leaf_file = leaf_dir / "terragrunt.hcl"
-    if leaf_file.exists():
+    if existed:
         created.append(leaf_file)
-
-    envcommon_path = REPO_ROOT / "workloads-live-repo" / "_envcommon" / f"{module_path}.hcl"
-    if not envcommon_path.exists():
-        envcommon_path.parent.mkdir(parents=True, exist_ok=True)
+    elif leaf_file.parent.exists():
         dep_blocks = ""
-        if dependencies:
-            for dep in dependencies:
-                dep_name = dep.split("/")[-1]
-                dep_blocks += (
-                    f'dependency "{dep_name}" {{\n'
-                    f'  config_path = "${{get_terragrunt_dir()}}/../../{dep}"\n'
-                    f"  mock_outputs = {{\n"
-                    f'    id = "{dep_name}-mock-id"\n'
-                    f"  }}\n"
-                    f'  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "show"]\n'
-                    f"}}\n\n"
-                )
-
-        envcommon_path.write_text(
-            f"# Common configuration for {module_path} modules across all environments.\n\n"
+        for dep in dependencies or []:
+            dep_name = dep.split("/")[-1]
+            dep_blocks += (
+                f'dependency "{dep_name}" {{\n'
+                f'  config_path = "../{dep_name}"\n'
+                f"  mock_outputs = {{\n"
+                f'    id = "{dep_name}-mock-id"\n'
+                f"  }}\n"
+                f'  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "show"]\n'
+                f"}}\n\n"
+            )
+        leaf_file.write_text(
+            f"# {module_path} stack. Account and region come from the folder path (root.hcl).\n"
+            f'include "root" {{\n'
+            f'  path   = find_in_parent_folders("root.hcl")\n'
+            f"  expose = true\n"
+            f"}}\n\n"
             f"terraform {{\n"
             f'  source = "${{get_repo_root()}}/iac-modules-repo/{module_path}"\n'
-            f"}}\n\n"
-            f"locals {{\n"
-            f'  env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))\n'
-            f"  env      = local.env_vars.locals.env\n"
             f"}}\n\n"
             f"{dep_blocks}"
             f"inputs = {{}}\n"
         )
-        created.append(envcommon_path)
-    else:
-        created.append(envcommon_path)
+        created.append(leaf_file)
 
     module_dir = REPO_ROOT / "iac-modules-repo" / module_path
     main_tf_header = (
@@ -591,7 +579,7 @@ def _tail(res: subprocess.CompletedProcess, n: int = 60) -> str:
 @contextmanager
 def mock_account_id():
     targets = []
-    for path in (REPO_ROOT / "workloads-live-repo").rglob("*.hcl"):
+    for path in (REPO_ROOT / "iac-live-repo").rglob("*.hcl"):
         if ".terragrunt-cache" in path.parts:
             continue
         content = path.read_text()
@@ -640,14 +628,14 @@ def validation_ladder(
     Validation ladder with syntax, static lint, offline validation, OPA/Checkov,
     and Infracost monthly budget enforcement.
     """
-    leaf_dir = live_env_dir(env) / region / module_path
+    leaf_dir = leaf_dir_for(env, region, module_path)
     module_dir = REPO_ROOT / "iac-modules-repo" / module_path
 
     fmt_step = (
         "terraform fmt",
         [
             "terraform", "fmt", "-check", "-recursive",
-            "iac-modules-repo", "foundation-live-repo", "workloads-live-repo", "policy-library-repo",
+            "iac-modules-repo", "iac-live-repo", "policy-library-repo",
         ],
         REPO_ROOT,
     )
@@ -804,11 +792,10 @@ class IaCPlatformAgent:
         region = classification["region"]
         has_template = bool(catalog_entry and catalog_entry.get("template"))
 
-        leaf_file = live_env_dir(env) / region / module_path / "terragrunt.hcl"
-        envcommon_path = REPO_ROOT / "workloads-live-repo" / "_envcommon" / f"{module_path}.hcl"
+        leaf_file = leaf_dir_for(env, region, module_path) / "terragrunt.hcl"
 
         if req.dry_run:
-            files = [leaf_file, envcommon_path]
+            files = [leaf_file]
             res = GenerationResult(
                 success=True,
                 branch=branch_name,
@@ -827,6 +814,18 @@ class IaCPlatformAgent:
             files = scaffold_from_template(catalog_entry, module_path, env, region, req.request)
         else:
             files = scaffold_skeleton(module_path, env, region, req.dependencies)
+        if not files:
+            res = GenerationResult(
+                success=False,
+                branch=branch_name,
+                catalog_id=catalog_entry["id"] if catalog_entry else None,
+                task_type=classification["task_type"],
+                module_path=module_path,
+                error_message=f"No stack was created: the account folder {live_env_dir(env).relative_to(REPO_ROOT)} does not exist.",
+                duration_seconds=time.time() - start_time,
+            )
+            record_telemetry({**asdict(res), "timestamp": datetime.now(timezone.utc).isoformat(), "request": req.request})
+            return res
 
         # 6. Generation & Validation Loop
         system_prompt = PROMPT_PATH.read_text() + "\n\n" + build_policy_digest()
@@ -860,8 +859,7 @@ class IaCPlatformAgent:
             )
             if passed:
                 # Commit locally
-                run(["git", "add", "--", str(live_env_dir(env) / region / module_path)], cwd=REPO_ROOT)
-                run(["git", "add", "--", str(REPO_ROOT / "workloads-live-repo" / "_envcommon" / f"{module_path}.hcl")], cwd=REPO_ROOT)
+                run(["git", "add", "--", str(leaf_dir_for(env, region, module_path))], cwd=REPO_ROOT)
                 if (REPO_ROOT / "iac-modules-repo" / module_path).exists():
                     run(["git", "add", "--", str(REPO_ROOT / "iac-modules-repo" / module_path)], cwd=REPO_ROOT)
                 run(["git", "commit", "-m", f"feat(iac-agent): {req.request}"], cwd=REPO_ROOT)

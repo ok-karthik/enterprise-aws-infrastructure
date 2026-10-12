@@ -1,0 +1,39 @@
+# Encrypted S3 bucket. Account and region come from the folder path (root.hcl).
+# Golden path: reuses the vetted terraform-aws-modules/s3-bucket/aws registry module,
+# rendered by the IaC Generation Agent from iac-agents-repo/catalog/templates/data-s3-encrypted/,
+# not LLM-authored.
+include "root" {
+  path   = find_in_parent_folders("root.hcl")
+  expose = true
+}
+
+terraform {
+  source = "tfr://registry.terraform.io/terraform-aws-modules/s3-bucket/aws?version=5.12.0"
+}
+
+inputs = {
+  bucket = "__BUCKET_SLUG__-${include.root.locals.env}-${include.root.locals.account_id}"
+
+  versioning = {
+    enabled = true
+  }
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm = "aws:kms"
+      }
+      bucket_key_enabled = true
+    }
+  }
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+
+  tags = {
+    Environment = title(include.root.locals.env)
+    Service     = "__SERVICE_NAME__"
+  }
+}

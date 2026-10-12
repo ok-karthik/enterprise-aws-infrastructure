@@ -259,8 +259,8 @@
                     <div class="feature-item">
                         <div class="feature-icon">🧬</div>
                         <div class="feature-text">
-                            <b>_envcommon/</b>
-                            <span>Shared DRY inheritance layer. 100% config reuse.</span>
+                            <b>root.hcl</b>
+                            <span>The one root: provider, backend and tags. Every stack is one file.</span>
                         </div>
                     </div>
                 </div>
@@ -324,7 +324,7 @@
                                 </li>
                             </ul>
                         </li>
-                        <li><span class="folder">foundation-live-repo/_bootstrap/</span> <span class="comment"># Day-0</span>
+                        <li><span class="folder">iac-live-repo/_bootstrap/</span> <span class="comment"># Day-0</span>
                             <ul>
                                 <li class="last"><span class="comment">CloudFormation: S3 state, OIDC role</span></li>
                             </ul>
@@ -335,23 +335,23 @@
                                 <li class="last"><span class="folder">compute/eks/</span></li>
                             </ul>
                         </li>
-                        <li><span class="folder">workloads-live-repo/</span> <span class="comment"># Deliverables (foundation-live-repo/ holds the landing zone)</span>
+                        <li><span class="folder">iac-live-repo/</span> <span class="comment"># All live stacks, one folder per account</span>
                             <ul>
                                 <li><span class="hcl">root.hcl</span> <span class="comment"># Global config</span></li>
-                                <li><span class="folder">_envcommon/</span> <span class="hcl"># DRY Hub</span></li>
-                                <li><span class="folder">dev/eu-central-1/</span>
+                                <li><span class="folder">_config/</span> <span class="hcl"># Account registry</span></li>
+                                <li><span class="folder">workloads-dev/eu-central-1/</span>
                                     <ul>
-                                        <li><span class="folder">network/vpc/</span> <span class="hcl">terragrunt.hcl</span></li>
-                                        <li class="last"><span class="folder">compute/eks/</span> <span class="hcl">terragrunt.hcl</span></li>
+                                        <li><span class="folder">vpc/</span> <span class="hcl">terragrunt.hcl</span></li>
+                                        <li class="last"><span class="folder">eks/</span> <span class="hcl">terragrunt.hcl</span></li>
                                     </ul>
                                 </li>
-                                <li><span class="folder">prod/eu-central-1/</span>
+                                <li><span class="folder">workloads-prod/eu-central-1/</span>
                                     <ul>
-                                        <li><span class="folder">network/vpc/</span> <span class="hcl">terragrunt.hcl</span></li>
-                                        <li class="last"><span class="folder">compute/eks/</span> <span class="hcl">terragrunt.hcl</span></li>
+                                        <li><span class="folder">vpc/</span> <span class="hcl">terragrunt.hcl</span></li>
+                                        <li class="last"><span class="folder">eks/</span> <span class="hcl">terragrunt.hcl</span></li>
                                     </ul>
                                 </li>
-                                <li class="last"><span class="folder">scripts/</span> <span class="comment"># smoke-test, generate-module</span></li>
+                                <li class="last"><span class="folder">scripts/</span> <span class="comment"># smoke-test, generate-module (repo root)</span></li>
                             </ul>
                         </li>
                         <li><span class="folder">policy-library-repo/terraform/</span> <span class="comment"># OPA Rego</span></li>

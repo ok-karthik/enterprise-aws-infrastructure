@@ -1,6 +1,6 @@
 # compute/eks
 
-**Status:** 📝 Plan-only (wired into `workloads-live-repo`; not applied to AWS)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS)
 
 Reusable EKS module wrapping `terraform-aws-modules/eks/aws`. Encrypts Kubernetes secrets with a dedicated KMS key and enables full control-plane logging (api, audit, authenticator, controllerManager, scheduler) by default, so clusters are auditable and encrypted at rest out of the box.
 

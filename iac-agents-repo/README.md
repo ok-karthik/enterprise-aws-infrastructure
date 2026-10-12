@@ -15,7 +15,7 @@ Interactive and static visual diagrams are maintained in `docs/diagrams/` and pu
 ### 1. IaC Architect (`prompts/architect.md`)
 * **Role**: Senior Cloud Infrastructure Architect.
 * **Responsibility**: Writes valid, hardened Terraform and Terragrunt HCL.
-* **Directives**: Dry-run testing (`-backend=false` init / `terraform validate`), strict adherence to variable definitions under `workloads-live-repo` and `iac-modules-repo`.
+* **Directives**: Dry-run testing (`-backend=false` init / `terraform validate`), strict adherence to variable definitions under `iac-live-repo` and `iac-modules-repo`.
 
 ### 2. Policy Auditor (`prompts/auditor.md`)
 * **Role**: Security & Governance Compliance Officer.

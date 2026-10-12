@@ -33,7 +33,7 @@ jobs:
           # Real account ids (not secret) from the ACCOUNTS_LOCAL_HCL repository variable; empty on forks.
           ACCOUNTS_LOCAL_HCL: ${{ vars.ACCOUNTS_LOCAL_HCL }}
         run: |
-          if python3 workloads-live-repo/scripts/generate_account_matrix.py --account management --github-output; then
+          if python3 scripts/generate_account_matrix.py --account management --github-output; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
           else
             echo "::notice title=FinOps report skipped::management is not in the CI matrix yet (placeholder id or ci = false)"
@@ -53,7 +53,7 @@ jobs:
 
       - name: "Build report"
         if: steps.mgmt.outputs.skip == 'false'
-        run: python3 workloads-live-repo/scripts/cost_report.py --out /tmp/cost-report.md
+        run: python3 scripts/cost_report.py --out /tmp/cost-report.md
 
       - name: "Open or update the weekly issue"
         if: steps.mgmt.outputs.skip == 'false'

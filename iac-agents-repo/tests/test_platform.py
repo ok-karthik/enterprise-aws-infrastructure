@@ -19,20 +19,22 @@ import iac_agent_metrics  # noqa: E402
 
 
 class TestLiveEnvDir(unittest.TestCase):
-    """The account-first layout is workloads-live-repo/workloads/<nonprod|prod>/workloads-<env> (PLAN 8.8)."""
+    """The layout is iac-live-repo/<account>/<region>/<stack>; the dev and prod accounts are workloads-dev / workloads-prod."""
 
-    def test_resolves_ou_grouped_account_folders(self):
+    def test_account_folder_is_iac_live_repo_workloads_env(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            (root / "workloads-live-repo/workloads/nonprod/workloads-dev").mkdir(parents=True)
-            (root / "workloads-live-repo/workloads/prod/workloads-prod").mkdir(parents=True)
-            self.assertEqual(iac_agent.live_env_dir("dev", root), root / "workloads-live-repo/workloads/nonprod/workloads-dev")
-            self.assertEqual(iac_agent.live_env_dir("prod", root), root / "workloads-live-repo/workloads/prod/workloads-prod")
+            self.assertEqual(iac_agent.live_env_dir("dev", root), root / "iac-live-repo/workloads-dev")
+            self.assertEqual(iac_agent.live_env_dir("prod", root), root / "iac-live-repo/workloads-prod")
+            self.assertEqual(iac_agent.live_env_dir("staging", root), root / "iac-live-repo/workloads-staging")
 
-    def test_unknown_environment_falls_back_to_the_flat_path(self):
+    def test_stack_folder_is_account_region_module_name(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            self.assertEqual(iac_agent.live_env_dir("staging", root), root / "workloads-live-repo/workloads-staging")
+            self.assertEqual(
+                iac_agent.leaf_dir_for("dev", "eu-central-1", "data/s3-encrypted", root),
+                root / "iac-live-repo/workloads-dev/eu-central-1/s3-encrypted",
+            )
 
     def test_real_repo_dev_and_prod_exist(self):
         self.assertTrue(iac_agent.live_env_dir("dev").is_dir(), iac_agent.live_env_dir("dev"))
@@ -190,11 +192,12 @@ class TestIaCPlatformAgent(unittest.TestCase):
         self.assertIsNotNone(entry)
         self.assertEqual(entry["id"], "data/dynamodb-table")
         self.assertEqual(entry["template"], "data-dynamodb-table")
-        template_file = iac_agent.CATALOG_TEMPLATES_DIR / entry["template"] / "envcommon.hcl.tmpl"
+        template_file = iac_agent.CATALOG_TEMPLATES_DIR / entry["template"] / "leaf.hcl.tmpl"
         self.assertTrue(template_file.exists())
         tmpl_content = template_file.read_text()
         self.assertIn("terraform-aws-modules/dynamodb-table/aws", tmpl_content)
         self.assertIn("PAY_PER_REQUEST", tmpl_content)
+        self.assertNotIn("read_terragrunt_config", tmpl_content)
 
 
 if __name__ == "__main__":

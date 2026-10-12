@@ -73,7 +73,7 @@ bucket copies every state file, one way, to the secondary region's bucket. Delet
 
 **Recovery, if `tg-state-<account>-eu-central-1` is gone or unusable:**
 1. Check the replica first: `aws s3 ls s3://tg-state-<account>-eu-west-1/<state key>` (keys keep the same path,
-   for example `workloads/prod/workloads-prod/eu-central-1/network/vpc/terraform.tfstate`).
+   for example `workloads-prod/eu-central-1/vpc/terraform.tfstate`).
 2. Recreate the primary bucket by re-deploying the Day-0 stack in `eu-central-1` (it is `Retain`, so if only
    the bucket was deleted, the stack update recreates it).
 3. Copy the state files back: `aws s3 sync s3://tg-state-<account>-eu-west-1/ s3://tg-state-<account>-eu-central-1/ --exclude "eu-west-1/*"`.
@@ -99,7 +99,7 @@ incident lead has agreed (a health check alarm alone is not enough).
    `aws rds remove-from-global-cluster --global-cluster-identifier <id> --db-cluster-identifier <secondary arn>`
    (the secondary becomes a standalone writer). Planned switch: `aws rds failover-global-cluster`.
    S3: the replica bucket is already readable. AWS Backup: restore from the copy in the secondary vault.
-2. **Compute.** Raise `min_size` / `desired_size` in `workloads-prod/eu-west-1/compute/eks/terragrunt.hcl`,
+2. **Compute.** Raise `min_size` / `desired_size` in `iac-live-repo/workloads-prod/eu-west-1/eks/terragrunt.hcl`,
    merge the PR and let the pipeline apply it (a human approves the prod Environment). Deploy workloads.
 3. **Traffic.** `network/route53-failover` moves DNS by itself once the primary health check fails (about 90 s
    plus caching). If it has not, or the alarm was a false positive, do it by hand from the Route 53 console.

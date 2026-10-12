@@ -1,6 +1,6 @@
 # network/dns
 
-**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS)
 
 DNS (PLAN 5.5), applied in **network-hub**, per region: Route 53 Resolver inbound/outbound endpoints, forwarding rules for on-premises domains, resolver query logging, and public hosted zones with per-workload-account delegated subdomains.
 

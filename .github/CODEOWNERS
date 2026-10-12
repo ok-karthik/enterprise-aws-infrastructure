@@ -6,8 +6,14 @@
 
 # Module-specific owners
 /iac-modules-repo/   @ok-karthik
-/foundation-live-repo/     @ok-karthik
-/workloads-live-repo/      @ok-karthik
+/iac-live-repo/            @ok-karthik
+# Per-account ownership, once there is more than one team (examples, keep commented):
+# /iac-live-repo/management/        @ok-karthik @org/platform-leads
+# /iac-live-repo/log-archive/       @org/security-team
+# /iac-live-repo/security-tooling/  @org/security-team
+# /iac-live-repo/network-hub/       @org/network-team
+# /iac-live-repo/workloads-prod/    @org/platform-team
+/scripts/                  @ok-karthik
 
 # Security & Compliance policies
 /policy-library-repo/      @ok-karthik

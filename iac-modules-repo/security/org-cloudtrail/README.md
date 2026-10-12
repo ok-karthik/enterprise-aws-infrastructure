@@ -1,6 +1,6 @@
 # security/org-cloudtrail
 
-**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS)
 
 The organization-wide **CloudTrail** (PLAN 4.2): one trail, applied **once** in the management account, that logs every account (`is_organization_trail = true`, `is_multi_region_trail = true`). It delivers to the bucket that `security/log-archive` builds in the `log-archive` account.
 
@@ -8,7 +8,7 @@ The organization-wide **CloudTrail** (PLAN 4.2): one trail, applied **once** in 
 
 This module and `security/log-archive` never read each other's state. They agree on names instead:
 
-- `log_archive_bucket_name` must equal that module's `bucket_names["cloudtrail"]` output (`<name_prefix>-cloudtrail-<log-archive account id>-<region>`), which the `_envcommon` blueprint computes from the account registry.
+- `log_archive_bucket_name` must equal that module's `bucket_names["cloudtrail"]` output (`<name_prefix>-cloudtrail-<log-archive account id>-<region>`), which the live stack computes from the account registry.
 - `trail_name` (default `platform-org-trail`) must equal the `trail_name` the log-archive bucket policy trusts.
 
 If the names drift apart, the trail either fails to deliver or the bucket policy denies it. Both are checked by the first apply, not by Terraform.

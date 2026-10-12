@@ -1,6 +1,6 @@
 # security/threat-detection
 
-**Status:** 📝 Plan-only (wired into `foundation-live-repo`; not applied to AWS. Includes optional Audit Manager integration, default off)
+**Status:** 📝 Plan-only (wired into `iac-live-repo`; not applied to AWS. Includes optional Audit Manager integration, default off)
 
 Turns on **GuardDuty, Security Hub, Inspector v2 and Macie** for the whole organization (PLAN 4.4), applied in the `security-tooling` account, which is the **delegated administrator** for each service. Detective is optional.
 

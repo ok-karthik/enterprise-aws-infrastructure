@@ -20,10 +20,6 @@ on:
 
 
 env:
-  # Use modules from this checkout instead of the pinned release tags (module_versions in env.hcl).
-  # Needed until every module has a release tag at the iac-modules-repo path (PLAN 1.4), and later for
-  # PRs that change iac-modules-repo/** so module changes are tested before release.
-  IAC_MODULES_LOCAL: '1'
   TG_LOG_FORMAT: 'bare'
 
 permissions:
@@ -62,13 +58,13 @@ jobs:
           aws_role_arn: ${{ inputs.aws_plan_role_arn }}
 
       - name: "Disaster Recovery (Smoke Test)"
-        run: ./workloads-live-repo/scripts/smoke-test.sh ${{ inputs.working_directory }}
+        run: ./scripts/smoke-test.sh ${{ inputs.working_directory }}
 
-      # PLAN 8.5: a PR plans only the units it changed. Shared code (modules, _envcommon, root.hcl, ...) or any
+      # PLAN 8.5: a PR plans only the units it changed. Shared code (modules, root.hcl, the registry, scripts, ...) or any
       # non-PR run plans everything. The scheduled drift-detection run is the full check.
       - name: "Decide plan scope"
         id: scope
-        run: python3 workloads-live-repo/scripts/plan_scope.py "${{ github.event_name }}" "${{ github.base_ref }}" | tee -a "$GITHUB_OUTPUT"
+        run: python3 scripts/plan_scope.py "${{ github.event_name }}" "${{ github.base_ref }}" | tee -a "$GITHUB_OUTPUT"
 
       # --out-dir keeps the binary plans (what apply will run, PLAN 8.6); --json-out-dir keeps the readable
       # copies the governance and cost jobs scan.
@@ -178,7 +174,7 @@ jobs:
             exit 1
           fi
           echo "Scanned $count plan(s)"
-          python3 workloads-live-repo/scripts/merge_sarif.py checkov-plan-sarif "checkov-results-${{ inputs.account }}.sarif"
+          python3 scripts/merge_sarif.py checkov-plan-sarif "checkov-results-${{ inputs.account }}.sarif"
           exit $status
 
       - name: Upload Checkov SARIF results
@@ -284,7 +280,7 @@ jobs:
           COST_GATE_MAX_PCT: '20'
           PR_LABELS: ${{ steps.labels.outputs.names }}
         run: |
-          python3 workloads-live-repo/scripts/cost_gate.py /tmp/infracost-combined.json \
+          python3 scripts/cost_gate.py /tmp/infracost-combined.json \
             --labels "$PR_LABELS" \
             --max-usd "$COST_GATE_MAX_USD" --min-usd "$COST_GATE_MIN_USD" --max-pct "$COST_GATE_MAX_PCT" \
             --markdown-out /tmp/pr-comment.md

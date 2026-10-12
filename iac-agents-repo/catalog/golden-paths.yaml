@@ -11,8 +11,8 @@
 - id: data/s3-encrypted
   description: >-
     Encrypted, versioned, private S3 bucket. Reuses the vetted
-    terraform-aws-modules/s3-bucket/aws registry module — same pattern as the existing
-    workloads-live-repo/_envcommon/data/s3.hcl — rather than a hand-rolled resource block.
+    terraform-aws-modules/s3-bucket/aws registry module — same intent as the in-repo
+    iac-modules-repo/storage/s3 — rather than a hand-rolled resource block.
   module_path: data/s3-encrypted
   resource_hint: aws_s3_bucket
   keywords:

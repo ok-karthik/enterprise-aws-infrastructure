@@ -1,6 +1,6 @@
 # ADR 0012: Terragrunt Stacks — not adopted yet
 
-- Status: draft
+- Status: not used: superseded by the one-file layout (ADR 0010, 2026-10-11)
 - Date: 2026-09-29
 
 ## Context
