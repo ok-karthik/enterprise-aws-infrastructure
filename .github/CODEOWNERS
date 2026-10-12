@@ -13,6 +13,9 @@
 /iac-live-repo/infrastructure/      @ok-karthik  # network/platform team
 /iac-live-repo/workloads/prod/      @ok-karthik  # platform team + service owners
 /iac-live-repo/workloads/nonprod/   @ok-karthik  # platform team
+# In a company, config and the root include would be owned by the platform leads (still @ok-karthik here):
+#/iac-live-repo/_config/     @ok-karthik  # platform leads
+#/iac-live-repo/root.hcl     @ok-karthik  # platform leads
 /scripts/                  @ok-karthik
 
 # Security & Compliance policies

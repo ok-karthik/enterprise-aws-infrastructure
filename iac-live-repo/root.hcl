@@ -32,6 +32,13 @@ locals {
   owner               = local.account.owner
   data_classification = local.account.data_classification
   aws_region          = local.region_dir == "_global" ? local.regions.primary_region : local.region_dir
+
+  # Guard: the account's folder must sit under the folder of its registry OU, mapped through organization.hcl
+  # (lowercase kebab, parent first, Root = root). Same rule as scripts/check-account-registry.sh, so a misplaced
+  # account fails at render time with a clear message. The OU folders never change state keys or tags.
+  ou_parent        = try(local.organization.organizational_units[local.ou].parent, null)
+  expected_ou_path = local.ou == "Root" ? "root" : (local.ou_parent == null ? lower(local.ou) : "${lower(local.ou_parent)}/${lower(local.ou)}")
+  ou_path_check    = local.ou_path == local.expected_ou_path ? "ok" : file("ERROR: account ${local.account_name} must live under iac-live-repo/${local.expected_ou_path}/ (its registry OU is ${local.ou}) but is under iac-live-repo/${local.ou_path}/")
 }
 
 # Wait up to 5 minutes for a state lock instead of failing at once (PLAN 8.3).

@@ -5,8 +5,8 @@ You are an expert Cloud Infrastructure Architect specializing in Terragrunt, Ter
 You are working on the `enterprise-aws-infrastructure` repository.
 *   **Terragrunt Architecture**:
     *   Re-usable infrastructure code belongs in `/iac-modules-repo/`.
-    *   Live deployments belong in `/iac-live-repo/<account>/<region>/<stack>/`
-        (workload accounts and platform accounts such as management, security and network are all folders of `/iac-live-repo/`).
+    *   Live deployments belong in `/iac-live-repo/<ou folder>/<account>/<region|_global>/<stack>/`
+        (the OU folders mirror `_config/organization.hcl`, for example `workloads/nonprod/workloads-dev`; `scripts/check-account-registry.sh` maps each account folder's OU to the registry).
     *   In the live repos, configuration files are always named `terragrunt.hcl`.
 *   **Standards to Keep**:
     *   All files must use HCL 2 syntax.

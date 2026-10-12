@@ -1,4 +1,7 @@
 """org_tree.py: the OU tree text, the README block and the staleness check (no AWS access)."""
+from __future__ import annotations
+
+
 import importlib.util
 import re
 import tempfile
@@ -41,8 +44,11 @@ locals {
 README = "# Live\n\n<!-- org-tree:start -->\nold\n<!-- org-tree:end -->\n\nrest\n"
 
 
-def make_root(readme: str = README) -> Path:
-    root = Path(tempfile.mkdtemp())
+def make_root(readme: str = README, test: unittest.TestCase | None = None) -> Path:
+    tmp = tempfile.TemporaryDirectory()
+    if test is not None:
+        test.addCleanup(tmp.cleanup)
+    root = Path(tmp.name)
     config = root / "iac-live-repo" / "_config"
     config.mkdir(parents=True)
     (config / "accounts.hcl").write_text(REGISTRY)
@@ -55,7 +61,7 @@ def make_root(readme: str = README) -> Path:
 
 class Tree(unittest.TestCase):
     def setUp(self):
-        self.root = make_root()
+        self.root = make_root(test=self)
         self.accounts = ot.parse_registry(REGISTRY)
         self.ous = ot.parse_ous(ORGANIZATION)
 
@@ -77,13 +83,14 @@ class Tree(unittest.TestCase):
     def test_readme_mode_hides_the_ids(self):
         text = ot.render_tree(self.accounts, self.ous, self.root, show_ids=False)
         self.assertNotRegex(text, r"\d{12}")
-        self.assertIn("real", text)
-        self.assertIn("placeholder", text)
+        self.assertNotIn("placeholder", text)
+        self.assertNotIn("real", text)
+        self.assertIn("iac-live-repo/root/management", text)
 
 
 class ReadmeBlock(unittest.TestCase):
     def test_check_fails_when_stale_and_passes_after_readme(self):
-        root = make_root()
+        root = make_root(test=self)
         self.assertEqual(ot.main(["--check"], root), 1)
         self.assertEqual(ot.main(["--readme"], root), 0)
         self.assertEqual(ot.main(["--check"], root), 0)
@@ -92,20 +99,20 @@ class ReadmeBlock(unittest.TestCase):
         self.assertTrue(text.endswith("\nrest\n"))
 
     def test_the_block_never_contains_a_12_digit_id(self):
-        root = make_root()
+        root = make_root(test=self)
         ot.main(["--readme"], root)
         text = (root / "iac-live-repo/README.md").read_text()
         self.assertIsNone(re.search(r"\d{12}", text))
 
     def test_a_changed_registry_makes_the_block_stale(self):
-        root = make_root()
+        root = make_root(test=self)
         ot.main(["--readme"], root)
         registry = root / "iac-live-repo/_config/accounts.hcl"
         registry.write_text(REGISTRY.replace('ou = "NonProd"', 'ou = "Sandbox"'))
         self.assertEqual(ot.main(["--check"], root), 1)
 
     def test_a_readme_without_the_markers_fails(self):
-        root = make_root("# Live\n")
+        root = make_root("# Live\n", test=self)
         self.assertEqual(ot.main(["--check"], root), 1)
 
 

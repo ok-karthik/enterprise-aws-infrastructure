@@ -9,8 +9,8 @@ Usage:
   org_tree.py --readme   rewrite the block between <!-- org-tree:start --> and <!-- org-tree:end --> in iac-live-repo/README.md
   org_tree.py --check    exit 1 if that block is stale (CI)
 
-The README block never contains an account id (the repository is public): it shows only "real" or "placeholder",
-taken from the committed registry alone, so CI and a laptop produce the same block.
+The README block has no id column at all (the repository is public), and is built from the committed registry alone,
+so CI and a laptop produce the same block.
 """
 from __future__ import annotations
 
@@ -40,10 +40,8 @@ def is_placeholder(account_id: str) -> bool:
     return not re.fullmatch(r"\d{12}", account_id) or account_id.startswith("00000000")
 
 
-def id_label(account_id: str, show_ids: bool) -> str:
-    if is_placeholder(account_id):
-        return "placeholder"
-    return account_id if show_ids else "real"
+def id_label(account_id: str) -> str:
+    return "placeholder" if is_placeholder(account_id) else account_id
 
 
 def render_tree(accounts: dict[str, dict[str, str]], ous: dict[str, str | None], root: Path, show_ids: bool) -> str:
@@ -58,7 +56,9 @@ def render_tree(accounts: dict[str, dict[str, str]], ous: dict[str, str | None],
         folder = f"{LIVE_REPO}/{ou_folder(ou, ous)}/{account}"
         missing = "" if (root / folder).is_dir() else "  (no live folder)"
         label = f"{prefix}{branch}{name}"
-        return f"{label:<36}{id_label(accounts[account].get('id', ''), show_ids):<13}{folder}{missing}"
+        if not show_ids:
+            return f"{label:<36}{folder}{missing}"
+        return f"{label:<36}{id_label(accounts[account].get('id', '')):<13}{folder}{missing}"
 
     def children_of(ou: str) -> list[tuple[str, str | None]]:
         """Entries under an OU: its accounts first, then its child OUs in map order."""
