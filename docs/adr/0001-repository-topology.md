@@ -76,8 +76,7 @@ Split by **who approves a change and how much damage a bad change can do**, not 
 - **Where isolation between accounts comes from now:** not from repo boundaries. It comes from per-account CI roles (OIDC,
   `github-actions-plan` read-only and `github-actions-apply` only from that account's GitHub Environment), per-account
   state buckets (`tg-state-<account-id>-<region>`), and GitHub Environments with approvals.
-- **Ownership:** CODEOWNERS per account folder (`/iac-live-repo/<account>/`); the examples are in `.github/CODEOWNERS`, commented
-  out until there is more than one team.
+- **Ownership:** CODEOWNERS per OU folder (`/iac-live-repo/<ou>/`, e.g. `/iac-live-repo/root/`, `/iac-live-repo/security/`, `/iac-live-repo/workloads/`); see `.github/CODEOWNERS` and Revision 2026-10-12 below.
 - **Unchanged:** `iac-modules-repo` and `policy-library-repo` stay separately versioned (release tags per module; the policy
   bundle is pulled by every pipeline).
 - **What we give up:** one repo's history for both teams, and per-repo branch protection and access control (a token for the
