@@ -25,6 +25,14 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: no-real-account-ids
+        name: 🔐 No real account ids in tracked files
+        # Reads the real ids from the gitignored accounts.local.hcl (skips with a note when it is missing, e.g. CI).
+        entry: python3 scripts/check_no_real_ids.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: platform-smoke-test
         name: 🧪 Platform Smoke Test (Validate & TFLint)
         # Reuses your battle-tested script
