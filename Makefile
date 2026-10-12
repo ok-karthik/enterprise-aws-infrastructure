@@ -52,7 +52,11 @@ verify-module: ## Check ONE module with the CI tools, no AWS credentials: make v
 .PHONY: plan
 plan: ## Plan one account: make plan ACCOUNT=workloads-dev
 	@test -n "$(ACCOUNT)" || { echo "usage: make plan ACCOUNT=workloads-dev"; exit 2; }
-	cd iac-live-repo/$(ACCOUNT) && terragrunt run --all plan --non-interactive --log-format bare
+	d="$$(python3 scripts/generate_account_matrix.py --dir $(ACCOUNT))" && cd "$$d" && terragrunt run --all plan --non-interactive --log-format bare
+
+.PHONY: org-tree
+org-tree: ## Print the OU tree (and refresh iac-live-repo/README.md)
+	python3 scripts/org_tree.py && python3 scripts/org_tree.py --readme
 
 .PHONY: test
 test: ## Run OPA policy unit tests, module unit tests and Python unit tests (no AWS credentials needed)

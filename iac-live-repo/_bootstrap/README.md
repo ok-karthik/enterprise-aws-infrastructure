@@ -160,7 +160,7 @@ Details of the pipeline architecture are in [`docs/CICD.md`](../docs/CICD.md).
 The boundary is part of the template, so a change reaches accounts in two ways:
 
 - **Management account:** run `bootstrap.sh`. The change set shows `Modify` on `ApplyBoundary` (the stack policy only blocks replacing or deleting it).
-- **Member accounts:** apply `iac-live-repo/management/_global/bootstrap-stacksets`. Its `template_body` changed, so each StackSet is updated across its accounts, 25 % at a time, stopping at the first failure.
+- **Member accounts:** apply `iac-live-repo/root/management/_global/bootstrap-stacksets`. Its `template_body` changed, so each StackSet is updated across its accounts, 25 % at a time, stopping at the first failure.
 
 **Identity Center from CI needs a re-run of `bootstrap.sh`.** The boundary used to deny `sso:*` everywhere, so CI could not apply the management `identity/identity-center` stack (AccessDenied). After this change the management stack must be updated once (the change set shows `AllowIdentityCenterAdmin` and a `Modify` on `ApplyBoundary`) **before the first Identity Center apply**. Member accounts are unchanged: the StackSets pass `AllowIdentityCenterAdmin=false`.
 

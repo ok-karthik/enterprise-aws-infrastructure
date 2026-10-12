@@ -1,6 +1,7 @@
 # Account registry: the single source of truth for which AWS accounts exist. The account factory
-# vends the entries with create = true; scripts/check-account-registry.sh fails CI if a
-# top-level folder of iac-live-repo has no entry here. The folder name IS the account key (see root.hcl).
+# vends the entries with create = true; scripts/check-account-registry.sh fails CI if an
+# account folder of iac-live-repo (<ou folder>/<account>/<region|_global>/<stack>) has no entry here or is not under the
+# folder of its registry OU (mapped through organization.hcl). The folder name IS the account key (see root.hcl).
 #
 # The ids and emails below are placeholders. Real IDs and emails come from accounts.local.hcl (gitignored) if
 # present, or supplied via the ACCOUNTS_LOCAL_HCL repository variable in CI (see accounts.local.hcl.example). An entry

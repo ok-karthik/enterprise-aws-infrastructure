@@ -37,18 +37,34 @@ import urllib.request
 BASE_DIR = Path(__file__).resolve().parent.parent  # iac-agents-repo/
 REPO_ROOT = BASE_DIR.parent
 sys.path.insert(0, str(BASE_DIR / "iac_agent"))
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
 PROMPT_PATH = BASE_DIR / "prompts" / "iac_agent.md"
 AUDITOR_PROMPT_PATH = BASE_DIR / "prompts" / "auditor.md"
 GENERATE_MODULE_SCRIPT = REPO_ROOT / "scripts" / "generate-module.sh"
 
 
+# The OU of a workloads account that is not in the registry yet (the registry has dev and prod only).
+_ENV_OU = {"dev": "NonProd", "staging": "NonProd", "prod": "Prod"}
+
+
 def live_env_dir(env: str, root: Optional[Path] = None) -> Path:
-    """Account folder for an environment: iac-live-repo/workloads-<env> (the folder name is the registry key)."""
-    return (root or REPO_ROOT) / "iac-live-repo" / f"workloads-{env}"
+    """Account folder for an environment: iac-live-repo/<ou folder>/workloads-<env>, found through the OU layout
+    (generate_account_matrix.find_account_dir). If it does not exist yet, the expected path (the registry OU mapped
+    through organizational_units; the repo's own registry decides, not the temp root a test passes in)."""
+    from generate_account_matrix import REGISTRY, find_account_dir, load_accounts, load_ous, ou_folder
+
+    root = root or REPO_ROOT
+    name = f"workloads-{env}"
+    found = find_account_dir(root, name)
+    if found is not None:
+        return found
+    fields = load_accounts((REPO_ROOT / REGISTRY).read_text(encoding="utf-8")).get(name, {})
+    ou = fields.get("ou") or _ENV_OU.get(env, "NonProd")
+    return root / "iac-live-repo" / ou_folder(ou, load_ous(REPO_ROOT)) / name
 
 
 def leaf_dir_for(env: str, region: str, module_path: str, root: Optional[Path] = None) -> Path:
-    """Folder of the one-file stack: iac-live-repo/<account>/<region>/<stack>, stack = the module's name."""
+    """Folder of the one-file stack: iac-live-repo/<ou folder>/<account>/<region>/<stack>, stack = the module's name."""
     return live_env_dir(env, root) / region / Path(module_path).name
 
 

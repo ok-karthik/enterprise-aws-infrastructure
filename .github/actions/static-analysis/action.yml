@@ -55,6 +55,10 @@ runs:
       shell: bash
       run: ./scripts/check-account-registry.sh
 
+    - name: OU tree check (the org-tree block in iac-live-repo/README.md is current)
+      shell: bash
+      run: python3 scripts/org_tree.py --check
+
     - name: Discovery contract check (ensure no contract parameter disappears)
       shell: bash
       run: python3 scripts/check_discovery_contract.py

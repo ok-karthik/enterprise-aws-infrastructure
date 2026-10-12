@@ -8,4 +8,17 @@ locals {
   # TODO(owner): after the first apply of the log-archive leaf, paste its `kms_key_arn` output here. The organization
   # trail (management account) needs the ARN of the log-archive key to encrypt its logs. Refused while it is the placeholder.
   log_archive_kms_key_arn = "arn:aws:kms:eu-central-1:000000000001:key/00000000-0000-0000-0000-000000000000"
+
+  # The OU tree. One source: the organization stack creates these OUs, and iac-live-repo's folders mirror them
+  # (lowercase; a child OU sits under its parent; Root = `root/`).
+  organizational_units = {
+    "Security"       = {}
+    "Infrastructure" = {}
+    "Workloads"      = {}
+    "Prod"           = { parent = "Workloads" }
+    "NonProd"        = { parent = "Workloads" }
+    "Sandbox"        = {}
+    "Policy-Staging" = {}
+    "Suspended"      = {}
+  }
 }

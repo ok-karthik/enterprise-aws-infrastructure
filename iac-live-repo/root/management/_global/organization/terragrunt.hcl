@@ -34,6 +34,9 @@ locals {
 }
 
 inputs = {
+  # The OU tree, from _config/organization.hcl (one source; the live folders mirror it).
+  organizational_units = include.root.locals.organization.organizational_units
+
   # Region allow-list per OU (PLAN 4.6), from _config/regions.hcl. Starts with ONLY the Policy-Staging entry,
   # same "test first" reasoning as guardrail_target_ous below: widen by adding more of
   # local.regions.allowed_regions_by_ou's keys once Policy-Staging has been proven safe.

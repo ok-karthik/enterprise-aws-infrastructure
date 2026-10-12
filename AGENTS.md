@@ -12,7 +12,7 @@ A multi-environment AWS Infrastructure-as-Code platform built with **Terragrunt 
 A directory ending in `-repo` is a separate Git repository in a real company (see `docs/adr/0001-repository-topology.md`); here they live side by side so the whole foundation can be read from one checkout.
 
 *   `/iac-modules-repo/`: Custom reusable Terraform modules, versioned per module (`<module>-vX.Y.Z`). Pure `.tf`, no environment specifics, no provider blocks.
-*   `/iac-live-repo/`: All live Terragrunt stacks, one folder per account: `iac-live-repo/<account>/<region or _global>/<stack>/terragrunt.hcl` (management, security, network, observability and the workload accounts `workloads-dev` / `workloads-prod`). One `root.hcl`, the account registry in `_config/`, and `_bootstrap/`. Ownership per account folder is set in `.github/CODEOWNERS`.
+*   `/iac-live-repo/`: All live Terragrunt stacks, folders mirror the AWS Organizations OU tree: `iac-live-repo/<ou path>/<account>/<region or _global>/<stack>/terragrunt.hcl` (for example `root/management`, `security/log-archive`, `infrastructure/network-hub`, `workloads/nonprod/workloads-dev`, `workloads/prod/workloads-prod`). The OU tree has one source, `_config/organization.hcl`; `make org-tree` prints it. One `root.hcl`, the account registry in `_config/`, and `_bootstrap/`. Ownership per OU folder is set in `.github/CODEOWNERS`. The state key and `Service` tag stay `<account>/<region>/<stack>` (the OU folders are for people).
 *   `/scripts/`: Smoke test, module/stack generator, account matrix, cost gate and the other CI helpers (with `tests/`).
 *   `/iac-live-repo/_bootstrap/`: Day-0 **CloudFormation** stack `platform-bootstrap` (`cloudformation/account-bootstrap.yaml`: S3 state bucket, GitHub OIDC provider, `github-actions-plan` / `github-actions-apply` roles + permissions boundary) and the `bootstrap.sh` that deploys it. Run once by a human in the management account; member accounts get it through StackSets (PLAN 2.0b). Terragrunt never creates the state bucket: **no command may pass `--backend-bootstrap`**.
 *   `/policy-library-repo/terraform/`: Rego-based OPA compliance rules enforced against Terraform plan JSON.
@@ -37,7 +37,7 @@ git::https://github.com/ok-karthik/enterprise-aws-infrastructure.git//iac-module
 | `iac-modules-repo/identity/workload-iam` | `iam` | `workload-iam-v1.0.0` | Documented interface stub for workload pod identity / IRSA role vending |
 
 ### 2. Platform Foundation Modules (Internal to this Repository)
-Applied and maintained directly by this platform via Terragrunt stacks (`iac-live-repo/<account>/<region>/<stack>`, for example `iac-live-repo/workloads-dev/...` and `iac-live-repo/management/_global/`):
+Applied and maintained directly by this platform via Terragrunt stacks (`iac-live-repo/<ou path>/<account>/<region>/<stack>`, for example `iac-live-repo/workloads/nonprod/workloads-dev/...` and `iac-live-repo/root/management/_global/`):
 
 | Module Path | Scope | Release Tag | Purpose |
 |---|---|---|---|
@@ -109,12 +109,13 @@ make image-scan     # build the toolbox image and Trivy-scan it (needs Docker)
 conftest test --policy policy-library-repo/terraform <plan.json>   # policy runs against plan JSON, not HCL
 
 # Plan/apply one account (uses run --all across the dependency graph)
-make plan ACCOUNT=workloads-dev
-cd iac-live-repo/workloads-dev && terragrunt run --all plan --non-interactive --log-format bare
-cd iac-live-repo/workloads-dev && terragrunt run --all apply --non-interactive -auto-approve --log-format bare
+make plan ACCOUNT=workloads-dev     # finds the OU folder from the registry
+make org-tree                       # print the OU tree and refresh the block in iac-live-repo/README.md
+cd iac-live-repo/workloads/nonprod/workloads-dev && terragrunt run --all plan --non-interactive --log-format bare
+cd iac-live-repo/workloads/nonprod/workloads-dev && terragrunt run --all apply --non-interactive -auto-approve --log-format bare
 
 # Plan/apply one stack only
-cd iac-live-repo/workloads-dev/eu-central-1/eks && terragrunt plan --log-format bare
+cd iac-live-repo/workloads/nonprod/workloads-dev/eu-central-1/eks && terragrunt plan --log-format bare
 
 # Scaffold a new stack (one terragrunt.hcl) manually
 ./scripts/generate-module.sh <category/module-name> <account> <region>
@@ -129,8 +130,8 @@ pre-commit install
 
 A stack is **one `terragrunt.hcl`**. Nothing is merged from other files except `root.hcl`:
 
-1. **The folder path is the config:** `iac-live-repo/<account>/<region or _global>/<stack>/terragrunt.hcl`. `<account>` must be a key in `iac-live-repo/_config/accounts.hcl` (the registry); `_global` means "account-wide, run from the primary region". Every folder name is checked by `scripts/check-account-registry.sh`.
-2. **`iac-live-repo/root.hcl`** is the only file that looks anything up. It takes the account from the path and everything else from the registry in `_config/` (`accounts.hcl`, `regions.hcl`, `organization.hcl`), and **generates `provider.tf` and `backend.tf`** with `default_tags` (`Environment`, `Service`, `Project`, `ManagedBy`, `Account`, `Owner`, `DataClassification`). The state bucket is `tg-state-<account-id>-<region>`, the state key is the path (`path_relative_to_include()`). Do not add provider/backend blocks by hand.
+1. **The folder path is the config:** `iac-live-repo/<ou path>/<account>/<region or _global>/<stack>/terragrunt.hcl`. `<ou path>` mirrors the OU tree in `_config/organization.hcl` (lowercase; a child OU under its parent; Root = `root/`) and must equal the account's `ou` in the registry. `<account>` must be a key in `iac-live-repo/_config/accounts.hcl` (the registry); `_global` means "account-wide, run from the primary region". Every folder name is checked by `scripts/check-account-registry.sh`. To move an account to another OU: change `ou` in the registry, `git mv` the account folder, run the check and `make org-tree`; no state move.
+2. **`iac-live-repo/root.hcl`** is the only file that looks anything up. It takes the account, region and stack from the last three folders of the path (the OU folders before them are ignored) and everything else from the registry in `_config/` (`accounts.hcl`, `regions.hcl`, `organization.hcl`), and **generates `provider.tf` and `backend.tf`** with `default_tags` (`Environment`, `Service`, `Project`, `ManagedBy`, `Account`, `Owner`, `DataClassification`). The state bucket is `tg-state-<account-id>-<region>`, the state key is `<account>/<region>/<stack>/terraform.tfstate` (`local.stack_path`, without the OU folders). Do not add provider/backend blocks by hand.
 3. **The stack file** includes `root.hcl` (`expose = true`), sets `terraform.source` to the local module (`${get_repo_root()}/iac-modules-repo/<category>/<module>`), declares its `dependency` blocks (with `mock_outputs` for plan-time) and every input. Short template:
 
    ```hcl
@@ -153,7 +154,7 @@ A stack is **one `terragrunt.hcl`**. Nothing is merged from other files except `
 4. **Where values come from:** account and region values are `include.root.locals.<name>` (`account_name`, `account_id`, `env`, `ou`, `alias`, `owner`, `data_classification`, `aws_region`, plus `registry`, `regions`, `organization`). Everything else (cluster names, sizes, CIDRs) is a literal in the stack file.
 5. **The one-file rule:** a stack never calls `read_terragrunt_config`, `get_env(` or `find_in_parent_folders` (except for `root.hcl`). `scripts/check-account-registry.sh` fails CI otherwise.
 
-The folder layout is load-bearing: the path drives the account, the region, the state key and the `Service` tag. `env` comes from the registry (`dev`/`staging`/`prod`/`global`), not from the folder name, and regions must be allowed for the account's OU in `_config/regions.hcl`. There is no `assume_role`: CI uses OIDC directly into the target account.
+The folder layout is load-bearing: the last three folders drive the account, the region, the state key and the `Service` tag; the OU folders before them are for people and checked against the registry. `env` comes from the registry (`dev`/`staging`/`prod`/`global`), not from the folder name, and regions must be allowed for the account's OU in `_config/regions.hcl`. There is no `assume_role`: CI uses OIDC directly into the target account.
 
 The catalog golden-path templates (`iac-agents-repo/catalog/templates/`) intentionally use pinned `tfr://` registry modules (third-party, versioned), while platform stacks use local `iac-modules-repo` sources.
 
@@ -176,7 +177,7 @@ These are enforced against the **Terraform plan JSON** in CI (`reusable-terragru
 
 ## 6. CI/CD Pipeline
 
-- `terragrunt.yml` — main orchestrator. Static analysis + one reusable stack per account run in parallel (the account matrix is generated from `iac-live-repo/_config/accounts.hcl` by `scripts/generate_account_matrix.py`; an account runs only with `ci = true`, a live folder and a real account id). On push to `main`, an `apply` matrix job runs one account at a time (management, core, dev, staging, prod), each in the account's GitHub Environment (prod requires manual approval).
+- `terragrunt.yml` — main orchestrator. Static analysis + one reusable stack per account run in parallel (the account matrix is generated from `iac-live-repo/_config/accounts.hcl` by `scripts/generate_account_matrix.py`; an account runs only with `ci = true`, a live folder (`iac-live-repo/<ou path>/<account>`) and a real account id). On push to `main`, an `apply` matrix job runs one account at a time (management, core, dev, staging, prod), each in the account's GitHub Environment (prod requires manual approval).
 - `reusable-terragrunt.yml` — per-account plan → governance (OPA on every plan, Checkov on every plan) → cost analysis. The cost gate in that last job marks the PR's cost-analysis check red on a big monthly rise; it blocks merging only once that check is required in branch protection (main is not protected yet). Plans are generated as `tfplan.bin`, converted to `tfplan.json`, uploaded as artifacts, and consumed by the gate jobs.
 - Auth is **zero-key OIDC** with two roles per account, straight into the target account (no shared role, no role chaining, no per-environment role variables): plan/governance/drift jobs assume the read-only `arn:aws:iam::<account-id>:role/github-actions-plan` (trusted from PRs and `main`); apply/destroy jobs assume `.../github-actions-apply` (trusted only from that account's GitHub Environment: `management`, `core`, `dev`, `prod`), via `setup-platform`. The account id comes from the registry. No static AWS credentials exist.
 - `drift-detection.yml` — nightly matrix over the account matrix; manages one GitHub Issue per account (create/comment/auto-close) and prompts for ChatOps reconciliation.

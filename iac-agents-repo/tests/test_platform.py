@@ -19,21 +19,21 @@ import iac_agent_metrics  # noqa: E402
 
 
 class TestLiveEnvDir(unittest.TestCase):
-    """The layout is iac-live-repo/<account>/<region>/<stack>; the dev and prod accounts are workloads-dev / workloads-prod."""
+    """The layout is iac-live-repo/<ou folder>/<account>/<region>/<stack>; the dev and prod accounts are workloads-dev (NonProd) / workloads-prod (Prod)."""
 
-    def test_account_folder_is_iac_live_repo_workloads_env(self):
+    def test_account_folder_is_the_ou_folder_then_workloads_env(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            self.assertEqual(iac_agent.live_env_dir("dev", root), root / "iac-live-repo/workloads-dev")
-            self.assertEqual(iac_agent.live_env_dir("prod", root), root / "iac-live-repo/workloads-prod")
-            self.assertEqual(iac_agent.live_env_dir("staging", root), root / "iac-live-repo/workloads-staging")
+            self.assertEqual(iac_agent.live_env_dir("dev", root), root / "iac-live-repo/workloads/nonprod/workloads-dev")
+            self.assertEqual(iac_agent.live_env_dir("prod", root), root / "iac-live-repo/workloads/prod/workloads-prod")
+            self.assertEqual(iac_agent.live_env_dir("staging", root), root / "iac-live-repo/workloads/nonprod/workloads-staging")
 
     def test_stack_folder_is_account_region_module_name(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             self.assertEqual(
                 iac_agent.leaf_dir_for("dev", "eu-central-1", "data/s3-encrypted", root),
-                root / "iac-live-repo/workloads-dev/eu-central-1/s3-encrypted",
+                root / "iac-live-repo/workloads/nonprod/workloads-dev/eu-central-1/s3-encrypted",
             )
 
     def test_real_repo_dev_and_prod_exist(self):
