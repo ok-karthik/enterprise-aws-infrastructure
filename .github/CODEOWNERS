@@ -7,12 +7,12 @@
 # Module-specific owners
 /iac-modules-repo/   @ok-karthik
 /iac-live-repo/            @ok-karthik
-# Per-account ownership, once there is more than one team (examples, keep commented):
-# /iac-live-repo/management/        @ok-karthik @org/platform-leads
-# /iac-live-repo/log-archive/       @org/security-team
-# /iac-live-repo/security-tooling/  @org/security-team
-# /iac-live-repo/network-hub/       @org/network-team
-# /iac-live-repo/workloads-prod/    @org/platform-team
+# One line per OU folder, all the owner for now. The comment names the team that would own it in a company.
+/iac-live-repo/root/                @ok-karthik  # platform leads
+/iac-live-repo/security/            @ok-karthik  # security team
+/iac-live-repo/infrastructure/      @ok-karthik  # network/platform team
+/iac-live-repo/workloads/prod/      @ok-karthik  # platform team + service owners
+/iac-live-repo/workloads/nonprod/   @ok-karthik  # platform team
 /scripts/                  @ok-karthik
 
 # Security & Compliance policies

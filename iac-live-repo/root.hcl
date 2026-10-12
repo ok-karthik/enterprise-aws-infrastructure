@@ -1,15 +1,23 @@
 # root.hcl: included by every stack (terragrunt.hcl) in iac-live-repo.
 #
 # The folder path IS the configuration:
-#   <account>/<region or _global>/<stack>/terragrunt.hcl
+#   <ou path>/<account>/<region or _global>/<stack>/terragrunt.hcl
+#   - <ou path> mirrors the OU tree in _config/organization.hcl (lowercase; Root = root/). It is for people only
 #   - <account> must be a key in iac-live-repo/_config/accounts.hcl (the registry)
 #   - <region> is an AWS region; _global means "account-wide", run from the primary region
 #
 # This is the ONLY file that looks anything up. A stack reads these values as include.root.locals.<name>.
 locals {
+  # Layout: <ou path>/<account>/<region or _global>/<stack>/terragrunt.hcl. The OU folders are for people; the last
+  # three folders are what count. The state key and the Service tag use only those three, so moving an account to
+  # another OU is a folder move, never a state move.
   path_parts   = split("/", path_relative_to_include())
-  account_name = local.path_parts[0]
-  region_dir   = local.path_parts[1]
+  depth        = length(local.path_parts)
+  ou_path      = join("/", slice(local.path_parts, 0, local.depth - 3))
+  account_name = local.path_parts[local.depth - 3]
+  region_dir   = local.path_parts[local.depth - 2]
+  stack_name   = local.path_parts[local.depth - 1]
+  stack_path   = "${local.account_name}/${local.region_dir}/${local.stack_name}"
 
   registry     = read_terragrunt_config("${get_repo_root()}/iac-live-repo/_config/accounts.hcl").locals.accounts
   regions      = read_terragrunt_config("${get_repo_root()}/iac-live-repo/_config/regions.hcl").locals
@@ -50,7 +58,7 @@ provider "aws" {
       ManagedBy          = "Terragrunt"
       Account            = "${local.account_name}"
       Project            = "enterprise-aws-platform"
-      Service            = "${path_relative_to_include()}"
+      Service            = "${local.stack_path}"
       Owner              = "${local.owner}"
       DataClassification = "${local.data_classification}"
     }
@@ -68,7 +76,7 @@ remote_state {
   }
   config = {
     bucket       = "tg-state-${local.account_id}-${local.aws_region}"
-    key          = "${path_relative_to_include()}/terraform.tfstate"
+    key          = "${local.stack_path}/terraform.tfstate"
     region       = "${local.aws_region}"
     encrypt      = true
     use_lockfile = true
