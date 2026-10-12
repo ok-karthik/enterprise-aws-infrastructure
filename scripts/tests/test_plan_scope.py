@@ -9,10 +9,10 @@ import plan_scope as p  # noqa: E402
 class PlanScope(unittest.TestCase):
     def test_anything_but_a_pull_request_is_a_full_run(self):
         for event in ["push", "schedule", "workflow_dispatch", ""]:
-            self.assertEqual(p.decide(event, ["iac-live-repo/workloads-prod/eu-central-1/x/terragrunt.hcl"]), "full")
+            self.assertEqual(p.decide(event, ["iac-live-repo/workloads/prod/workloads-prod/eu-central-1/x/terragrunt.hcl"]), "full")
 
     def test_a_change_inside_one_unit_is_affected_only(self):
-        self.assertEqual(p.decide("pull_request", ["iac-live-repo/workloads-prod/eu-west-1/vpc/terragrunt.hcl"]), "affected")
+        self.assertEqual(p.decide("pull_request", ["iac-live-repo/workloads/prod/workloads-prod/eu-west-1/vpc/terragrunt.hcl"]), "affected")
 
     def test_shared_code_forces_a_full_run(self):
         for path in [

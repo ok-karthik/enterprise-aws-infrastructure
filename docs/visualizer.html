@@ -614,7 +614,7 @@
           File Blueprint & Config
         </h4>
         <div class="code-snippet" id="drawerCode">
-iac-live-repo/network-hub/eu-central-1/transit-gateway/terragrunt.hcl
+iac-live-repo/infrastructure/network-hub/eu-central-1/transit-gateway/terragrunt.hcl
         </div>
       </div>
     </aside>
@@ -1173,7 +1173,7 @@ iac-live-repo/network-hub/eu-central-1/transit-gateway/terragrunt.hcl
         desc: "AWS Organizations root account. Deploys organization-wide SCPs, Resource Control Policies (RCP data perimeters), IAM Identity Center permission sets (developer, platform, break-glass), and the Day-0 bootstrap CloudFormation StackSets.",
         meta: { "OU Placement": "Root (Management)", "Region": "eu-central-1", "Deploy Method": "CloudFormation StackSets & OIDC" },
         guardrail: "Service Control Policies (SCPs) protect github-actions-* and platform-* IAM roles from deletion or alteration across all member accounts.",
-        code: "iac-live-repo/management/_global/organization/terragrunt.hcl"
+        code: "iac-live-repo/root/management/_global/organization/terragrunt.hcl"
       },
       'network-hub': {
         title: "network-hub Account",
@@ -1181,7 +1181,7 @@ iac-live-repo/network-hub/eu-central-1/transit-gateway/terragrunt.hcl
         desc: "Hub-and-spoke transit gateway architecture. Manages org-wide IPAM pools, RAM-shared Transit Gateway, Route 53 Resolver query logging, and the central inspection VPC with AWS Network Firewall.",
         meta: { "OU Placement": "Infrastructure", "Egress Mode": "central (Appliance Mode ON)", "Shared Via": "AWS Resource Access Manager (RAM)" },
         guardrail: "Network Firewall applies a STRICT_ORDER stateful domain drop policy: only approved package registries and base-image repositories are allowed outbound.",
-        code: "iac-modules-repo/network/inspection-egress/main.tf\niac-live-repo/network-hub/eu-central-1/transit-gateway/terragrunt.hcl"
+        code: "iac-modules-repo/network/inspection-egress/main.tf\niac-live-repo/infrastructure/network-hub/eu-central-1/transit-gateway/terragrunt.hcl"
       },
       'workloads-prod': {
         title: "workloads-prod (Primary Region)",
@@ -1189,7 +1189,7 @@ iac-live-repo/network-hub/eu-central-1/transit-gateway/terragrunt.hcl
         desc: "Active primary production cluster in eu-central-1. Hardened EKS cluster with private endpoints and IMDSv2 hop limit 1, Aurora Global Database Primary, and continuous cross-region S3 state replication.",
         meta: { "Region": "eu-central-1 (Active)", "OU Placement": "Workloads/Prod", "Discovery Contract": "SSM /platform/prod/eu-central-1/..." },
         guardrail: "KMS customer-managed keys (CMK) per data classification tier. Public EKS API endpoint is strictly disabled by default.",
-        code: "iac-live-repo/workloads-prod/eu-central-1/eks/terragrunt.hcl"
+        code: "iac-live-repo/workloads/prod/workloads-prod/eu-central-1/eks/terragrunt.hcl"
       },
       'workloads-dr': {
         title: "workloads-prod (DR Warm Standby)",
@@ -1197,7 +1197,7 @@ iac-live-repo/network-hub/eu-central-1/transit-gateway/terragrunt.hcl
         desc: "Secondary warm standby stack in eu-west-1. Standby VPC and EKS cluster with zero-sized worker node group to minimize idle run costs. Houses the Aurora Global Database secondary replica and S3 replica target.",
         meta: { "Region": "eu-west-1 (Warm Standby)", "RTO / RPO Target": "RTO < 2h / RPO < 1s", "Failover": "Route 53 Active-Passive Health Checks" },
         guardrail: "S3 replication is strictly one-way with Delete Marker replication disabled to prevent accidental state deletion propagation.",
-        code: "docs/DISASTER_RECOVERY.md\niac-live-repo/workloads-prod/eu-west-1/eks/terragrunt.hcl"
+        code: "docs/DISASTER_RECOVERY.md\niac-live-repo/workloads/prod/workloads-prod/eu-west-1/eks/terragrunt.hcl"
       },
       'log-archive': {
         title: "log-archive Account",

@@ -12,7 +12,7 @@ Cost used to be only visible. These pieces make it act. **None of them is applie
 |---|---|---|---|
 | PR | Cost gate: marks the PR's cost-analysis check red on a cost rise over the threshold unless labelled `cost-approved` | `scripts/cost_gate.py`, job `cost-analysis` in `.github/workflows/reusable-terragrunt.yml` | built, not applied |
 | Weekly | Cost report: top movers, untagged share and savings recommendations as a GitHub Issue | `scripts/cost_report.py`, `.github/workflows/finops-weekly.yml`; recommendations come from `governance/billing` (Cost Optimization Hub, Compute Optimizer) | built, not applied |
-| Nightly | Dev EKS nodes scale to zero outside working hours | `scale_schedule` in `iac-modules-repo/compute/eks`, set in the dev EKS stack (`iac-live-repo/workloads-dev/eu-central-1/eks`) | built, not applied |
+| Nightly | Dev EKS nodes scale to zero outside working hours | `scale_schedule` in `iac-modules-repo/compute/eks`, set in the dev EKS stack (`iac-live-repo/workloads/nonprod/workloads-dev/eu-central-1/eks`) | built, not applied |
 | Weekly | Cost janitor: orphaned EBS volumes, snapshots, Elastic IPs and log groups without retention (dev) | `iac-modules-repo/governance/cost-janitor` | built, not applied |
 
 ### Cost gate

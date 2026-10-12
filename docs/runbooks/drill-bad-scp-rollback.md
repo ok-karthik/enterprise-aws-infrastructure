@@ -55,7 +55,7 @@ Validate that an errant or overly broad Service Control Policy (SCP) is safely c
    *Note*: As long as `FullAWSAccess` remains attached, normal operation is restored immediately upon detachment.
 
 2. **GitOps Reconciliation**:
-   - Revert the Git commit that introduced the policy in `iac-live-repo/management/_global/organization/policies/`.
+   - Revert the Git commit that introduced the policy in `iac-live-repo/root/management/_global/organization/policies/`.
    - Run Terragrunt in the management organization stack to reconcile desired state with AWS.
 
 ---

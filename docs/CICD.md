@@ -45,7 +45,7 @@ Because the apply role trusts only one GitHub Environment, the manual-approval g
 
 ## Account matrix: one job per account
 
-Workflows do not have fixed `dev` / `prod` jobs. A `matrix` job runs `scripts/generate_account_matrix.py`, which reads the account registry (`iac-live-repo/_config/accounts.hcl`) and emits one entry per account that has `ci = true`, a live folder (`iac-live-repo/<account>`) and a **real account id** (a `000000000xxx` placeholder is skipped with a notice, never a red build). Plan, drift detection and apply all run over that matrix.
+Workflows do not have fixed `dev` / `prod` jobs. A `matrix` job runs `scripts/generate_account_matrix.py`, which reads the account registry (`iac-live-repo/_config/accounts.hcl`) and emits one entry per account that has `ci = true`, a live folder (`iac-live-repo/<ou path>/<account>`, the OU path mirrors the registry OU) and a **real account id** (a `000000000xxx` placeholder is skipped with a notice, never a red build). Plan, drift detection and apply all run over that matrix.
 
 - **Role ARNs are built from the account id**: `arn:aws:iam::<account-id>:role/github-actions-plan` and `.../github-actions-apply`. There is no shared role, no role chaining, and no per-environment role variable. Each account has its own OIDC provider and roles from the Day-0 bootstrap (CloudFormation for management, StackSets for members), so the blast radius stays one account.
 - **`stack`** (plan, governance, cost) runs for every account in parallel. **`apply`** runs on `main` only after every account's plan and governance passed, **one account at a time in the order management, core, dev, staging, prod**, and stops at the first failure. Each job runs in the account's GitHub Environment, so the approval on `prod` still gates prod.
@@ -53,7 +53,7 @@ Workflows do not have fixed `dev` / `prod` jobs. A `matrix` job runs `scripts/ge
 - **Repository variable:** only `AWS_REGION`. `iac-live-repo/_bootstrap/bootstrap.sh` prints the `gh` commands. The old `AWS_<ENV>_PLAN_ROLE_ARN` / `AWS_<ENV>_APPLY_ROLE_ARN` variables are no longer read and can be deleted.
 - **Branch protection:** the required status checks are now named per account (for example `workloads-dev / 📝 Plan: workloads-dev`); update them in Settings → Branches (see `GOVERNANCE.md`). Until an account has a real id no plan job exists for it, so only static analysis runs.
 
-**Account guard:** `root.hcl` takes the account ID from the account registry, using the account folder name (not from the caller's credentials) and sets it as `allowed_account_ids`, so running a stack with credentials for the wrong account fails at provider init.
+**Account guard:** `root.hcl` takes the account ID from the account registry, using the account folder name (the third folder from the end of the path; not from the caller's credentials) and sets it as `allowed_account_ids`, so running a stack with credentials for the wrong account fails at provider init.
 
 ## Governance rules (`policy-library-repo/terraform/`)
 

@@ -97,3 +97,18 @@ destroy, a changed argument): stop, don't apply, keep the old keys. The copy is 
 If all five are clean: `terragrunt apply tfplan` in each folder. Then remove the old keys (the bucket is versioned, so they stay recoverable):
 `aws s3 rm "$B/management/_global/governance/organization/terraform.tfstate"` and the other four. `aws s3 ls $B --recursive` should then
 list exactly the five new keys.
+
+## 2026-10-12: OU folders, keys unchanged
+
+The account folders moved under the OU tree. The state keys and the `Service` tag did not change (they are still
+`<account>/<region>/<stack>`), so nothing in S3 moves.
+
+| Account | New account folder |
+|---|---|
+| management | `iac-live-repo/root/management` |
+| log-archive, security-tooling | `iac-live-repo/security/<account>` |
+| network-hub, shared-services, observability | `iac-live-repo/infrastructure/<account>` |
+| workloads-dev | `iac-live-repo/workloads/nonprod/workloads-dev` |
+| workloads-prod | `iac-live-repo/workloads/prod/workloads-prod` |
+
+No state moves. After merge, `terragrunt plan` in the 5 applied stacks shows No changes.

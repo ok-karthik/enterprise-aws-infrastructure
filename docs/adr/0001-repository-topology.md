@@ -83,3 +83,15 @@ Split by **who approves a change and how much damage a bad change can do**, not 
 - **What we give up:** one repo's history for both teams, and per-repo branch protection and access control (a token for the
   repo reaches every account folder; the account roles are what limits damage).
 - **When to split again:** separate teams with separate release cadences, or an audit need for repo-level separation.
+
+## Revision 2026-10-12 (DRAFT by the model; owner to rewrite)
+
+- **What changed:** the folders under `iac-live-repo/` mirror the AWS Organizations OU tree for people:
+  `iac-live-repo/<ou path>/<account>/<region or _global>/<stack>/terragrunt.hcl` (for example `root/management`,
+  `security/log-archive`, `workloads/nonprod/workloads-dev`).
+- **State keys are unchanged:** they are `<account>/<region>/<stack>` (and so is the `Service` tag), because `root.hcl` uses
+  only the last three folders. A reorganisation is a folder move plus one registry line, not a state migration.
+- **One source for the OU tree:** `iac-live-repo/_config/organization.hcl` (`organizational_units`). The organization stack
+  creates the OUs from it, and the scripts derive the folder names from it. `scripts/check-account-registry.sh` checks that an
+  account folder is at the folder of its registry OU, and `make org-tree` prints the tree.
+- **Ownership:** CODEOWNERS has one line per OU folder.
