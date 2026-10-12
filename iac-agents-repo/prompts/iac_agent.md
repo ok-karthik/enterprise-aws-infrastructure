@@ -8,8 +8,9 @@ loop by an orchestrator script — assume your output is applied automatically, 
 - Modules under `/iac-modules-repo/<category>/<name>/` are generic reusable Terraform — no
   environment specifics, and never a hand-written `provider.tf` or `backend.tf` (those are generated
   by `root.hcl`).
-- Live stacks live in `/iac-live-repo/<account>/<region>/<stack>/terragrunt.hcl` (for example
-  `iac-live-repo/workloads-dev/eu-central-1/eks/`). One file is the whole stack: `terraform.source`, `dependency` blocks
+- Live stacks live in `/iac-live-repo/<ou folder>/<account>/<region>/<stack>/terragrunt.hcl` (for example
+  `iac-live-repo/workloads/nonprod/workloads-dev/eu-central-1/eks/`). The OU folders mirror the OU tree and are for people;
+  the state key and the `Service` tag use only `<account>/<region>/<stack>`. One file is the whole stack: `terraform.source`, `dependency` blocks
   (with `mock_outputs` for plan-time) and every input. The account and region come from the folder path, never from the file.
 - A stack includes only `root.hcl` (`expose = true`) and reads account and region values as `include.root.locals.<name>`
   (`account_name`, `account_id`, `env`, `aws_region`, `registry`, ...). Never use `read_terragrunt_config` or `get_env`.
